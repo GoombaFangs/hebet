@@ -15,13 +15,14 @@
       <button type="button" class="btn-edit" id="btnEdit">עריכה</button>
     </div>
     <div class="site-toolbar-theme">
-      <label class="site-theme-control" for="siteBgColor">
-        <span>רקע</span>
-        <input type="color" id="siteBgColor" value="#f0f0f0" title="צבע רקע לאתר">
-      </label>
-      <label class="site-theme-control" for="siteSecondaryColor">
-        <span>צבע משני</span>
-        <input type="color" id="siteSecondaryColor" value="#4a7c3f" title="צבע משני לאתר">
+      <div class="hsla-field site-theme-control" id="siteColorPicker" data-hsla-for="siteSecondaryColor">
+        <span>צבע</span>
+        <button type="button" class="hsla-swatch" id="siteColorSwatch" title="בחירת צבע" aria-label="בחירת צבע"></button>
+        <input type="hidden" id="siteSecondaryColor" value="#4a7c3f">
+      </div>
+      <label class="site-theme-control site-theme-check" for="colorCards">
+        <input type="checkbox" id="colorCards">
+        <span>לצבוע כרטיסים</span>
       </label>
       <label class="site-theme-control site-theme-upload" for="siteBgImage">
         <span>תמונת רקע</span>
@@ -332,19 +333,21 @@
 
           <div class="form-grid form-grid--design">
             <div class="form-field">
-              <label for="primaryColor">צבע ראשי</label>
-              <div class="color-picker-row">
-                <input type="color" id="primaryColor" name="primaryColor" value="#e87722">
+              <label>צבע ראשי</label>
+              <div class="hsla-field" id="primaryColorPicker" data-hsla-for="primaryColor">
+                <button type="button" class="hsla-swatch" title="בחירת צבע ראשי" aria-label="בחירת צבע ראשי"></button>
                 <span class="color-hex" id="primaryColorHex">#e87722</span>
+                <input type="hidden" id="primaryColor" name="primaryColor" value="#e87722">
               </div>
               <p class="field-subhint">כפתורי פעולה + חלק משילוב הרקע</p>
             </div>
 
             <div class="form-field">
-              <label for="secondaryColor">צבע משני</label>
-              <div class="color-picker-row">
-                <input type="color" id="secondaryColor" name="secondaryColor" value="#4a7c3f">
+              <label>צבע משני</label>
+              <div class="hsla-field" id="secondaryColorPicker" data-hsla-for="secondaryColor">
+                <button type="button" class="hsla-swatch" title="בחירת צבע משני" aria-label="בחירת צבע משני"></button>
                 <span class="color-hex" id="secondaryColorHex">#4a7c3f</span>
+                <input type="hidden" id="secondaryColor" name="secondaryColor" value="#4a7c3f">
               </div>
               <p class="field-subhint">מסגרות תגיות, שם יחידה, תוויות בכרטיס פתוח + שילוב רקע</p>
             </div>
@@ -398,6 +401,26 @@
       <path d="M12 5l-6 6h4v7h4v-7h4l-6-6z" fill="currentColor"/>
     </svg>
   </button>
+
+  <div class="hsla-popover" id="hslaPopover" hidden>
+    <div class="hsla-popover-preview" id="hslaPreview"></div>
+    <label class="hsla-slider">
+      <span>גוון (Hue) <strong id="hslaHVal">0</strong></span>
+      <input type="range" id="hslaH" min="0" max="360" step="1" value="0">
+    </label>
+    <label class="hsla-slider">
+      <span>רוויה (Saturation) <strong id="hslaSVal">0%</strong></span>
+      <input type="range" id="hslaS" min="0" max="100" step="1" value="0">
+    </label>
+    <label class="hsla-slider">
+      <span>בהירות <strong id="hslaLVal">50%</strong></span>
+      <input type="range" id="hslaL" min="0" max="100" step="1" value="50">
+    </label>
+    <label class="hsla-slider">
+      <span>שקיפות (Opacity) <strong id="hslaAVal">100%</strong></span>
+      <input type="range" id="hslaA" min="0" max="100" step="1" value="100">
+    </label>
+  </div>
 
   <script src="js/app.js"></script>
 </body>
