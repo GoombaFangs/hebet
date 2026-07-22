@@ -138,10 +138,26 @@
               </select>
             </div>
 
-            <div class="form-field">
-              <label for="projectLink">קישור לפרויקט <span class="req">*</span></label>
-              <input type="url" id="projectLink" name="projectLink" placeholder="https://..." required>
+            <div class="form-field form-field--full">
+              <span class="field-label">פעולות כפתור <span class="req">*</span></span>
+              <div class="action-checks">
+                <label class="action-check" for="actionView">
+                  <input type="checkbox" id="actionView" checked>
+                  <span>צפייה</span>
+                </label>
+                <label class="action-check" for="actionDownload">
+                  <input type="checkbox" id="actionDownload">
+                  <span>הורדה</span>
+                </label>
+                <label class="action-check" for="actionPrint">
+                  <input type="checkbox" id="actionPrint">
+                  <span>הדפסה</span>
+                </label>
+              </div>
+              <p class="field-subhint">יש לבחור לפחות פעולה אחת</p>
             </div>
+
+            <div class="form-field form-field--full" id="actionLinkFields"></div>
 
             <div class="form-field form-field--full">
               <label>תמונה מייצגת <span class="req">*</span></label>
@@ -187,7 +203,7 @@
                 <input type="color" id="primaryColor" name="primaryColor" value="#e87722">
                 <span class="color-hex" id="primaryColorHex">#e87722</span>
               </div>
-              <p class="field-subhint">כפתור צפייה + חלק משילוב הרקע</p>
+              <p class="field-subhint">כפתורי פעולה + חלק משילוב הרקע</p>
             </div>
 
             <div class="form-field">
@@ -196,7 +212,7 @@
                 <input type="color" id="secondaryColor" name="secondaryColor" value="#4a7c3f">
                 <span class="color-hex" id="secondaryColorHex">#4a7c3f</span>
               </div>
-              <p class="field-subhint">מסגרות תגיות, תוויות בכרטיס פתוח + שילוב רקע</p>
+              <p class="field-subhint">מסגרות תגיות, שם יחידה, תוויות בכרטיס פתוח + שילוב רקע</p>
             </div>
 
             <div class="form-field">

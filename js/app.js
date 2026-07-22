@@ -56,7 +56,8 @@ function createEmptyWizardData() {
     status: '',
     classification: '',
     projectType: '',
-    projectLink: '',
+    enabledActions: ['צפייה'],
+    actionLinks: { 'צפייה': '', 'הורדה': '', 'הדפסה': '' },
     mainImage: '',
     extraImages: [],
     logo: '',
@@ -165,19 +166,178 @@ function getCardThemeStyle(card) {
   );
 }
 
+function getButtonAction(card) {
+  return card.buttonAction || 'צפייה';
+}
+
+function getCardActions(card) {
+  if (card.enabledActions && card.enabledActions.length && card.actionLinks) {
+    return card.enabledActions.map(function (action) {
+      return {
+        action: action,
+        link: card.actionLinks[action] || '',
+      };
+    }).filter(function (item) {
+      return !!item.link;
+    });
+  }
+
+  // תאימות לאחור לכרטיסים ישנים
+  const legacyLink = card.projectLink || card.link || '';
+  const legacyAction = card.buttonAction || 'צפייה';
+  if (!legacyLink) return [];
+  return [{ action: legacyAction, link: legacyLink }];
+}
+
+function isPdfLink(link) {
+  return /\.pdf(\?|#|$)/i.test(link || '');
+}
+
+function isYouTubeLink(link) {
+  return /(youtube\.com|youtu\.be)/i.test(link || '');
+}
+
+function suggestActionForLink(link) {
+  if (isPdfLink(link)) return 'הדפסה';
+  if (isYouTubeLink(link)) return 'צפייה';
+  return 'צפייה';
+}
+
+function getFileNameFromUrl(link) {
+  try {
+    const path = new URL(link).pathname;
+    const name = path.split('/').pop();
+    return decodeURIComponent(name || 'file') || 'file';
+  } catch {
+    return 'file';
+  }
+}
+
+function handleCardAction(link, action) {
+  if (!link) {
+    alert('אין קישור לפעולה זו');
+    return;
+  }
+
+  const normalized = normalizeProjectLink(link);
+
+  if (action === 'הורדה') {
+    downloadFromLink(normalized);
+    return;
+  }
+
+  if (action === 'הדפסה') {
+    printFromLink(normalized);
+    return;
+  }
+
+  window.open(normalized, '_blank', 'noopener');
+}
+
+function downloadFromLink(link) {
+  const fileName = getFileNameFromUrl(link);
+
+  // ניסיון הורדה דרך fetch (עובד טוב יותר ל-PDF מאותו מקור / CORS פתוח)
+  fetch(link)
+    .then(function (res) {
+      if (!res.ok) throw new Error('fetch failed');
+      return res.blob();
+    })
+    .then(function (blob) {
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(blobUrl); }, 1000);
+    })
+    .catch(function () {
+      // נפילה חזרה — פתיחה עם download
+      const a = document.createElement('a');
+      a.href = link;
+      a.download = fileName;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+}
+
+function printFromLink(link) {
+  // iframe מוסתר — עובד טוב יותר להדפסת PDF בדפדפן
+  const existing = document.getElementById('printFrame');
+  if (existing) existing.remove();
+
+  const iframe = document.createElement('iframe');
+  iframe.id = 'printFrame';
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none;';
+  iframe.src = link;
+  document.body.appendChild(iframe);
+
+  let printed = false;
+  const doPrint = function () {
+    if (printed) return;
+    printed = true;
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    } catch (err) {
+      // אם נחסם (CORS) — פותחים בחלון ומדפיסים משם
+      const w = window.open(link, '_blank', 'noopener');
+      if (w) {
+        setTimeout(function () {
+          try { w.print(); } catch (e) {}
+        }, 800);
+      }
+    }
+  };
+
+  iframe.addEventListener('load', function () {
+    setTimeout(doPrint, 600);
+  });
+
+  // גיבוי אם load לא נורה (PDF viewer)
+  setTimeout(doPrint, 1800);
+}
+
+function buildActionButtonsHtml(card) {
+  const primary = card.primaryColor || '#e87722';
+  const actions = getCardActions(card);
+
+  if (!actions.length) {
+    return '<span class="btn-primary btn-view" style="background-color:' + primary + ';opacity:0.5;">אין קישור</span>';
+  }
+
+  return (
+    '<div class="card-actions">' +
+      actions.map(function (item) {
+        return (
+          '<button type="button" class="btn-primary btn-view" ' +
+            'data-link="' + escapeHtml(item.link) + '" ' +
+            'data-action="' + escapeHtml(item.action) + '" ' +
+            'style="background-color:' + primary + ';">' +
+            escapeHtml(item.action) +
+          '</button>'
+        );
+      }).join('') +
+    '</div>'
+  );
+}
+
 function buildCardInner(card) {
   const typeTag = card.projectType || 'מצגת';
   const classTag = card.classification || 'שמור';
-  const primary = card.primaryColor || '#e87722';
   const secondary = card.secondaryColor || '#4a7c3f';
-  const href = card.projectLink || card.link || '';
   const logoHtml = card.logo
     ? '<img class="card-logo" src="' + card.logo + '" alt="">'
     : '';
   const titleRaw = (card.title || '').slice(0, 10);
   const unitRaw = (card.unitName || '').slice(0, 10);
   const unitLine = unitRaw
-    ? '<p class="card-unit">' + escapeHtml(unitRaw) + '</p>'
+    ? '<p class="card-unit" style="color:' + secondary + ';">' + escapeHtml(unitRaw) + '</p>'
     : '';
   const desc = card.notes || card.description || '';
 
@@ -185,6 +345,10 @@ function buildCardInner(card) {
     '<div class="card-image' + (shouldShowImageBg(card) ? ' card-image--photo' : '') + '" style="' + getCardImageStyle(card) + '">' +
       getCardBgPhotoHtml(card) +
       logoHtml +
+      '<div class="card-image-tags">' +
+        '<span class="card-overlay-tag" style="border-color:' + secondary + ';">' + escapeHtml(typeTag) + '</span>' +
+        '<span class="card-overlay-tag" style="border-color:' + secondary + ';">' + escapeHtml(classTag) + '</span>' +
+      '</div>' +
       '<span class="card-title">' + escapeHtml(titleRaw) + '</span>' +
     '</div>' +
     '<div class="card-body">' +
@@ -192,11 +356,7 @@ function buildCardInner(card) {
       '<p class="card-notes">' + formatNotesHtml(desc) + '</p>' +
     '</div>' +
     '<div class="card-footer">' +
-      '<button type="button" class="btn-primary btn-view" data-link="' + escapeHtml(href) + '" style="background-color:' + primary + ';">צפייה</button>' +
-      '<div class="btn-tags">' +
-        '<span class="btn-tag" style="border-color:' + secondary + ';color:' + secondary + ';">' + escapeHtml(typeTag) + '</span>' +
-        '<span class="btn-tag" style="border-color:' + secondary + ';color:' + secondary + ';">' + escapeHtml(classTag) + '</span>' +
-      '</div>' +
+      buildActionButtonsHtml(card) +
     '</div>'
   );
 }
@@ -207,6 +367,7 @@ function renderCards(cards) {
       return (
         '<div class="card card--editing" draggable="true" data-id="' + card.id + '" style="animation-delay: ' + (index % 3) * 0.08 + 's; ' + getCardThemeStyle(card) + '">' +
           '<button type="button" class="card-edit" data-id="' + card.id + '" aria-label="עריכת כרטיס" title="עריכה">✎</button>' +
+          '<button type="button" class="card-duplicate" data-id="' + card.id + '" aria-label="שיכפול כרטיס" title="שיכפול">⧉</button>' +
           '<button type="button" class="card-delete" data-id="' + card.id + '" aria-label="מחיקת כרטיס">×</button>' +
           buildCardInner(card) +
         '</div>'
@@ -215,6 +376,7 @@ function renderCards(cards) {
     setupDragAndDrop();
     setupDeleteButtons();
     setupEditButtons();
+    setupDuplicateButtons();
   } else {
     cardsGrid.innerHTML = cards.map(function (card) {
       return (
@@ -295,10 +457,40 @@ function setupEditButtons() {
   });
 }
 
+function setupDuplicateButtons() {
+  cardsGrid.querySelectorAll('.card-duplicate').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      e.preventDefault();
+      duplicateCard(btn.dataset.id);
+    });
+  });
+}
+
+function duplicateCard(id) {
+  const cards = loadCards();
+  const source = cards.find(function (c) { return c.id === id; });
+  if (!source) return;
+
+  const copy = JSON.parse(JSON.stringify(source));
+  copy.id = createCardId();
+  copy.title = ((source.title || '') + ' ע').slice(0, 10);
+
+  const index = cards.findIndex(function (c) { return c.id === id; });
+  cards.splice(index + 1, 0, copy);
+
+  if (!saveCards(cards)) {
+    alert('אין מספיק מקום לשמירת השיכפול. נסו למחוק כרטיס או להקטין תמונות.');
+    return;
+  }
+
+  renderCards(cards);
+}
+
 function setupCardClicks() {
   cardsGrid.querySelectorAll('.card--clickable').forEach(function (cardEl) {
     cardEl.addEventListener('click', function (e) {
-      if (e.target.closest('.btn-view') || e.target.closest('.card-edit')) return;
+      if (e.target.closest('.btn-view') || e.target.closest('.card-edit') || e.target.closest('.card-duplicate')) return;
       openCardDetail(cardEl.dataset.id, cardEl);
     });
 
@@ -313,12 +505,7 @@ function setupCardClicks() {
   cardsGrid.querySelectorAll('.btn-view').forEach(function (btn) {
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
-      const link = btn.dataset.link;
-      if (!link) {
-        alert('אין קישור לכרטיס זה');
-        return;
-      }
-      window.open(link, '_blank', 'noopener');
+      handleCardAction(btn.dataset.link, btn.dataset.action || 'צפייה');
     });
   });
 }
@@ -335,7 +522,6 @@ let detailOriginRect = null;
 let floatTimer = null;
 
 function buildDetailHtml(card) {
-  const link = card.projectLink || card.link || '';
   const notes = card.notes || card.description || '—';
 
   const extras = (card.extraImages || []).map(function (src) {
@@ -362,9 +548,21 @@ function buildDetailHtml(card) {
         row('הערות', notes) +
       '</div>' +
       (extras ? '<div class="detail-extras"><h4>תמונות נוספות</h4><div class="detail-extras-grid">' + extras + '</div></div>' : '') +
-      (link
-        ? '<a class="detail-open-link" href="' + escapeHtml(link) + '" target="_blank" rel="noopener">פתיחת קישור ←</a>'
-        : '') +
+      (function () {
+        const actions = getCardActions(card);
+        if (!actions.length) return '';
+        return (
+          '<div class="detail-actions">' +
+            actions.map(function (item) {
+              return (
+                '<button type="button" class="detail-open-link" data-link="' + escapeHtml(item.link) + '" data-action="' + escapeHtml(item.action) + '">' +
+                  escapeHtml(item.action) + ' ←' +
+                '</button>'
+              );
+            }).join('') +
+          '</div>'
+        );
+      })() +
       '<button type="button" class="detail-edit-btn" data-id="' + card.id + '">✎ עריכת כרטיס</button>' +
     '</div>'
   );
@@ -415,6 +613,13 @@ function openCardDetail(id, cardEl) {
       openWizardForEdit(id);
     });
   }
+
+  const detailActionBtns = detailContent.querySelectorAll('.detail-open-link');
+  detailActionBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      handleCardAction(btn.dataset.link, btn.dataset.action || 'צפייה');
+    });
+  });
 
   detailOverlay.hidden = false;
   detailFly.classList.remove('is-flipped', 'is-closing', 'is-floating');
@@ -523,9 +728,16 @@ function buildPreviewCard() {
     logo: wizardData.logo,
     fontFamily: wizardData.fontFamily,
     useImageBg: wizardData.useImageBg,
-    projectLink: '',
-    link: '',
+    enabledActions: wizardData.enabledActions.slice(),
+    actionLinks: Object.assign({}, wizardData.actionLinks),
   };
+
+  // בתצוגה המקדימה מציגים כפתורים גם בלי קישורים מלאים
+  const previewLinks = {};
+  wizardData.enabledActions.forEach(function (action) {
+    previewLinks[action] = wizardData.actionLinks[action] || '#';
+  });
+  previewCard.actionLinks = previewLinks;
 
   const metaBits = [];
   if (wizardData.status) metaBits.push(wizardData.status);
@@ -536,11 +748,7 @@ function buildPreviewCard() {
 
   let inner = buildCardInner(previewCard);
   if (metaHtml) {
-    inner = inner.replace('</div>\n      <div class="card-footer">', metaHtml + '</div><div class="card-footer">');
-    // fallback without newlines
-    if (inner.indexOf(metaHtml) === -1) {
-      inner = inner.replace('</div><div class="card-footer">', metaHtml + '</div><div class="card-footer">');
-    }
+    inner = inner.replace('</div><div class="card-footer">', metaHtml + '</div><div class="card-footer">');
   }
 
   return '<div class="card card--preview" style="' + getCardThemeStyle(previewCard) + '">' + inner + '</div>';
@@ -595,13 +803,20 @@ function validateStep(step) {
 
   if (step === 2) {
     if (!wizardData.projectType) return 'סוג פרויקט הוא שדה חובה';
-    if (!wizardData.projectLink.trim()) return 'קישור לפרויקט הוא שדה חובה';
-    try {
-      const url = new URL(normalizeProjectLink(wizardData.projectLink));
-      if (!/^https?:$/.test(url.protocol)) return 'הקישור חייב להיות כתובת אינטרנט תקינה';
-    } catch {
-      return 'הקישור אינו תקין — הזינו כתובת (למשל https://...)';
+    if (!wizardData.enabledActions.length) return 'יש לבחור לפחות פעולת כפתור אחת';
+
+    for (let i = 0; i < wizardData.enabledActions.length; i++) {
+      const action = wizardData.enabledActions[i];
+      const link = (wizardData.actionLinks[action] || '').trim();
+      if (!link) return 'יש להזין קישור עבור "' + action + '"';
+      try {
+        const url = new URL(normalizeProjectLink(link));
+        if (!/^https?:$/.test(url.protocol)) return 'הקישור ל"' + action + '" אינו תקין';
+      } catch {
+        return 'הקישור ל"' + action + '" אינו תקין';
+      }
     }
+
     if (!wizardData.mainImage) return 'תמונה מייצגת היא שדה חובה';
   }
 
@@ -673,20 +888,91 @@ function syncFormToData() {
   wizardData.status = document.getElementById('status').value;
   wizardData.classification = document.getElementById('classification').value;
   wizardData.projectType = document.getElementById('projectType').value;
-  wizardData.projectLink = document.getElementById('projectLink').value;
   wizardData.primaryColor = document.getElementById('primaryColor').value;
   wizardData.secondaryColor = document.getElementById('secondaryColor').value;
   wizardData.fontFamily = document.getElementById('cardFont').value;
   wizardData.useImageBg = document.getElementById('useImageBg').checked;
 
+  const enabled = [];
+  if (document.getElementById('actionView').checked) enabled.push('צפייה');
+  if (document.getElementById('actionDownload').checked) enabled.push('הורדה');
+  if (document.getElementById('actionPrint').checked) enabled.push('הדפסה');
+  wizardData.enabledActions = enabled;
+
+  ['צפייה', 'הורדה', 'הדפסה'].forEach(function (action) {
+    const input = document.getElementById('link-' + action);
+    if (input) {
+      wizardData.actionLinks[action] = input.value;
+    }
+  });
+
   document.getElementById('primaryColorHex').textContent = wizardData.primaryColor;
   document.getElementById('secondaryColorHex').textContent = wizardData.secondaryColor;
+}
+
+function renderActionLinkFields() {
+  const container = document.getElementById('actionLinkFields');
+  const enabled = wizardData.enabledActions || [];
+
+  if (!enabled.length) {
+    container.innerHTML = '<p class="field-subhint">בחרו לפחות פעולה אחת כדי להזין קישורים</p>';
+    return;
+  }
+
+  container.innerHTML = enabled.map(function (action) {
+    const value = wizardData.actionLinks[action] || '';
+    return (
+      '<div class="form-field form-field--full action-link-field">' +
+        '<label for="link-' + action + '">קישור ל' + action + ' <span class="req">*</span></label>' +
+        '<input type="url" id="link-' + action + '" value="' + escapeHtml(value) + '" placeholder="https://..." required>' +
+      '</div>'
+    );
+  }).join('');
+
+  enabled.forEach(function (action) {
+    const input = document.getElementById('link-' + action);
+    if (!input) return;
+    input.addEventListener('input', function () {
+      wizardData.actionLinks[action] = input.value;
+      updateLivePreview();
+    });
+    input.addEventListener('change', function () {
+      wizardData.actionLinks[action] = input.value;
+      // הצעה אוטומטית לפי סוג הקישור — רק אם פעולה אחת מסומנת
+      if (wizardData.enabledActions.length === 1) {
+        const suggested = suggestActionForLink(input.value);
+        if (suggested !== action) {
+          // לא מחליפים אוטומטית את הצ'קבוקסים כשיש כבר בחירה מרובה
+        }
+      }
+      updateLivePreview();
+    });
+  });
+}
+
+function onActionCheckboxChange() {
+  const view = document.getElementById('actionView');
+  const download = document.getElementById('actionDownload');
+  const print = document.getElementById('actionPrint');
+
+  // אסור לבטל את האחרון שנשאר
+  const checkedCount = [view, download, print].filter(function (el) { return el.checked; }).length;
+  if (checkedCount === 0) {
+    // מחזירים את זה שנלחץ
+    const last = document.activeElement;
+    if (last && last.type === 'checkbox') last.checked = true;
+    else view.checked = true;
+  }
+
+  syncFormToData();
+  renderActionLinkFields();
+  updateLivePreview();
 }
 
 function bindLiveInputs() {
   const liveIds = [
     'pageName', 'unitName', 'notes', 'cardDate', 'status',
-    'classification', 'projectType', 'projectLink',
+    'classification', 'projectType',
     'primaryColor', 'secondaryColor', 'cardFont', 'useImageBg',
   ];
 
@@ -702,10 +988,13 @@ function bindLiveInputs() {
     });
   });
 
+  ['actionView', 'actionDownload', 'actionPrint'].forEach(function (id) {
+    document.getElementById(id).addEventListener('change', onActionCheckboxChange);
+  });
+
   document.getElementById('mainImage').addEventListener('change', async function (e) {
     const file = e.target.files[0];
     if (!file) return;
-    // יחס משוער של אזור התמונה בכרטיס
     wizardData.mainImage = await readFileAsDataURL(file, 1000, 16 / 10);
     document.getElementById('mainImageText').hidden = true;
     const preview = document.getElementById('mainImagePreview');
@@ -787,24 +1076,30 @@ function applyWizardDataToForm() {
   document.getElementById('status').value = wizardData.status || '';
   document.getElementById('classification').value = wizardData.classification || '';
   document.getElementById('projectType').value = wizardData.projectType || '';
-  document.getElementById('projectLink').value = wizardData.projectLink || '';
   document.getElementById('primaryColor').value = wizardData.primaryColor || '#e87722';
   document.getElementById('secondaryColor').value = wizardData.secondaryColor || '#4a7c3f';
   document.getElementById('primaryColorHex').textContent = wizardData.primaryColor || '#e87722';
   document.getElementById('secondaryColorHex').textContent = wizardData.secondaryColor || '#4a7c3f';
   document.getElementById('cardFont').value = wizardData.fontFamily || "'Segoe UI', Tahoma, Arial, sans-serif";
   document.getElementById('useImageBg').checked = wizardData.useImageBg !== false;
-  fillMediaPreviews();
-}
 
-function updateWizardChrome() {
-  const isEdit = !!editingCardId;
-  document.getElementById('wizardTitle').textContent = isEdit ? 'עריכת כרטיס' : 'יצירת כרטיס חדש';
-  btnFinish.textContent = isEdit ? '✓ שמירת שינויים' : '✓ שמירה';
+  const enabled = wizardData.enabledActions || ['צפייה'];
+  document.getElementById('actionView').checked = enabled.indexOf('צפייה') !== -1;
+  document.getElementById('actionDownload').checked = enabled.indexOf('הורדה') !== -1;
+  document.getElementById('actionPrint').checked = enabled.indexOf('הדפסה') !== -1;
+
+  fillMediaPreviews();
+  renderActionLinkFields();
 }
 
 function buildCardFromWizard(id) {
-  const projectLink = normalizeProjectLink(wizardData.projectLink);
+  const actionLinks = {};
+  wizardData.enabledActions.forEach(function (action) {
+    actionLinks[action] = normalizeProjectLink(wizardData.actionLinks[action] || '');
+  });
+
+  const firstLink = actionLinks[wizardData.enabledActions[0]] || '';
+
   return {
     id: id,
     title: wizardData.pageName.trim().slice(0, 10),
@@ -815,8 +1110,10 @@ function buildCardFromWizard(id) {
     status: wizardData.status,
     classification: wizardData.classification,
     projectType: wizardData.projectType,
-    projectLink: projectLink,
-    link: projectLink,
+    enabledActions: wizardData.enabledActions.slice(),
+    actionLinks: actionLinks,
+    projectLink: firstLink,
+    link: firstLink,
     mainImage: wizardData.mainImage,
     extraImages: wizardData.extraImages.slice(),
     logo: wizardData.logo,
@@ -846,6 +1143,12 @@ function trySaveCards(cards, card, index) {
   return saved;
 }
 
+function updateWizardChrome() {
+  const isEdit = !!editingCardId;
+  document.getElementById('wizardTitle').textContent = isEdit ? 'עריכת כרטיס' : 'יצירת כרטיס חדש';
+  btnFinish.textContent = isEdit ? '✓ שמירת שינויים' : '✓ שמירה';
+}
+
 function openWizard() {
   editingCardId = null;
   resetWizardData();
@@ -855,6 +1158,8 @@ function openWizard() {
   const today = new Date().toISOString().slice(0, 10);
   wizardData.date = today;
   wizardData.useImageBg = true;
+  wizardData.enabledActions = ['צפייה'];
+  wizardData.actionLinks = { 'צפייה': '', 'הורדה': '', 'הדפסה': '' };
   wizardData.primaryColor = '#e87722';
   wizardData.secondaryColor = '#4a7c3f';
   wizardData.fontFamily = "'Segoe UI', Tahoma, Arial, sans-serif";
@@ -886,7 +1191,6 @@ function openWizardForEdit(cardId) {
   wizardData.status = card.status || '';
   wizardData.classification = card.classification || '';
   wizardData.projectType = card.projectType || '';
-  wizardData.projectLink = card.projectLink || card.link || '';
   wizardData.mainImage = card.mainImage || '';
   wizardData.extraImages = (card.extraImages || []).slice();
   wizardData.logo = card.logo || '';
@@ -894,6 +1198,21 @@ function openWizardForEdit(cardId) {
   wizardData.secondaryColor = card.secondaryColor || '#4a7c3f';
   wizardData.fontFamily = card.fontFamily || "'Segoe UI', Tahoma, Arial, sans-serif";
   wizardData.useImageBg = card.useImageBg !== false;
+
+  if (card.enabledActions && card.enabledActions.length) {
+    wizardData.enabledActions = card.enabledActions.slice();
+    wizardData.actionLinks = Object.assign(
+      { 'צפייה': '', 'הורדה': '', 'הדפסה': '' },
+      card.actionLinks || {}
+    );
+  } else {
+    // תאימות לאחור
+    const legacyAction = card.buttonAction || 'צפייה';
+    const legacyLink = card.projectLink || card.link || '';
+    wizardData.enabledActions = [legacyAction];
+    wizardData.actionLinks = { 'צפייה': '', 'הורדה': '', 'הדפסה': '' };
+    wizardData.actionLinks[legacyAction] = legacyLink;
+  }
 
   applyWizardDataToForm();
   updateWizardChrome();
