@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>צפייה</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      direction: rtl;
+      background: #f5f5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .content {
+      background: #fff;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+      text-align: center;
+      max-width: 500px;
+    }
+    h1 { color: #4a7c3f; margin-bottom: 12px; }
+    p { color: #555; line-height: 1.6; }
+    a { color: #e87722; }
+  </style>
+</head>
+<body>
+  <div class="content">
+    <h1 id="pageTitle">טוען...</h1>
+    <p id="pageDesc"></p>
+    <p><a href="../index.html">← חזרה לדף הראשי</a></p>
+  </div>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const cardId = params.get('id');
+    const cards = JSON.parse(localStorage.getItem('hebet-cards') || '[]');
+    const card = cards.find(function (c) { return c.id === cardId; });
+
+    if (card) {
+      document.title = card.title;
+      document.getElementById('pageTitle').textContent = card.title;
+      document.getElementById('pageDesc').textContent = card.description;
+    } else {
+      document.getElementById('pageTitle').textContent = 'כרטיס לא נמצא';
+      document.getElementById('pageDesc').textContent = 'הכרטיס שחיפשתם לא קיים או נמחק.';
+    }
+  </script>
+</body>
+</html>

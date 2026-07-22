@@ -8,182 +8,205 @@
 </head>
 <body>
 
-  <!-- כותרת עליונה -->
   <header class="site-header">
     <div class="header-banner">
       <span class="header-icon">📺</span>
       <h1>צפו הנה צפו הנה... זה כאן</h1>
     </div>
     <div class="header-sub">
-      <p class="updated">מעודכן ל-2026</p>
-      <p class="subtitle">צפייה מהנה!</p>
+      <div class="header-sub-text">
+        <p class="updated">מעודכן ל-2026</p>
+        <p class="subtitle">צפייה מהנה!</p>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="btn-new" id="btnNew">+ חדש</button>
+        <button type="button" class="btn-edit" id="btnEdit">עריכה</button>
+      </div>
     </div>
   </header>
 
-  <!-- רשת הכרטיסים -->
-  <main class="cards-grid">
+  <main class="cards-grid" id="cardsGrid"></main>
 
-    <a href="pages/page1.html" class="card" target="_blank">
-      <div class="card-image" style="background: linear-gradient(135deg, #1a3a5c, #2d6a9f);">
-        <span class="card-title">כותרת 1</span>
+  <!-- תצוגת פרטי כרטיס -->
+  <div class="detail-overlay" id="detailOverlay" hidden>
+    <div class="detail-fly" id="detailFly">
+      <button type="button" class="detail-close" id="detailClose" aria-label="סגירה">×</button>
+      <div class="detail-content" id="detailContent"></div>
+    </div>
+  </div>
+
+  <!-- אשף יצירת כרטיס -->
+  <div class="modal-overlay" id="modalOverlay" hidden>
+    <div class="wizard" role="dialog" aria-labelledby="wizardTitle">
+
+      <div class="wizard-header">
+        <h2 id="wizardTitle">יצירת כרטיס חדש</h2>
+        <button type="button" class="wizard-close" id="btnCancel" aria-label="סגירה">×</button>
       </div>
-      <div class="card-body">
-        <p>תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.</p>
-      </div>
-      <div class="card-footer">
-        <span class="btn-primary">צפייה</span>
-        <div class="btn-tags">
-          <span class="btn-tag">מצגת</span>
-          <span class="btn-tag">שמור</span>
+
+      <!-- שלבים -->
+      <nav class="wizard-steps" aria-label="שלבי יצירה">
+        <div class="wizard-step" data-step="1">
+          <span class="step-circle">1</span>
+          <span class="step-label">תיאור כללי</span>
         </div>
-      </div>
-    </a>
-
-    <a href="pages/page2.html" class="card" target="_blank">
-      <div class="card-image" style="background: linear-gradient(135deg, #3d2b1f, #8b5e3c);">
-        <span class="card-title">כותרת 2</span>
-      </div>
-      <div class="card-body">
-        <p>תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.</p>
-      </div>
-      <div class="card-footer">
-        <span class="btn-primary">צפייה</span>
-        <div class="btn-tags">
-          <span class="btn-tag">מצגת</span>
-          <span class="btn-tag">שמור</span>
+        <div class="wizard-step-line"></div>
+        <div class="wizard-step" data-step="2">
+          <span class="step-circle">2</span>
+          <span class="step-label">סוג הפרויקט</span>
         </div>
-      </div>
-    </a>
-
-    <a href="pages/page3.html" class="card" target="_blank">
-      <div class="card-image" style="background: linear-gradient(135deg, #1f3d2b, #3c8b5e);">
-        <span class="card-title">כותרת 3</span>
-      </div>
-      <div class="card-body">
-        <p>תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.</p>
-      </div>
-      <div class="card-footer">
-        <span class="btn-primary">צפייה</span>
-        <div class="btn-tags">
-          <span class="btn-tag">מצגת</span>
-          <span class="btn-tag">שמור</span>
+        <div class="wizard-step-line"></div>
+        <div class="wizard-step" data-step="3">
+          <span class="step-circle">3</span>
+          <span class="step-label">עיצוב</span>
         </div>
-      </div>
-    </a>
+      </nav>
 
-    <a href="pages/page4.html" class="card" target="_blank">
-      <div class="card-image" style="background: linear-gradient(135deg, #3d1f2b, #8b3c5e);">
-        <span class="card-title">כותרת 4</span>
+      <!-- תצוגה מקדימה חיה -->
+      <div class="wizard-preview-wrap">
+        <div class="wizard-preview" id="livePreview"></div>
       </div>
-      <div class="card-body">
-        <p>תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.</p>
-      </div>
-      <div class="card-footer">
-        <span class="btn-primary">צפייה</span>
-        <div class="btn-tags">
-          <span class="btn-tag">מצגת</span>
-          <span class="btn-tag">שמור</span>
+
+      <form id="wizardForm" novalidate>
+
+        <!-- שלב 1: תיאור כללי -->
+        <section class="wizard-panel" data-panel="1">
+          <h3>תיאור כללי</h3>
+          <p class="wizard-hint">הזינו את הפרטים הבסיסיים של הדף החדש</p>
+
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="pageName">שם הדף <span class="req">*</span></label>
+              <input type="text" id="pageName" name="pageName" placeholder="לדוגמה: מבוא ליחידה" required>
+            </div>
+
+            <div class="form-field">
+              <label for="unitName">שם היחידה</label>
+              <input type="text" id="unitName" name="unitName" placeholder="אופציונלי">
+            </div>
+
+            <div class="form-field form-field--full">
+              <label for="notes">הערות</label>
+              <textarea id="notes" name="notes" rows="2" placeholder="הערות נוספות (אופציונלי)"></textarea>
+            </div>
+
+            <div class="form-field">
+              <label for="cardDate">תאריך <span class="req">*</span></label>
+              <input type="date" id="cardDate" name="cardDate" required>
+            </div>
+
+            <div class="form-field">
+              <label for="status">סטטוס <span class="req">*</span></label>
+              <select id="status" name="status" required>
+                <option value="">בחרו סטטוס</option>
+                <option value="בעבודה">בעבודה</option>
+                <option value="מוכן">מוכן</option>
+              </select>
+            </div>
+
+            <div class="form-field form-field--full">
+              <label for="classification">סיווג <span class="req">*</span></label>
+              <select id="classification" name="classification" required>
+                <option value="">בחרו סיווג</option>
+                <option value="בלמ״ס">בלמ״ס</option>
+                <option value="שמור">שמור</option>
+                <option value="סודי">סודי</option>
+                <option value="סודי ביותר">סודי ביותר</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <!-- שלב 2: סוג הפרויקט -->
+        <section class="wizard-panel" data-panel="2" hidden>
+          <h3>סוג הפרויקט</h3>
+          <p class="wizard-hint">בחרו את סוג התוכן והעלו חומרים ויזואליים</p>
+
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="projectType">סוג פרויקט <span class="req">*</span></label>
+              <select id="projectType" name="projectType" required>
+                <option value="">בחרו סוג</option>
+                <option value="מצגת">מצגת</option>
+                <option value="לומדה">לומדה</option>
+                <option value="סרט">סרט</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label for="projectLink">קישור לפרויקט <span class="req">*</span></label>
+              <input type="url" id="projectLink" name="projectLink" placeholder="https://..." required>
+            </div>
+
+            <div class="form-field form-field--full">
+              <label>תמונה מייצגת <span class="req">*</span></label>
+              <label class="upload-box" for="mainImage">
+                <input type="file" id="mainImage" name="mainImage" accept="image/*" hidden>
+                <span class="upload-icon">🖼️</span>
+                <span class="upload-text" id="mainImageText">לחצו להעלאת תמונה</span>
+                <img class="upload-preview" id="mainImagePreview" alt="" hidden>
+              </label>
+            </div>
+
+            <div class="form-field">
+              <label>תמונות נוספות</label>
+              <label class="upload-box upload-box--sm" for="extraImages">
+                <input type="file" id="extraImages" name="extraImages" accept="image/*" multiple hidden>
+                <span class="upload-icon">📷</span>
+                <span class="upload-text" id="extraImagesText">העלאה (אופציונלי)</span>
+              </label>
+              <div class="extra-thumbs" id="extraThumbs"></div>
+            </div>
+
+            <div class="form-field">
+              <label>לוגו</label>
+              <label class="upload-box upload-box--sm" for="logoImage">
+                <input type="file" id="logoImage" name="logoImage" accept="image/*" hidden>
+                <span class="upload-icon">🏷️</span>
+                <span class="upload-text" id="logoImageText">העלאה (אופציונלי)</span>
+                <img class="upload-preview upload-preview--logo" id="logoImagePreview" alt="" hidden>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <!-- שלב 3: עיצוב -->
+        <section class="wizard-panel" data-panel="3" hidden>
+          <h3>עיצוב</h3>
+          <p class="wizard-hint">בחרו את צבעי המותג של הכרטיס</p>
+
+          <div class="form-grid form-grid--colors">
+            <div class="form-field">
+              <label for="primaryColor">צבע ראשי</label>
+              <div class="color-picker-row">
+                <input type="color" id="primaryColor" name="primaryColor" value="#e87722">
+                <span class="color-hex" id="primaryColorHex">#e87722</span>
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label for="secondaryColor">צבע משני</label>
+              <div class="color-picker-row">
+                <input type="color" id="secondaryColor" name="secondaryColor" value="#4a7c3f">
+                <span class="color-hex" id="secondaryColorHex">#4a7c3f</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <p class="wizard-error" id="wizardError" hidden></p>
+
+        <!-- ניווט -->
+        <div class="wizard-nav">
+          <button type="button" class="wizard-nav-btn wizard-nav-btn--back" id="btnPrev" hidden>→ הקודם</button>
+          <p class="wizard-nav-hint" id="navHint">בואו נתחיל</p>
+          <button type="button" class="wizard-nav-btn wizard-nav-btn--next" id="btnNext">הבא ←</button>
+          <button type="button" class="wizard-nav-btn wizard-nav-btn--finish" id="btnFinish" hidden>✓ סיום</button>
         </div>
-      </div>
-    </a>
+      </form>
+    </div>
+  </div>
 
-    <a href="pages/page5.html" class="card" target="_blank">
-      <div class="card-image" style="background: linear-gradient(135deg, #2b1f3d, #5e3c8b);">
-        <span class="card-title">כותרת 5</span>
-      </div>
-      <div class="card-body">
-        <p>תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.</p>
-      </div>
-      <div class="card-footer">
-        <span class="btn-primary">צפייה</span>
-        <div class="btn-tags">
-          <span class="btn-tag">מצגת</span>
-          <span class="btn-tag">שמור</span>
-        </div>
-      </div>
-    </a>
-
-    <a href="pages/page6.html" class="card" target="_blank">
-      <div class="card-image" style="background: linear-gradient(135deg, #1f2b3d, #3c5e8b);">
-        <span class="card-title">כותרת 6</span>
-      </div>
-      <div class="card-body">
-        <p>תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.</p>
-      </div>
-      <div class="card-footer">
-        <span class="btn-primary">צפייה</span>
-        <div class="btn-tags">
-          <span class="btn-tag">מצגת</span>
-          <span class="btn-tag">שמור</span>
-        </div>
-      </div>
-    </a>
-
-    <a href="pages/page7.html" class="card" target="_blank">
-      <div class="card-image" style="background: linear-gradient(135deg, #3d3d1f, #8b8b3c);">
-        <span class="card-title">כותרת 7</span>
-      </div>
-      <div class="card-body">
-        <p>תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.</p>
-      </div>
-      <div class="card-footer">
-        <span class="btn-primary">צפייה</span>
-        <div class="btn-tags">
-          <span class="btn-tag">מצגת</span>
-          <span class="btn-tag">שמור</span>
-        </div>
-      </div>
-    </a>
-
-    <a href="pages/page8.html" class="card" target="_blank">
-      <div class="card-image" style="background: linear-gradient(135deg, #1f3d3d, #3c8b8b);">
-        <span class="card-title">כותרת 8</span>
-      </div>
-      <div class="card-body">
-        <p>תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.</p>
-      </div>
-      <div class="card-footer">
-        <span class="btn-primary">צפייה</span>
-        <div class="btn-tags">
-          <span class="btn-tag">מצגת</span>
-          <span class="btn-tag">שמור</span>
-        </div>
-      </div>
-    </a>
-
-    <a href="pages/page9.html" class="card" target="_blank">
-      <div class="card-image" style="background: linear-gradient(135deg, #3d1f1f, #8b3c3c);">
-        <span class="card-title">כותרת 9</span>
-      </div>
-      <div class="card-body">
-        <p>תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.</p>
-      </div>
-      <div class="card-footer">
-        <span class="btn-primary">צפייה</span>
-        <div class="btn-tags">
-          <span class="btn-tag">מצגת</span>
-          <span class="btn-tag">שמור</span>
-        </div>
-      </div>
-    </a>
-
-    <a href="pages/page10.html" class="card" target="_blank">
-      <div class="card-image" style="background: linear-gradient(135deg, #2b3d1f, #5e8b3c);">
-        <span class="card-title">כותרת 10</span>
-      </div>
-      <div class="card-body">
-        <p>תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.</p>
-      </div>
-      <div class="card-footer">
-        <span class="btn-primary">צפייה</span>
-        <div class="btn-tags">
-          <span class="btn-tag">מצגת</span>
-          <span class="btn-tag">שמור</span>
-        </div>
-      </div>
-    </a>
-
-  </main>
-
+  <script src="js/app.js"></script>
 </body>
 </html>
