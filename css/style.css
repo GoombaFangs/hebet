@@ -1,0 +1,181 @@
+/* ===== בסיס ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  background-color: #f0f0f0;
+  color: #333;
+  direction: rtl;
+  min-height: 100vh;
+}
+
+/* ===== כותרת ===== */
+.site-header {
+  margin-bottom: 24px;
+}
+
+.header-banner {
+  background-color: #4a7c3f;
+  color: #fff;
+  text-align: center;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.header-banner h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.header-icon {
+  font-size: 1.3rem;
+}
+
+.header-sub {
+  padding: 12px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.header-sub .updated {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.header-sub .subtitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #222;
+}
+
+/* ===== רשת כרטיסים ===== */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  padding: 0 20px 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ===== כרטיס בודד ===== */
+.card {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+
+.card-image {
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.card-title {
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 0 10px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.card-body {
+  flex: 1;
+  padding: 12px 14px;
+}
+
+.card-body p {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #444;
+  text-align: center;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-top: 1px solid #eee;
+  gap: 8px;
+}
+
+.btn-primary {
+  background-color: #e87722;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 6px 18px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.btn-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn-tag {
+  font-size: 0.72rem;
+  padding: 4px 10px;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  color: #555;
+  background: #fff;
+  white-space: nowrap;
+}
+
+/* ===== רספונסיביות ===== */
+@media (max-width: 1200px) {
+  .cards-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 0 12px 30px;
+  }
+
+  .header-banner h1 {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
