@@ -21,6 +21,9 @@ const registeredFontFamilies = {};
 const MAX_FONT_BYTES = 8 * 1024 * 1024;
 const FONT_FILE_RE = /\.(ttf|otf|woff2?)$/i;
 
+let pageEntranceDone = false;
+let pendingCardPopId = null;
+
 const DEFAULT_HOME = {
   title: 'פורטל תוכן',
   titleImage: '',
@@ -85,9 +88,10 @@ const DEFAULT_HOME = {
   closing2VideoPosY: 50,
   closing2VideoBgMode: 'transparent',
   closing2VideoBgColor: '#2f5a28',
-  siteBgColor: '#f0f0f0',
+  siteBgColor: '#F3EEE4',
   siteBgImage: '',
   siteSecondaryColor: '#4a7c3f',
+  colorCards: false,
   siteFont: "'Segoe UI', Tahoma, Arial, sans-serif",
   cardsPerRow: 5,
   cardsGap: 16,
@@ -206,6 +210,297 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+function clampNumber(value, min, max) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return min;
+  return Math.min(max, Math.max(min, num));
+}
+
+function hexToRgb(hex) {
+  let h = String(hex || '').trim().replace('#', '');
+  if (h.length === 3) {
+    h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  }
+  if (h.length === 6 || h.length === 8) {
+    return {
+      r: parseInt(h.slice(0, 2), 16) || 0,
+      g: parseInt(h.slice(2, 4), 16) || 0,
+      b: parseInt(h.slice(4, 6), 16) || 0,
+      a: h.length === 8 ? (parseInt(h.slice(6, 8), 16) || 0) / 255 : 1,
+    };
+  }
+  return { r: 74, g: 124, b: 63, a: 1 };
+}
+
+function rgbToHsl(r, g, b) {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      default: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return {
+    h: Math.round(h * 360),
+    s: Math.round(s * 100),
+    l: Math.round(l * 100),
+  };
+}
+
+function hueToRgb(p, q, t) {
+  let tt = t;
+  if (tt < 0) tt += 1;
+  if (tt > 1) tt -= 1;
+  if (tt < 1 / 6) return p + (q - p) * 6 * tt;
+  if (tt < 1 / 2) return q;
+  if (tt < 2 / 3) return p + (q - p) * (2 / 3 - tt) * 6;
+  return p;
+}
+
+function hslToRgb(h, s, l) {
+  const hh = (((h % 360) + 360) % 360) / 360;
+  const ss = clampNumber(s, 0, 100) / 100;
+  const ll = clampNumber(l, 0, 100) / 100;
+  if (ss === 0) {
+    const v = Math.round(ll * 255);
+    return { r: v, g: v, b: v };
+  }
+  const q = ll < 0.5 ? ll * (1 + ss) : ll + ss - ll * ss;
+  const p = 2 * ll - q;
+  return {
+    r: Math.round(hueToRgb(p, q, hh + 1 / 3) * 255),
+    g: Math.round(hueToRgb(p, q, hh) * 255),
+    b: Math.round(hueToRgb(p, q, hh - 1 / 3) * 255),
+  };
+}
+
+function parseColorToHsla(input) {
+  const raw = String(input || '').trim();
+  const hslaMatch = raw.match(/hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*(?:,\s*([\d.]+)\s*)?\)/i);
+  if (hslaMatch) {
+    return {
+      h: clampNumber(hslaMatch[1], 0, 360),
+      s: clampNumber(hslaMatch[2], 0, 100),
+      l: clampNumber(hslaMatch[3], 0, 100),
+      a: hslaMatch[4] == null ? 1 : clampNumber(hslaMatch[4], 0, 1),
+    };
+  }
+  const rgbaMatch = raw.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)/i);
+  if (rgbaMatch) {
+    const hsl = rgbToHsl(
+      clampNumber(rgbaMatch[1], 0, 255),
+      clampNumber(rgbaMatch[2], 0, 255),
+      clampNumber(rgbaMatch[3], 0, 255)
+    );
+    return {
+      h: hsl.h,
+      s: hsl.s,
+      l: hsl.l,
+      a: rgbaMatch[4] == null ? 1 : clampNumber(rgbaMatch[4], 0, 1),
+    };
+  }
+  const rgb = hexToRgb(raw);
+  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  return { h: hsl.h, s: hsl.s, l: hsl.l, a: rgb.a };
+}
+
+function hslaToCss(h, s, l, a) {
+  const alpha = Math.round(clampNumber(a, 0, 1) * 1000) / 1000;
+  return 'hsla(' + Math.round(h) + ', ' + Math.round(s) + '%, ' + Math.round(l) + '%, ' + alpha + ')';
+}
+
+function hslaToHex(h, s, l, a) {
+  const rgb = hslToRgb(h, s, l);
+  const toHex = function (n) {
+    return clampNumber(n, 0, 255).toString(16).padStart(2, '0');
+  };
+  const alpha = clampNumber(a, 0, 1);
+  const base = '#' + toHex(rgb.r) + toHex(rgb.g) + toHex(rgb.b);
+  if (alpha >= 0.999) return base;
+  return base + toHex(Math.round(alpha * 255));
+}
+
+function colorToCss(input) {
+  const c = parseColorToHsla(input);
+  return hslaToCss(c.h, c.s, c.l, c.a);
+}
+
+function colorToDisplayHex(input) {
+  const c = parseColorToHsla(input);
+  return hslaToHex(c.h, c.s, c.l, c.a);
+}
+
+let activeHslaTarget = null;
+
+function getHslaPopoverEls() {
+  return {
+    popover: document.getElementById('hslaPopover'),
+    preview: document.getElementById('hslaPreview'),
+    h: document.getElementById('hslaH'),
+    s: document.getElementById('hslaS'),
+    l: document.getElementById('hslaL'),
+    a: document.getElementById('hslaA'),
+    hVal: document.getElementById('hslaHVal'),
+    sVal: document.getElementById('hslaSVal'),
+    lVal: document.getElementById('hslaLVal'),
+    aVal: document.getElementById('hslaAVal'),
+  };
+}
+
+function updateHslaSwatch(field) {
+  if (!field) return;
+  const input = field.querySelector('input[type="hidden"]');
+  const swatch = field.querySelector('.hsla-swatch');
+  const hexLabel = field.querySelector('.color-hex');
+  if (!input || !swatch) return;
+  const css = colorToCss(input.value);
+  swatch.style.setProperty('--swatch-color', css);
+  if (hexLabel) hexLabel.textContent = colorToDisplayHex(input.value);
+}
+
+function syncHslaPopoverFromState(state) {
+  const els = getHslaPopoverEls();
+  if (!els.popover) return;
+  els.h.value = String(Math.round(state.h));
+  els.s.value = String(Math.round(state.s));
+  els.l.value = String(Math.round(state.l));
+  els.a.value = String(Math.round(state.a * 100));
+  els.hVal.textContent = String(Math.round(state.h));
+  els.sVal.textContent = Math.round(state.s) + '%';
+  els.lVal.textContent = Math.round(state.l) + '%';
+  els.aVal.textContent = Math.round(state.a * 100) + '%';
+  const css = hslaToCss(state.h, state.s, state.l, state.a);
+  els.preview.style.setProperty('--preview-color', css);
+  els.s.style.background = 'linear-gradient(to left, hsl(' + state.h + ', 0%, ' + state.l + '%), hsl(' + state.h + ', 100%, ' + state.l + '%))';
+  els.l.style.background = 'linear-gradient(to left, #000, hsl(' + state.h + ', ' + state.s + '%, 50%), #fff)';
+}
+
+function readHslaPopoverState() {
+  const els = getHslaPopoverEls();
+  return {
+    h: clampNumber(els.h.value, 0, 360),
+    s: clampNumber(els.s.value, 0, 100),
+    l: clampNumber(els.l.value, 0, 100),
+    a: clampNumber(els.a.value, 0, 100) / 100,
+  };
+}
+
+function applyActiveHslaState(state, commit) {
+  if (!activeHslaTarget) return;
+  const hex = hslaToHex(state.h, state.s, state.l, state.a);
+  activeHslaTarget.input.value = hex;
+  updateHslaSwatch(activeHslaTarget.field);
+  syncHslaPopoverFromState(state);
+  if (typeof activeHslaTarget.onChange === 'function') {
+    activeHslaTarget.onChange(hex, commit);
+  }
+}
+
+function positionHslaPopover(anchor) {
+  const els = getHslaPopoverEls();
+  if (!els.popover || !anchor) return;
+  const rect = anchor.getBoundingClientRect();
+  const pad = 8;
+  const width = els.popover.offsetWidth || 280;
+  const height = els.popover.offsetHeight || 240;
+  let left = rect.left;
+  let top = rect.bottom + pad;
+  if (left + width > window.innerWidth - pad) {
+    left = Math.max(pad, window.innerWidth - width - pad);
+  }
+  if (top + height > window.innerHeight - pad) {
+    top = Math.max(pad, rect.top - height - pad);
+  }
+  els.popover.style.left = left + 'px';
+  els.popover.style.top = top + 'px';
+}
+
+function closeHslaPopover() {
+  const els = getHslaPopoverEls();
+  if (els.popover) els.popover.hidden = true;
+  activeHslaTarget = null;
+}
+
+function openHslaPopover(field, onChange) {
+  const input = field.querySelector('input[type="hidden"]');
+  const swatch = field.querySelector('.hsla-swatch');
+  const els = getHslaPopoverEls();
+  if (!input || !swatch || !els.popover) return;
+
+  activeHslaTarget = { field: field, input: input, onChange: onChange };
+  const state = parseColorToHsla(input.value);
+  syncHslaPopoverFromState(state);
+  els.popover.hidden = false;
+  positionHslaPopover(swatch);
+}
+
+function bindHslaPickers() {
+  const els = getHslaPopoverEls();
+  if (!els.popover || els.popover.dataset.bound === '1') return;
+  els.popover.dataset.bound = '1';
+
+  ['h', 's', 'l', 'a'].forEach(function (key) {
+    els[key].addEventListener('input', function () {
+      applyActiveHslaState(readHslaPopoverState(), false);
+    });
+    els[key].addEventListener('change', function () {
+      applyActiveHslaState(readHslaPopoverState(), true);
+    });
+  });
+
+  document.addEventListener('click', function (e) {
+    if (els.popover.hidden) return;
+    if (els.popover.contains(e.target)) return;
+    if (e.target.closest && e.target.closest('.hsla-swatch')) return;
+    closeHslaPopover();
+  });
+
+  window.addEventListener('resize', function () {
+    if (els.popover.hidden || !activeHslaTarget) return;
+    positionHslaPopover(activeHslaTarget.field.querySelector('.hsla-swatch'));
+  });
+}
+
+function setupHslaField(field, onChange) {
+  if (!field || field.dataset.hslaReady === '1') return;
+  field.dataset.hslaReady = '1';
+  updateHslaSwatch(field);
+  const swatch = field.querySelector('.hsla-swatch');
+  if (!swatch) return;
+  swatch.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const els = getHslaPopoverEls();
+    if (!els.popover.hidden && activeHslaTarget && activeHslaTarget.field === field) {
+      closeHslaPopover();
+      return;
+    }
+    openHslaPopover(field, onChange);
+  });
+}
+
+function setHslaFieldValue(fieldOrInputId, value) {
+  const field = typeof fieldOrInputId === 'string'
+    ? document.querySelector('[data-hsla-for="' + fieldOrInputId + '"]')
+    : fieldOrInputId;
+  if (!field) return;
+  const input = field.querySelector('input[type="hidden"]');
+  if (!input) return;
+  input.value = colorToDisplayHex(value);
+  updateHslaSwatch(field);
+}
+
 function formatDate(dateStr) {
   if (!dateStr) return '';
   const parts = dateStr.split('-');
@@ -223,8 +518,8 @@ function formatNotesHtml(notes) {
 }
 
 function getColorBlend(primary, secondary) {
-  const p = primary || '#e87722';
-  const s = secondary || '#4a7c3f';
+  const p = colorToCss(primary || '#e87722');
+  const s = colorToCss(secondary || '#4a7c3f');
   return 'linear-gradient(135deg, ' + p + ' 0%, ' + s + ' 100%)';
 }
 
@@ -248,8 +543,8 @@ function getCardBgPhotoHtml(card) {
 }
 
 function getCardThemeStyle(card) {
-  const primary = card.primaryColor || '#e87722';
-  const secondary = card.secondaryColor || '#4a7c3f';
+  const primary = colorToCss(card.primaryColor || '#e87722');
+  const secondary = colorToCss(card.secondaryColor || '#4a7c3f');
   // מרכאות בודדות — כדי לא לשבור את מאפיין style ב-HTML
   const font = (card.fontFamily || "'Segoe UI', Tahoma, Arial, sans-serif").replace(/"/g, "'");
   return (
@@ -397,7 +692,7 @@ function printFromLink(link) {
 }
 
 function buildActionButtonsHtml(card) {
-  const primary = card.primaryColor || '#e87722';
+  const primary = colorToCss(card.primaryColor || '#e87722');
   const actions = getCardActions(card);
 
   if (!actions.length) {
@@ -423,7 +718,7 @@ function buildActionButtonsHtml(card) {
 function buildCardInner(card) {
   const typeTag = card.projectType || 'מצגת';
   const classTag = card.classification || 'שמור';
-  const secondary = card.secondaryColor || '#4a7c3f';
+  const secondary = colorToCss(card.secondaryColor || '#4a7c3f');
   const logoHtml = card.logo
     ? '<img class="card-logo" src="' + card.logo + '" alt="">'
     : '';
@@ -457,8 +752,9 @@ function buildCardInner(card) {
 function renderCards(cards) {
   if (editMode) {
     cardsGrid.innerHTML = cards.map(function (card, index) {
+      const popClass = pendingCardPopId === card.id ? ' card-pop-in' : '';
       return (
-        '<div class="card card--editing" draggable="true" data-id="' + card.id + '" style="animation-delay: ' + (index % 3) * 0.08 + 's; ' + getCardThemeStyle(card) + '">' +
+        '<div class="card card--editing' + popClass + '" draggable="true" data-id="' + card.id + '" style="animation-delay: ' + (index % 3) * 0.08 + 's; ' + getCardThemeStyle(card) + '">' +
           '<button type="button" class="card-edit" data-id="' + card.id + '" aria-label="עריכת כרטיס" title="עריכה">✎</button>' +
           '<button type="button" class="card-duplicate" data-id="' + card.id + '" aria-label="שיכפול כרטיס" title="שיכפול">⧉</button>' +
           '<button type="button" class="card-delete" data-id="' + card.id + '" aria-label="מחיקת כרטיס">×</button>' +
@@ -472,8 +768,9 @@ function renderCards(cards) {
     setupDuplicateButtons();
   } else {
     cardsGrid.innerHTML = cards.map(function (card) {
+      const popClass = pendingCardPopId === card.id ? ' card-pop-in' : '';
       return (
-        '<div class="card card--clickable" data-id="' + card.id + '" role="button" tabindex="0" style="' + getCardThemeStyle(card) + '">' +
+        '<div class="card card--clickable' + popClass + '" data-id="' + card.id + '" role="button" tabindex="0" style="' + getCardThemeStyle(card) + '">' +
           '<button type="button" class="card-edit card-edit--quiet" data-id="' + card.id + '" aria-label="עריכת כרטיס" title="עריכה">✎</button>' +
           buildCardInner(card) +
         '</div>'
@@ -482,6 +779,7 @@ function renderCards(cards) {
     setupCardClicks();
     setupEditButtons();
   }
+  pendingCardPopId = null;
 }
 
 /* ===== מצב עריכה / גרירה / מחיקה ===== */
@@ -577,7 +875,24 @@ function duplicateCard(id) {
     return;
   }
 
+  pendingCardPopId = copy.id;
   renderCards(cards);
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function wait(ms) {
+  return new Promise(function (resolve) {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function animateElementOut(el) {
+  if (!el || prefersReducedMotion()) return;
+  el.classList.add('is-removing');
+  await wait(180);
 }
 
 function setupCardClicks() {
@@ -695,8 +1010,8 @@ function openCardDetail(id, cardEl) {
 
   detailFront.innerHTML = '<div class="card" style="' + getCardThemeStyle(card) + '">' + buildCardInner(card) + '</div>';
   detailContent.innerHTML = buildDetailHtml(card);
-  detailFly.style.setProperty('--card-primary', card.primaryColor || '#e87722');
-  detailFly.style.setProperty('--card-secondary', card.secondaryColor || '#4a7c3f');
+  detailFly.style.setProperty('--card-primary', colorToCss(card.primaryColor || '#e87722'));
+  detailFly.style.setProperty('--card-secondary', colorToCss(card.secondaryColor || '#4a7c3f'));
 
   const detailEditBtn = detailContent.querySelector('.detail-edit-btn');
   if (detailEditBtn) {
@@ -787,10 +1102,13 @@ function closeCardDetail(instant) {
   setTimeout(resetDetail, 880);
 }
 
-function deleteCard(id) {
+async function deleteCard(id) {
   const card = loadCards().find(function (c) { return c.id === id; });
   const name = card ? card.title : 'כרטיס זה';
   if (!confirm('למחוק את "' + name + '"?')) return;
+
+  const el = cardsGrid.querySelector('.card[data-id="' + id + '"]');
+  await animateElementOut(el);
 
   const cards = loadCards().filter(function (c) { return c.id !== id; });
   saveCards(cards);
@@ -1004,8 +1322,8 @@ function syncFormToData() {
     }
   });
 
-  document.getElementById('primaryColorHex').textContent = wizardData.primaryColor;
-  document.getElementById('secondaryColorHex').textContent = wizardData.secondaryColor;
+  document.getElementById('primaryColorHex').textContent = colorToDisplayHex(wizardData.primaryColor);
+  document.getElementById('secondaryColorHex').textContent = colorToDisplayHex(wizardData.secondaryColor);
 }
 
 function renderActionLinkFields() {
@@ -1071,7 +1389,7 @@ function bindLiveInputs() {
   const liveIds = [
     'pageName', 'unitName', 'notes', 'cardDate', 'status',
     'classification', 'projectType',
-    'primaryColor', 'secondaryColor', 'cardFont', 'useImageBg',
+    'cardFont', 'useImageBg',
   ];
 
   liveIds.forEach(function (id) {
@@ -1084,6 +1402,18 @@ function bindLiveInputs() {
       syncFormToData();
       updateLivePreview();
     });
+  });
+
+  setupHslaField(document.getElementById('primaryColorPicker'), function (hex) {
+    wizardData.primaryColor = hex;
+    document.getElementById('primaryColorHex').textContent = colorToDisplayHex(hex);
+    updateLivePreview();
+  });
+
+  setupHslaField(document.getElementById('secondaryColorPicker'), function (hex) {
+    wizardData.secondaryColor = hex;
+    document.getElementById('secondaryColorHex').textContent = colorToDisplayHex(hex);
+    updateLivePreview();
   });
 
   ['actionView', 'actionDownload', 'actionPrint'].forEach(function (id) {
@@ -1176,8 +1506,10 @@ function applyWizardDataToForm() {
   document.getElementById('projectType').value = wizardData.projectType || '';
   document.getElementById('primaryColor').value = wizardData.primaryColor || '#e87722';
   document.getElementById('secondaryColor').value = wizardData.secondaryColor || '#4a7c3f';
-  document.getElementById('primaryColorHex').textContent = wizardData.primaryColor || '#e87722';
-  document.getElementById('secondaryColorHex').textContent = wizardData.secondaryColor || '#4a7c3f';
+  setHslaFieldValue('primaryColor', wizardData.primaryColor || '#e87722');
+  setHslaFieldValue('secondaryColor', wizardData.secondaryColor || '#4a7c3f');
+  document.getElementById('primaryColorHex').textContent = colorToDisplayHex(wizardData.primaryColor || '#e87722');
+  document.getElementById('secondaryColorHex').textContent = colorToDisplayHex(wizardData.secondaryColor || '#4a7c3f');
   setFontSelectValue(
     document.getElementById('cardFont'),
     wizardData.fontFamily || "'Segoe UI', Tahoma, Arial, sans-serif"
@@ -1365,6 +1697,7 @@ function finishWizard() {
       showError('אין מספיק מקום לשמירה. נסו תמונה קטנה יותר וחזרו על שמירה.');
       return;
     }
+    pendingCardPopId = newCard.id;
   }
 
   renderCards(cards);
@@ -1485,6 +1818,15 @@ function syncHomeSectionControls(home) {
 
   const intro2 = document.getElementById('homeIntro2');
   const closing2 = document.getElementById('homeClosing2');
+  const intro = document.getElementById('homeIntro');
+  const closing = document.getElementById('homeClosing');
+
+  [intro, intro2, closing, closing2].forEach(function (el) {
+    if (!el) return;
+    el.classList.remove('is-removing');
+    el.style.removeProperty('opacity');
+  });
+
   if (intro2) intro2.hidden = !home.hasIntro2;
   if (closing2) closing2.hidden = !home.hasClosing2;
 
@@ -1557,6 +1899,13 @@ async function deleteSecondaryHomeSection(kind) {
 
   const label = kind === 'intro2' ? 'פתיח 2' : 'סגירה 2';
   if (!confirm('למחוק את "' + label + '"?')) return;
+
+  const sectionEl = getSectionRootEl(kind);
+  if (sectionEl) {
+    await animateElementOut(sectionEl);
+    sectionEl.classList.remove('is-removing');
+    sectionEl.style.removeProperty('opacity');
+  }
 
   const home = loadHome();
   clearMediaSectionFields(home, kind);
@@ -2263,7 +2612,7 @@ function getSelectedHomeMediaType() {
 }
 
 function applySiteTheme(home) {
-  const bgColor = home.siteBgColor || DEFAULT_HOME.siteBgColor;
+  const bgColor = DEFAULT_HOME.siteBgColor;
   const bgImage = home.siteBgImage || '';
   const secondary = home.siteSecondaryColor || DEFAULT_HOME.siteSecondaryColor;
   const font = home.siteFont || DEFAULT_HOME.siteFont;
@@ -2275,14 +2624,14 @@ function applySiteTheme(home) {
     '--site-bg-image',
     bgImage ? 'url(' + JSON.stringify(bgImage) + ')' : 'none'
   );
-  document.body.style.setProperty('--site-secondary', secondary);
+  document.body.style.setProperty('--site-secondary', colorToCss(secondary));
   document.body.style.setProperty('--site-font', font);
+  document.body.classList.toggle('cards-colored', !!home.colorCards);
 
   cardsGrid.style.setProperty('--cards-per-row', String(perRow));
   cardsGrid.style.setProperty('--cards-gap', gap + 'px');
 
-  const colorInput = document.getElementById('siteBgColor');
-  const secondaryInput = document.getElementById('siteSecondaryColor');
+  const colorCardsInput = document.getElementById('colorCards');
   const fontSelect = document.getElementById('siteFont');
   const clearBtn = document.getElementById('siteBgClear');
   const perRowInput = document.getElementById('cardsPerRow');
@@ -2290,8 +2639,8 @@ function applySiteTheme(home) {
   const perRowValue = document.getElementById('cardsPerRowValue');
   const gapValue = document.getElementById('cardsGapValue');
 
-  if (colorInput) colorInput.value = bgColor;
-  if (secondaryInput) secondaryInput.value = secondary;
+  setHslaFieldValue('siteSecondaryColor', secondary);
+  if (colorCardsInput) colorCardsInput.checked = !!home.colorCards;
   if (fontSelect) setFontSelectValue(fontSelect, font);
   if (clearBtn) clearBtn.hidden = !bgImage;
   if (perRowInput) perRowInput.value = String(perRow);
@@ -2899,12 +3248,8 @@ btnNew.addEventListener('click', openWizard);
 btnEdit.addEventListener('click', toggleEditMode);
 btnCancel.addEventListener('click', closeWizard);
 
-document.getElementById('siteBgColor').addEventListener('input', function (e) {
-  updateHomeField({ siteBgColor: e.target.value });
-});
-
-document.getElementById('siteSecondaryColor').addEventListener('input', function (e) {
-  updateHomeField({ siteSecondaryColor: e.target.value });
+document.getElementById('colorCards').addEventListener('change', function (e) {
+  updateHomeField({ colorCards: e.target.checked });
 });
 
 document.getElementById('siteFont').addEventListener('change', function (e) {
@@ -3039,6 +3384,10 @@ detailOverlay.addEventListener('click', function (e) {
 })();
 
 bindLiveInputs();
+bindHslaPickers();
+setupHslaField(document.getElementById('siteColorPicker'), function (hex) {
+  updateHomeField({ siteSecondaryColor: hex });
+});
 bindSectionResizeHandles();
 syncResizeHandlesVisibility();
 
@@ -3049,8 +3398,59 @@ async function initApp() {
     console.warn('Custom fonts unavailable', err);
   }
   populateFontSelects();
-  renderHome();
+  await renderHome();
   renderCards(loadCards());
+  playPageEntrance();
+}
+
+function preparePageEntrance() {
+  const selectors = [
+    '#siteToolbar',
+    '#homeLogoSection',
+    '#homeHero',
+    '#homeIntro',
+    '#homeIntro2',
+    '#cardsLayoutBar',
+    '#cardsGrid .card',
+    '#homeClosing',
+    '#homeClosing2',
+  ];
+  let index = 0;
+  selectors.forEach(function (selector) {
+    document.querySelectorAll(selector).forEach(function (el) {
+      if (el.hidden) return;
+      el.classList.add('anim-enter');
+      el.style.setProperty('--i', String(index));
+      index += 1;
+    });
+  });
+}
+
+function playPageEntrance() {
+  if (pageEntranceDone) {
+    document.body.classList.add('motion-ready');
+    return;
+  }
+
+  if (prefersReducedMotion()) {
+    document.body.classList.add('motion-ready');
+    pageEntranceDone = true;
+    return;
+  }
+
+  preparePageEntrance();
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      document.body.classList.add('motion-ready');
+      pageEntranceDone = true;
+      setTimeout(function () {
+        document.querySelectorAll('.anim-enter').forEach(function (el) {
+          el.classList.remove('anim-enter');
+          el.style.removeProperty('--i');
+        });
+      }, 2200);
+    });
+  });
 }
 
 initApp();
