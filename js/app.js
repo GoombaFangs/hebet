@@ -3019,6 +3019,25 @@ detailOverlay.addEventListener('click', function (e) {
   if (e.target === detailOverlay) closeCardDetail();
 });
 
+(function bindBackToTop() {
+  const btn = document.getElementById('backToTop');
+  if (!btn) return;
+  const SHOW_AFTER = 280;
+
+  function syncVisibility() {
+    const show = window.scrollY > SHOW_AFTER;
+    btn.hidden = !show;
+    btn.classList.toggle('is-visible', show);
+  }
+
+  btn.addEventListener('click', function () {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  window.addEventListener('scroll', syncVisibility, { passive: true });
+  syncVisibility();
+})();
+
 bindLiveInputs();
 bindSectionResizeHandles();
 syncResizeHandlesVisibility();
