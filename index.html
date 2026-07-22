@@ -8,24 +8,163 @@
 </head>
 <body>
 
-  <header class="site-header">
-    <div class="header-banner">
-      <span class="header-icon">📺</span>
-      <h1>צפו הנה צפו הנה... זה כאן</h1>
+  <!-- שורת פונקציונליות -->
+  <header class="site-toolbar" id="siteToolbar">
+    <div class="site-toolbar-actions">
+      <button type="button" class="btn-new" id="btnNew">+ כרטיס חדש</button>
+      <button type="button" class="btn-edit" id="btnEdit">עריכה</button>
     </div>
-    <div class="header-sub">
-      <div class="header-sub-text">
-        <p class="updated">מעודכן ל-2026</p>
-        <p class="subtitle">צפייה מהנה!</p>
-      </div>
-      <div class="header-actions">
-        <button type="button" class="btn-new" id="btnNew">+ חדש</button>
-        <button type="button" class="btn-edit" id="btnEdit">עריכה</button>
-      </div>
+    <div class="site-toolbar-theme">
+      <label class="site-theme-control" for="siteBgColor">
+        <span>רקע</span>
+        <input type="color" id="siteBgColor" value="#f0f0f0" title="צבע רקע לאתר">
+      </label>
+      <label class="site-theme-control" for="siteSecondaryColor">
+        <span>צבע משני</span>
+        <input type="color" id="siteSecondaryColor" value="#4a7c3f" title="צבע משני לאתר">
+      </label>
+      <label class="site-theme-control site-theme-upload" for="siteBgImage">
+        <span>תמונת רקע</span>
+        <input type="file" id="siteBgImage" accept="image/*" hidden>
+      </label>
+      <button type="button" class="site-theme-clear" id="siteBgClear" hidden title="הסרת תמונת רקע">הסרת תמונה</button>
+      <label class="site-theme-control" for="siteFont">
+        <span>גופן</span>
+        <select id="siteFont" title="גופן האתר">
+          <option value="'Segoe UI', Tahoma, Arial, sans-serif">Segoe UI</option>
+          <option value="Arial, Helvetica, sans-serif">Arial</option>
+          <option value="Tahoma, Geneva, sans-serif">Tahoma</option>
+          <option value="Gisha, Arial, sans-serif">Gisha</option>
+          <option value="David, 'Times New Roman', serif">David</option>
+          <option value="Miriam, Arial, sans-serif">Miriam</option>
+          <option value="Narkisim, Arial, sans-serif">Narkisim</option>
+          <option value="'Times New Roman', Times, serif">Times New Roman</option>
+          <option value="Georgia, serif">Georgia</option>
+          <option value="'Courier New', Courier, monospace">Courier New</option>
+        </select>
+      </label>
+      <label class="site-theme-control site-theme-upload" for="siteFontUpload">
+        <span>העלאת גופן</span>
+        <input type="file" id="siteFontUpload" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2,application/font-woff,application/font-sfnt" hidden>
+      </label>
     </div>
   </header>
 
+  <!-- לוגו יחידה -->
+  <section class="home-logo-section" id="homeLogoSection" data-home-section="logo" hidden>
+      <a class="home-logo-wrap" id="homeLogoWrap" hidden>
+        <img class="home-logo" id="homeLogo" alt="">
+      </a>
+    <button type="button" class="home-section-edit" data-edit-home="logo" hidden title="עריכת לוגו">✎</button>
+  </section>
+
+  <!-- כותרת ראשית -->
+  <section class="home-section home-hero" id="homeHero" data-home-section="hero">
+    <div class="home-section-bg" id="homeHeroBg"></div>
+    <div class="home-section-content">
+      <h1 class="home-title" id="homeTitle">פורטל תוכן</h1>
+    </div>
+    <button type="button" class="home-section-edit" data-edit-home="hero" hidden title="עריכת כותרת">✎</button>
+  </section>
+
+  <!-- כותרת משנה + פתיח -->
+  <section class="home-section home-intro" id="homeIntro" data-home-section="intro">
+    <div class="home-intro-main" id="homeIntroMain">
+      <div class="home-section-bg home-intro-bg" id="homeIntroBg"></div>
+      <div class="home-section-content">
+        <h2 class="home-subtitle" id="homeSubtitle">צפייה מהנה</h2>
+        <p class="home-intro-text" id="homeIntroText">ברוכים הבאים לפורטל התוכן. כאן תמצאו מצגות, לומדות וסרטים.</p>
+      </div>
+      <div class="home-resize-handle" data-resize="intro" hidden title="גררו לשינוי גובה">
+        <span class="home-resize-grip"></span>
+      </div>
+    </div>
+    <div class="home-section-actions">
+      <button type="button" class="home-section-edit" data-edit-home="intro" hidden title="עריכת פתיח">✎</button>
+      <button type="button" class="home-section-dup" data-dup-home="intro" hidden title="שכפול פתיח" aria-label="שכפול פתיח">⧉</button>
+    </div>
+  </section>
+
+  <!-- פתיח שני (אופציונלי) -->
+  <section class="home-section home-intro" id="homeIntro2" data-home-section="intro2" hidden>
+    <div class="home-intro-main" id="homeIntro2Main">
+      <div class="home-section-bg home-intro-bg" id="homeIntro2Bg"></div>
+      <div class="home-section-content">
+        <h2 class="home-subtitle" id="homeIntro2Subtitle"></h2>
+        <p class="home-intro-text" id="homeIntro2Text"></p>
+      </div>
+      <div class="home-resize-handle" data-resize="intro2" hidden title="גררו לשינוי גובה">
+        <span class="home-resize-grip"></span>
+      </div>
+    </div>
+    <div class="home-section-actions">
+      <button type="button" class="home-section-edit" data-edit-home="intro2" hidden title="עריכת פתיח 2">✎</button>
+      <button type="button" class="home-section-delete" data-delete-home="intro2" hidden title="מחיקת פתיח 2" aria-label="מחיקת פתיח 2">×</button>
+    </div>
+  </section>
+
+  <!-- כרטיסיות -->
+  <div class="cards-layout-bar" id="cardsLayoutBar" hidden>
+    <label class="cards-layout-control" for="cardsPerRow">
+      <span>כרטיסים בשורה</span>
+      <input type="range" id="cardsPerRow" min="2" max="6" step="1" value="5">
+      <strong id="cardsPerRowValue">5</strong>
+    </label>
+    <label class="cards-layout-control" for="cardsGap">
+      <span>מרווח בין כרטיסים</span>
+      <input type="range" id="cardsGap" min="4" max="48" step="2" value="16">
+      <strong id="cardsGapValue">16px</strong>
+    </label>
+  </div>
   <main class="cards-grid" id="cardsGrid"></main>
+
+  <!-- סגירה -->
+  <section class="home-section home-closing" id="homeClosing" data-home-section="closing">
+    <div class="home-section-bg" id="homeClosingBg"></div>
+    <div class="home-section-content">
+      <p class="home-closing-text" id="homeClosingText">תודה שביקרתם. נשתמע בפעם הבאה.</p>
+    </div>
+    <div class="home-resize-handle" data-resize="closing" hidden title="גררו לשינוי גובה">
+      <span class="home-resize-grip"></span>
+    </div>
+    <div class="home-section-actions">
+      <button type="button" class="home-section-edit" data-edit-home="closing" hidden title="עריכת סגירה">✎</button>
+      <button type="button" class="home-section-dup" data-dup-home="closing" hidden title="שכפול סגירה" aria-label="שכפול סגירה">⧉</button>
+    </div>
+  </section>
+
+  <!-- סגירה שנייה (אופציונלי) -->
+  <section class="home-section home-closing" id="homeClosing2" data-home-section="closing2" hidden>
+    <div class="home-section-bg" id="homeClosing2Bg"></div>
+    <div class="home-section-content">
+      <p class="home-closing-text" id="homeClosing2Text"></p>
+    </div>
+    <div class="home-resize-handle" data-resize="closing2" hidden title="גררו לשינוי גובה">
+      <span class="home-resize-grip"></span>
+    </div>
+    <div class="home-section-actions">
+      <button type="button" class="home-section-edit" data-edit-home="closing2" hidden title="עריכת סגירה 2">✎</button>
+      <button type="button" class="home-section-delete" data-delete-home="closing2" hidden title="מחיקת סגירה 2" aria-label="מחיקת סגירה 2">×</button>
+    </div>
+  </section>
+
+  <!-- עריכת מקטע בדף הבית -->
+  <div class="modal-overlay" id="homeEditOverlay" hidden>
+    <div class="home-edit-modal" role="dialog" aria-labelledby="homeEditTitle">
+      <div class="wizard-header">
+        <h2 id="homeEditTitle">עריכת מקטע</h2>
+        <button type="button" class="wizard-close" id="homeEditCancel" aria-label="סגירה">×</button>
+      </div>
+      <form id="homeEditForm">
+        <div id="homeEditFields"></div>
+        <div class="wizard-nav" style="margin-top: 20px;">
+          <button type="button" class="wizard-nav-btn wizard-nav-btn--back" id="homeEditCancelBtn">ביטול</button>
+          <span></span>
+          <button type="submit" class="wizard-nav-btn wizard-nav-btn--finish">✓ שמירה</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- תצוגת פרטי כרטיס — card flip -->
   <div class="detail-overlay" id="detailOverlay" hidden>
@@ -49,7 +188,6 @@
         <button type="button" class="wizard-close" id="btnCancel" aria-label="סגירה">×</button>
       </div>
 
-      <!-- שלבים -->
       <nav class="wizard-steps" aria-label="שלבי יצירה">
         <div class="wizard-step" data-step="1">
           <span class="step-circle">1</span>
@@ -67,14 +205,12 @@
         </div>
       </nav>
 
-      <!-- תצוגה מקדימה חיה -->
       <div class="wizard-preview-wrap">
         <div class="wizard-preview" id="livePreview"></div>
       </div>
 
       <form id="wizardForm" novalidate>
 
-        <!-- שלב 1: תיאור כללי -->
         <section class="wizard-panel" data-panel="1">
           <h3>תיאור כללי</h3>
           <p class="wizard-hint">הזינו את הפרטים הבסיסיים של הדף החדש</p>
@@ -122,7 +258,6 @@
           </div>
         </section>
 
-        <!-- שלב 2: סוג הפרויקט -->
         <section class="wizard-panel" data-panel="2" hidden>
           <h3>סוג הפרויקט</h3>
           <p class="wizard-hint">בחרו את סוג התוכן והעלו חומרים ויזואליים</p>
@@ -191,7 +326,6 @@
           </div>
         </section>
 
-        <!-- שלב 3: עיצוב -->
         <section class="wizard-panel" data-panel="3" hidden>
           <h3>עיצוב</h3>
           <p class="wizard-hint">בחרו צבעים, גופן, והאם להציג את התמונה המייצגת ברקע</p>
@@ -229,6 +363,12 @@
                 <option value="Georgia, serif">Georgia</option>
                 <option value="'Courier New', Courier, monospace">Courier New</option>
               </select>
+              <label class="upload-box upload-box--font" for="cardFontUpload" style="margin-top:10px;">
+                <input type="file" id="cardFontUpload" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2,application/font-woff,application/font-sfnt" hidden>
+                <span class="upload-icon">🔤</span>
+                <span class="upload-text">העלאת גופן מהמחשב</span>
+              </label>
+              <p class="field-subhint">TTF / OTF / WOFF / WOFF2</p>
             </div>
 
             <div class="form-field">
@@ -243,7 +383,6 @@
 
         <p class="wizard-error" id="wizardError" hidden></p>
 
-        <!-- ניווט -->
         <div class="wizard-nav">
           <button type="button" class="wizard-nav-btn wizard-nav-btn--back" id="btnPrev" hidden>→ הקודם</button>
           <p class="wizard-nav-hint" id="navHint">בואו נתחיל</p>

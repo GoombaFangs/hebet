@@ -1,4 +1,97 @@
 const STORAGE_KEY = 'hebet-cards';
+const HOME_STORAGE_KEY = 'hebet-home';
+const FONTS_DB_NAME = 'hebet-fonts';
+const FONTS_STORE = 'fonts';
+
+const BUILTIN_FONTS = [
+  { value: "'Segoe UI', Tahoma, Arial, sans-serif", label: 'Segoe UI' },
+  { value: 'Arial, Helvetica, sans-serif', label: 'Arial' },
+  { value: 'Tahoma, Geneva, sans-serif', label: 'Tahoma' },
+  { value: 'Gisha, Arial, sans-serif', label: 'Gisha' },
+  { value: "David, 'Times New Roman', serif", label: 'David' },
+  { value: 'Miriam, Arial, sans-serif', label: 'Miriam' },
+  { value: 'Narkisim, Arial, sans-serif', label: 'Narkisim' },
+  { value: "'Times New Roman', Times, serif", label: 'Times New Roman' },
+  { value: 'Georgia, serif', label: 'Georgia' },
+  { value: "'Courier New', Courier, monospace", label: 'Courier New' },
+];
+
+let customFontsCache = [];
+const registeredFontFamilies = {};
+const MAX_FONT_BYTES = 8 * 1024 * 1024;
+const FONT_FILE_RE = /\.(ttf|otf|woff2?)$/i;
+
+const DEFAULT_HOME = {
+  title: 'פורטל תוכן',
+  titleImage: '',
+  titleBgOpacity: 100,
+  titleLogoEnabled: false,
+  titleLogo: '',
+  titleLogoLink: '',
+  titleLogoAlign: 'right',
+  subtitle: 'צפייה מהנה',
+  introText: 'ברוכים הבאים לפורטל התוכן. כאן תמצאו מצגות, לומדות וסרטים.',
+  introImage: '',
+  introVideo: '',
+  introMediaType: 'image',
+  introBgOpacity: 100,
+  introSizeAuto: true,
+  introHeight: 280,
+  introVideoFit: 'cover',
+  introVideoZoom: 100,
+  introVideoPosX: 50,
+  introVideoPosY: 50,
+  introVideoBgMode: 'transparent',
+  introVideoBgColor: '#2f5a28',
+  hasIntro2: false,
+  intro2Subtitle: '',
+  intro2Text: '',
+  intro2Image: '',
+  intro2Video: '',
+  intro2MediaType: 'image',
+  intro2BgOpacity: 100,
+  intro2SizeAuto: true,
+  intro2Height: 280,
+  intro2VideoFit: 'cover',
+  intro2VideoZoom: 100,
+  intro2VideoPosX: 50,
+  intro2VideoPosY: 50,
+  intro2VideoBgMode: 'transparent',
+  intro2VideoBgColor: '#2f5a28',
+  closingText: 'תודה שביקרתם. נשתמע בפעם הבאה.',
+  closingImage: '',
+  closingVideo: '',
+  closingMediaType: 'image',
+  closingBgOpacity: 100,
+  closingSizeAuto: true,
+  closingHeight: 280,
+  closingVideoFit: 'cover',
+  closingVideoZoom: 100,
+  closingVideoPosX: 50,
+  closingVideoPosY: 50,
+  closingVideoBgMode: 'transparent',
+  closingVideoBgColor: '#2f5a28',
+  hasClosing2: false,
+  closing2Text: '',
+  closing2Image: '',
+  closing2Video: '',
+  closing2MediaType: 'image',
+  closing2BgOpacity: 100,
+  closing2SizeAuto: true,
+  closing2Height: 280,
+  closing2VideoFit: 'cover',
+  closing2VideoZoom: 100,
+  closing2VideoPosX: 50,
+  closing2VideoPosY: 50,
+  closing2VideoBgMode: 'transparent',
+  closing2VideoBgColor: '#2f5a28',
+  siteBgColor: '#f0f0f0',
+  siteBgImage: '',
+  siteSecondaryColor: '#4a7c3f',
+  siteFont: "'Segoe UI', Tahoma, Arial, sans-serif",
+  cardsPerRow: 5,
+  cardsGap: 16,
+};
 
 const GRADIENTS = [
   'linear-gradient(135deg, #1a3a5c, #2d6a9f)',
@@ -709,6 +802,11 @@ function toggleEditMode() {
   btnEdit.textContent = editMode ? 'סיום עריכה' : 'עריכה';
   btnEdit.classList.toggle('active', editMode);
   cardsGrid.classList.toggle('edit-mode', editMode);
+  document.body.classList.toggle('page-edit-mode', editMode);
+  document.getElementById('cardsLayoutBar').hidden = !editMode;
+  syncHomeSectionControls(loadHome());
+  syncResizeHandlesVisibility();
+  renderHomeLogo(loadHome());
   renderCards(loadCards());
 }
 
@@ -1080,7 +1178,10 @@ function applyWizardDataToForm() {
   document.getElementById('secondaryColor').value = wizardData.secondaryColor || '#4a7c3f';
   document.getElementById('primaryColorHex').textContent = wizardData.primaryColor || '#e87722';
   document.getElementById('secondaryColorHex').textContent = wizardData.secondaryColor || '#4a7c3f';
-  document.getElementById('cardFont').value = wizardData.fontFamily || "'Segoe UI', Tahoma, Arial, sans-serif";
+  setFontSelectValue(
+    document.getElementById('cardFont'),
+    wizardData.fontFamily || "'Segoe UI', Tahoma, Arial, sans-serif"
+  );
   document.getElementById('useImageBg').checked = wizardData.useImageBg !== false;
 
   const enabled = wizardData.enabledActions || ['צפייה'];
@@ -1270,11 +1371,1606 @@ function finishWizard() {
   closeWizard();
 }
 
+/* ===== דף בית ===== */
+
+function loadHome() {
+  const saved = localStorage.getItem(HOME_STORAGE_KEY);
+  let home = Object.assign({}, DEFAULT_HOME);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      home = Object.assign({}, DEFAULT_HOME, parsed);
+      home.titleBgOpacity = migrateBgOpacity(parsed, 'title');
+      home.introBgOpacity = migrateBgOpacity(parsed, 'intro');
+      home.intro2BgOpacity = migrateBgOpacity(parsed, 'intro2');
+      home.closingBgOpacity = migrateBgOpacity(parsed, 'closing');
+      home.closing2BgOpacity = migrateBgOpacity(parsed, 'closing2');
+      home.hasIntro2 = !!home.hasIntro2;
+      home.hasClosing2 = !!home.hasClosing2;
+    } catch {
+      home = Object.assign({}, DEFAULT_HOME);
+    }
+  }
+  return home;
+}
+
+function migrateBgOpacity(parsed, kind) {
+  const opacityKey = kind + 'BgOpacity';
+  const hasBgKey = kind === 'title' ? 'titleHasBg' : kind + 'HasBg';
+  const noBgKey = kind === 'title' ? 'titleNoBg' : kind + 'NoBg';
+
+  if (Object.prototype.hasOwnProperty.call(parsed, opacityKey)) {
+    return clampBgOpacity(parsed[opacityKey]);
+  }
+  if (Object.prototype.hasOwnProperty.call(parsed, hasBgKey)) {
+    return parsed[hasBgKey] ? 100 : 0;
+  }
+  if (Object.prototype.hasOwnProperty.call(parsed, noBgKey)) {
+    return parsed[noBgKey] ? 0 : 100;
+  }
+  return 100;
+}
+
+function clampBgOpacity(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 100;
+  return Math.min(100, Math.max(0, Math.round(num)));
+}
+
+function saveHome(home) {
+  try {
+    localStorage.setItem(HOME_STORAGE_KEY, JSON.stringify(home));
+    return true;
+  } catch (err) {
+    console.error('שגיאת שמירת דף בית:', err);
+    return false;
+  }
+}
+
+const MEDIA_SECTION_KEYS = [
+  'Text', 'Image', 'Video', 'MediaType', 'BgOpacity', 'SizeAuto', 'Height',
+  'VideoFit', 'VideoZoom', 'VideoPosX', 'VideoPosY', 'VideoBgMode', 'VideoBgColor',
+];
+
+function copyMediaSectionFields(home, fromKind, toKind) {
+  MEDIA_SECTION_KEYS.forEach(function (suffix) {
+    home[toKind + suffix] = home[fromKind + suffix];
+  });
+}
+
+function clearMediaSectionFields(home, kind) {
+  const defaults = DEFAULT_HOME;
+  MEDIA_SECTION_KEYS.forEach(function (suffix) {
+    const key = kind + suffix;
+    home[key] = Object.prototype.hasOwnProperty.call(defaults, key) ? defaults[key] : (
+      suffix === 'MediaType' ? 'image' :
+      suffix === 'BgOpacity' || suffix === 'VideoZoom' ? (suffix === 'VideoZoom' ? 100 : 100) :
+      suffix === 'Height' ? 280 :
+      suffix === 'SizeAuto' ? true :
+      suffix === 'VideoFit' ? 'cover' :
+      suffix === 'VideoPosX' || suffix === 'VideoPosY' ? 50 :
+      suffix === 'VideoBgMode' ? 'transparent' :
+      suffix === 'VideoBgColor' ? '#2f5a28' :
+      ''
+    );
+  });
+}
+
+function getSectionHeightEl(kind) {
+  if (kind === 'intro') return document.getElementById('homeIntroMain');
+  if (kind === 'intro2') return document.getElementById('homeIntro2Main');
+  if (kind === 'closing') return document.getElementById('homeClosing');
+  if (kind === 'closing2') return document.getElementById('homeClosing2');
+  return null;
+}
+
+function getSectionRootEl(kind) {
+  if (kind === 'intro') return document.getElementById('homeIntro');
+  if (kind === 'intro2') return document.getElementById('homeIntro2');
+  if (kind === 'closing') return document.getElementById('homeClosing');
+  if (kind === 'closing2') return document.getElementById('homeClosing2');
+  return null;
+}
+
+function getSectionBgEl(kind) {
+  if (kind === 'intro') return document.getElementById('homeIntroBg');
+  if (kind === 'intro2') return document.getElementById('homeIntro2Bg');
+  if (kind === 'closing') return document.getElementById('homeClosingBg');
+  if (kind === 'closing2') return document.getElementById('homeClosing2Bg');
+  return null;
+}
+
+function syncHomeSectionControls(home) {
+  home = home || loadHome();
+
+  const intro2 = document.getElementById('homeIntro2');
+  const closing2 = document.getElementById('homeClosing2');
+  if (intro2) intro2.hidden = !home.hasIntro2;
+  if (closing2) closing2.hidden = !home.hasClosing2;
+
+  document.querySelectorAll('[data-dup-home]').forEach(function (btn) {
+    const kind = btn.dataset.dupHome;
+    const blocked = (kind === 'intro' && home.hasIntro2) || (kind === 'closing' && home.hasClosing2);
+    btn.hidden = !editMode || blocked;
+  });
+
+  document.querySelectorAll('[data-delete-home]').forEach(function (btn) {
+    const kind = btn.dataset.deleteHome;
+    const allowed = (kind === 'intro2' && home.hasIntro2) || (kind === 'closing2' && home.hasClosing2);
+    btn.hidden = !editMode || !allowed;
+  });
+
+  document.querySelectorAll('[data-edit-home]').forEach(function (btn) {
+    const section = btn.dataset.editHome;
+    if (section === 'intro2') {
+      btn.hidden = !editMode || !home.hasIntro2;
+    } else if (section === 'closing2') {
+      btn.hidden = !editMode || !home.hasClosing2;
+    } else {
+      btn.hidden = !editMode;
+    }
+  });
+}
+
+async function duplicateHomeSection(kind) {
+  if (kind !== 'intro' && kind !== 'closing') return;
+
+  const home = loadHome();
+  const flag = kind === 'intro' ? 'hasIntro2' : 'hasClosing2';
+  if (home[flag]) return;
+
+  const toKind = kind + '2';
+  copyMediaSectionFields(home, kind, toKind);
+  if (kind === 'intro') {
+    home.intro2Subtitle = (home.subtitle || '').slice(0, 10);
+  }
+  home[flag] = true;
+
+  if (home[kind + 'Video']) {
+    try {
+      const stored = await getHomeVideo(kind);
+      if (stored && stored.blob) {
+        const file = new File(
+          [stored.blob],
+          stored.name || home[kind + 'Video'] || 'video.mp4',
+          { type: stored.type || stored.blob.type || 'video/mp4' }
+        );
+        await putHomeVideo(toKind, file);
+        home[toKind + 'Video'] = file.name;
+      }
+    } catch (err) {
+      console.warn('Video copy failed', err);
+      home[toKind + 'Video'] = '';
+      home[toKind + 'MediaType'] = 'image';
+    }
+  }
+
+  if (!saveHome(home)) {
+    alert('אין מספיק מקום לשמירה.');
+    return;
+  }
+  await renderHome();
+}
+
+async function deleteSecondaryHomeSection(kind) {
+  if (kind !== 'intro2' && kind !== 'closing2') return;
+
+  const label = kind === 'intro2' ? 'פתיח 2' : 'סגירה 2';
+  if (!confirm('למחוק את "' + label + '"?')) return;
+
+  const home = loadHome();
+  clearMediaSectionFields(home, kind);
+  if (kind === 'intro2') {
+    home.intro2Subtitle = '';
+    home.hasIntro2 = false;
+  } else {
+    home.hasClosing2 = false;
+  }
+
+  try {
+    await deleteHomeVideo(kind);
+  } catch (err) {
+    console.warn(err);
+  }
+
+  if (!saveHome(home)) {
+    alert('שגיאה בשמירה לאחר מחיקה.');
+    return;
+  }
+  await renderHome();
+}
+
+function setSectionBackground(el, imageUrl) {
+  if (!el) return;
+  clearSectionMedia(el);
+  if (imageUrl) {
+    el.style.backgroundImage = 'url(' + JSON.stringify(imageUrl) + ')';
+    el.classList.add('has-image');
+  } else {
+    el.style.backgroundImage = '';
+    el.classList.remove('has-image');
+  }
+}
+
+function clearSectionMedia(el) {
+  if (!el) return;
+  el.querySelectorAll('.home-section-video, .home-section-iframe').forEach(function (node) {
+    if (node.tagName === 'VIDEO' && node.src && node.src.indexOf('blob:') === 0) {
+      URL.revokeObjectURL(node.src);
+    }
+    node.remove();
+  });
+  el.classList.remove('has-media', 'has-video-bg-color');
+  el.style.removeProperty('--video-underlay-color');
+}
+
+const VIDEO_DB_NAME = 'hebet-media';
+const VIDEO_STORE = 'videos';
+
+function openFontsDb() {
+  return new Promise(function (resolve, reject) {
+    const request = indexedDB.open(FONTS_DB_NAME, 1);
+    request.onupgradeneeded = function () {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(FONTS_STORE)) {
+        db.createObjectStore(FONTS_STORE, { keyPath: 'id' });
+      }
+    };
+    request.onsuccess = function () { resolve(request.result); };
+    request.onerror = function () { reject(request.error || new Error('IndexedDB fonts failed')); };
+  });
+}
+
+function listCustomFonts() {
+  return openFontsDb().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      const tx = db.transaction(FONTS_STORE, 'readonly');
+      const req = tx.objectStore(FONTS_STORE).getAll();
+      req.onsuccess = function () { resolve(req.result || []); };
+      req.onerror = function () { reject(req.error || new Error('שגיאה בטעינת גופנים')); };
+    });
+  });
+}
+
+function putCustomFont(record) {
+  return openFontsDb().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      const tx = db.transaction(FONTS_STORE, 'readwrite');
+      tx.objectStore(FONTS_STORE).put(record);
+      tx.oncomplete = function () { resolve(); };
+      tx.onerror = function () { reject(tx.error || new Error('שגיאה בשמירת גופן')); };
+    });
+  });
+}
+
+function fontDisplayNameFromFile(fileName) {
+  const base = String(fileName || 'CustomFont').replace(/\.[^.]+$/, '').trim() || 'CustomFont';
+  const clean = base.replace(/[^\u0590-\u05FFa-zA-Z0-9 _-]/g, ' ').replace(/\s+/g, ' ').trim();
+  return clean || 'CustomFont';
+}
+
+function cssValueForFontFamily(family) {
+  const safe = String(family || 'CustomFont').replace(/'/g, '');
+  return "'" + safe + "', sans-serif";
+}
+
+async function registerCustomFont(record) {
+  if (!record || !record.family || !record.blob) return;
+  if (registeredFontFamilies[record.family]) return;
+
+  const buffer = await record.blob.arrayBuffer();
+  const face = new FontFace(record.family, buffer);
+  await face.load();
+  document.fonts.add(face);
+  registeredFontFamilies[record.family] = true;
+}
+
+async function loadAndRegisterCustomFonts() {
+  const fonts = await listCustomFonts();
+  customFontsCache = Array.isArray(fonts) ? fonts.slice() : [];
+  customFontsCache.sort(function (a, b) {
+    return String(a.name || '').localeCompare(String(b.name || ''), 'he');
+  });
+
+  for (let i = 0; i < customFontsCache.length; i += 1) {
+    try {
+      await registerCustomFont(customFontsCache[i]);
+    } catch (err) {
+      console.warn('Failed to register font', customFontsCache[i] && customFontsCache[i].name, err);
+    }
+  }
+}
+
+function populateFontSelects() {
+  const selectIds = ['siteFont', 'cardFont'];
+  selectIds.forEach(function (id) {
+    const select = document.getElementById(id);
+    if (!select) return;
+
+    const current = select.value;
+    select.innerHTML = '';
+
+    const builtinGroup = document.createElement('optgroup');
+    builtinGroup.label = 'גופנים מובנים';
+    BUILTIN_FONTS.forEach(function (font) {
+      const opt = document.createElement('option');
+      opt.value = font.value;
+      opt.textContent = font.label;
+      opt.style.fontFamily = font.value;
+      builtinGroup.appendChild(opt);
+    });
+    select.appendChild(builtinGroup);
+
+    if (customFontsCache.length) {
+      const customGroup = document.createElement('optgroup');
+      customGroup.label = 'גופנים שהועלו';
+      customFontsCache.forEach(function (font) {
+        const opt = document.createElement('option');
+        opt.value = font.cssValue;
+        opt.textContent = font.name;
+        opt.style.fontFamily = font.cssValue;
+        customGroup.appendChild(opt);
+      });
+      select.appendChild(customGroup);
+    }
+
+    setFontSelectValue(select, current);
+  });
+}
+
+function setFontSelectValue(select, value) {
+  if (!select || !value) return;
+  const exists = Array.prototype.some.call(select.options, function (opt) {
+    return opt.value === value;
+  });
+  if (!exists) {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = 'גופן שמור';
+    opt.style.fontFamily = value;
+    select.appendChild(opt);
+  }
+  select.value = value;
+}
+
+async function handleFontUpload(file, target) {
+  if (!file) return;
+
+  if (!FONT_FILE_RE.test(file.name)) {
+    alert('נא לבחור קובץ גופן: TTF, OTF, WOFF או WOFF2');
+    return;
+  }
+  if (file.size > MAX_FONT_BYTES) {
+    alert('קובץ הגופן גדול מדי (מקסימום 8MB)');
+    return;
+  }
+
+  const baseName = fontDisplayNameFromFile(file.name);
+  let family = baseName;
+  let suffix = 2;
+  while (
+    customFontsCache.some(function (f) { return f.family === family; }) ||
+    BUILTIN_FONTS.some(function (f) { return f.label === family; })
+  ) {
+    family = baseName + ' ' + suffix;
+    suffix += 1;
+  }
+
+  const id = 'font-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+  const cssValue = cssValueForFontFamily(family);
+  const record = {
+    id: id,
+    name: family,
+    family: family,
+    cssValue: cssValue,
+    blob: file,
+    type: file.type || 'application/octet-stream',
+    fileName: file.name,
+  };
+
+  try {
+    await registerCustomFont(record);
+    await putCustomFont(record);
+    customFontsCache.push(record);
+    customFontsCache.sort(function (a, b) {
+      return String(a.name || '').localeCompare(String(b.name || ''), 'he');
+    });
+    populateFontSelects();
+
+    if (target === 'site') {
+      const siteFont = document.getElementById('siteFont');
+      if (siteFont) siteFont.value = cssValue;
+      updateHomeField({ siteFont: cssValue });
+    } else {
+      const cardFont = document.getElementById('cardFont');
+      if (cardFont) cardFont.value = cssValue;
+      wizardData.fontFamily = cssValue;
+      updateLivePreview();
+    }
+  } catch (err) {
+    console.error(err);
+    alert('לא הצלחנו לטעון את הגופן. נסו קובץ אחר.');
+  }
+}
+
+function openVideoDb() {
+  return new Promise(function (resolve, reject) {
+    const request = indexedDB.open(VIDEO_DB_NAME, 1);
+    request.onupgradeneeded = function () {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(VIDEO_STORE)) {
+        db.createObjectStore(VIDEO_STORE);
+      }
+    };
+    request.onsuccess = function () { resolve(request.result); };
+    request.onerror = function () { reject(request.error || new Error('IndexedDB failed')); };
+  });
+}
+
+function putHomeVideo(key, file) {
+  return openVideoDb().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      const tx = db.transaction(VIDEO_STORE, 'readwrite');
+      tx.objectStore(VIDEO_STORE).put({
+        blob: file,
+        name: file.name || 'video',
+        type: file.type || 'video/mp4',
+      }, key);
+      tx.oncomplete = function () { resolve(); };
+      tx.onerror = function () { reject(tx.error || new Error('שגיאה בשמירת סרטון')); };
+    });
+  });
+}
+
+function getHomeVideo(key) {
+  return openVideoDb().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      const tx = db.transaction(VIDEO_STORE, 'readonly');
+      const req = tx.objectStore(VIDEO_STORE).get(key);
+      req.onsuccess = function () { resolve(req.result || null); };
+      req.onerror = function () { reject(req.error || new Error('שגיאה בטעינת סרטון')); };
+    });
+  });
+}
+
+function deleteHomeVideo(key) {
+  return openVideoDb().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      const tx = db.transaction(VIDEO_STORE, 'readwrite');
+      tx.objectStore(VIDEO_STORE).delete(key);
+      tx.oncomplete = function () { resolve(); };
+      tx.onerror = function () { reject(tx.error || new Error('שגיאה במחיקת סרטון')); };
+    });
+  });
+}
+
+async function setSectionMedia(el, options) {
+  if (!el) return;
+  clearSectionMedia(el);
+  el.style.backgroundImage = '';
+  el.style.background = '';
+  el.classList.remove('has-image', 'has-media');
+
+  const sectionEl = options.sectionEl;
+  if (sectionEl) sectionEl.classList.remove('home-section--video-only');
+
+  if (options.noBg && options.mediaType !== 'video' && !options.image) {
+    return;
+  }
+
+  const fit = options.videoFit === 'contain' ? 'contain' : 'cover';
+  const zoom = Math.min(200, Math.max(50, Number(options.videoZoom) || 100)) / 100;
+  const posX = Math.min(100, Math.max(0, Number(options.videoPosX) || 50));
+  const posY = Math.min(100, Math.max(0, Number(options.videoPosY) || 50));
+
+  el.style.setProperty('--video-fit', fit);
+  el.style.setProperty('--video-zoom', String(zoom));
+  el.style.setProperty('--video-pos-x', posX + '%');
+  el.style.setProperty('--video-pos-y', posY + '%');
+
+  if (options.mediaType === 'video' && options.videoKey && options.hasVideo) {
+    try {
+      let videoSrc = '';
+      if (options.videoFile) {
+        videoSrc = URL.createObjectURL(options.videoFile);
+      } else {
+        const record = await getHomeVideo(options.videoKey);
+        if (!record || !record.blob) return;
+        videoSrc = URL.createObjectURL(record.blob);
+      }
+
+      el.style.backgroundImage = 'none';
+      el.classList.remove('has-video-bg-color');
+      el.style.removeProperty('background');
+      el.style.removeProperty('background-color');
+
+      if (options.videoBgMode === 'color') {
+        const underlay = options.videoBgColor || '#2f5a28';
+        el.style.setProperty('--video-underlay-color', underlay);
+        el.classList.add('has-video-bg-color');
+      }
+
+      const video = document.createElement('video');
+      video.className = 'home-section-video';
+      video.src = videoSrc;
+      video.autoplay = true;
+      video.muted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.controls = true;
+      el.appendChild(video);
+      el.classList.add('has-media');
+      if (sectionEl) sectionEl.classList.add('home-section--video-only');
+
+      await new Promise(function (resolve) {
+        if (video.readyState >= 1) {
+          resolve();
+          return;
+        }
+        video.addEventListener('loadedmetadata', function () { resolve(); }, { once: true });
+        video.addEventListener('error', function () { resolve(); }, { once: true });
+      });
+
+      if (options.onVideoMeta && video.videoWidth && video.videoHeight) {
+        options.onVideoMeta(video.videoWidth, video.videoHeight);
+      }
+
+      video.play().catch(function () {});
+    } catch (err) {
+      console.error('שגיאת ניגון סרטון:', err);
+    }
+    return;
+  }
+
+  if (options.noBg && !options.image) return;
+
+  if (options.image) {
+    el.style.backgroundImage = 'url(' + JSON.stringify(options.image) + ')';
+    el.classList.add('has-image');
+    el.style.setProperty('--video-fit', 'cover');
+    el.style.setProperty('--video-zoom', '1');
+    if (options.noBg) {
+      el.style.backgroundColor = 'transparent';
+    }
+  }
+}
+
+function calcMediaHeight(mediaWidth, mediaHeight, containerWidth) {
+  if (!mediaWidth || !mediaHeight) return 280;
+  const width = containerWidth || 1000;
+  const height = Math.round(width / (mediaWidth / mediaHeight));
+  return Math.min(560, Math.max(160, height));
+}
+
+function applySectionMediaHeight(kind, heightPx) {
+  const value = Math.min(560, Math.max(120, Number(heightPx) || 280)) + 'px';
+  const el = getSectionHeightEl(kind);
+  if (el) el.style.setProperty('--section-media-height', value);
+}
+
+function homeSectionLayoutFieldsHtml(home, kind) {
+  const mediaType = home[kind + 'MediaType'] || 'image';
+  const fit = home[kind + 'VideoFit'] === 'contain' ? 'contain' : 'cover';
+  const zoom = Number(home[kind + 'VideoZoom']) || 100;
+  const posX = Number(home[kind + 'VideoPosX']) || 50;
+  const posY = Number(home[kind + 'VideoPosY']) || 50;
+  const bgMode = home[kind + 'VideoBgMode'] === 'color' ? 'color' : 'transparent';
+  const bgColor = home[kind + 'VideoBgColor'] || '#2f5a28';
+
+  return (
+    '<div class="form-field form-field--full" id="homeLayoutFields"' +
+      (mediaType === 'video' ? '' : ' hidden') + '>' +
+      '<span class="field-label">רקע מתחת לסרטון</span>' +
+      '<div class="action-checks">' +
+        '<label class="action-check" for="homeVideoBgTransparent">' +
+          '<input type="radio" name="homeVideoBgMode" id="homeVideoBgTransparent" value="transparent"' +
+            (bgMode === 'transparent' ? ' checked' : '') + '>' +
+          '<span>שקיפות</span>' +
+        '</label>' +
+        '<label class="action-check" for="homeVideoBgColorMode">' +
+          '<input type="radio" name="homeVideoBgMode" id="homeVideoBgColorMode" value="color"' +
+            (bgMode === 'color' ? ' checked' : '') + '>' +
+          '<span>רקע בצבע</span>' +
+        '</label>' +
+      '</div>' +
+      '<div id="homeVideoBgColorWrap"' + (bgMode === 'color' ? '' : ' hidden') + ' style="margin-top:10px;">' +
+        '<label class="site-theme-control" for="homeFieldVideoBgColor" style="gap:10px;">' +
+          '<span>צבע רקע</span>' +
+          '<input type="color" id="homeFieldVideoBgColor" value="' + escapeHtml(bgColor) + '">' +
+        '</label>' +
+      '</div>' +
+      '<p class="field-subhint">את גובה המקטע משנים במסך עצמו: במצב עריכה גררו את הידית בתחתית המסגרת.</p>' +
+      '<span class="field-label" style="margin-top:14px; display:block;">חיתוך והתאמת סרטון</span>' +
+      '<div class="action-checks">' +
+        '<label class="action-check" for="homeVideoFitCover">' +
+          '<input type="radio" name="homeVideoFit" id="homeVideoFitCover" value="cover"' +
+            (fit === 'cover' ? ' checked' : '') + '>' +
+          '<span>חיתוך למילוי</span>' +
+        '</label>' +
+        '<label class="action-check" for="homeVideoFitContain">' +
+          '<input type="radio" name="homeVideoFit" id="homeVideoFitContain" value="contain"' +
+            (fit === 'contain' ? ' checked' : '') + '>' +
+          '<span>הצגה מלאה</span>' +
+        '</label>' +
+      '</div>' +
+      '<label for="homeFieldVideoZoom" style="margin-top:10px; display:block;">הגדלה / הקטנה: <strong id="homeFieldVideoZoomValue">' + zoom + '%</strong></label>' +
+      '<input type="range" id="homeFieldVideoZoom" min="50" max="200" step="5" value="' + zoom + '" style="width:100%; accent-color:#4a7c3f;">' +
+      '<label for="homeFieldVideoPosX" style="margin-top:10px; display:block;">מיקום אופקי (חיתוך): <strong id="homeFieldVideoPosXValue">' + posX + '%</strong></label>' +
+      '<input type="range" id="homeFieldVideoPosX" min="0" max="100" step="1" value="' + posX + '" style="width:100%; accent-color:#4a7c3f;">' +
+      '<label for="homeFieldVideoPosY" style="margin-top:10px; display:block;">מיקום אנכי (חיתוך): <strong id="homeFieldVideoPosYValue">' + posY + '%</strong></label>' +
+      '<input type="range" id="homeFieldVideoPosY" min="0" max="100" step="1" value="' + posY + '" style="width:100%; accent-color:#4a7c3f;">' +
+      '<button type="button" class="btn-cancel" id="homeResetAutoSize" style="margin-top:14px;">איפוס גובה לפי הסרטון</button>' +
+    '</div>'
+  );
+}
+
+function bindHomeLayoutFields() {
+  const zoom = document.getElementById('homeFieldVideoZoom');
+  const zoomValue = document.getElementById('homeFieldVideoZoomValue');
+  const posX = document.getElementById('homeFieldVideoPosX');
+  const posXValue = document.getElementById('homeFieldVideoPosXValue');
+  const posY = document.getElementById('homeFieldVideoPosY');
+  const posYValue = document.getElementById('homeFieldVideoPosYValue');
+  const resetBtn = document.getElementById('homeResetAutoSize');
+  const bgTransparent = document.getElementById('homeVideoBgTransparent');
+  const bgColorMode = document.getElementById('homeVideoBgColorMode');
+  const bgColorWrap = document.getElementById('homeVideoBgColorWrap');
+
+  function syncBgMode() {
+    if (!bgColorWrap) return;
+    bgColorWrap.hidden = !(bgColorMode && bgColorMode.checked);
+  }
+
+  if (bgTransparent) bgTransparent.addEventListener('change', syncBgMode);
+  if (bgColorMode) bgColorMode.addEventListener('change', syncBgMode);
+  syncBgMode();
+
+  if (zoom && zoomValue) {
+    zoom.addEventListener('input', function () {
+      zoomValue.textContent = zoom.value + '%';
+    });
+  }
+  if (posX && posXValue) {
+    posX.addEventListener('input', function () {
+      posXValue.textContent = posX.value + '%';
+    });
+  }
+  if (posY && posYValue) {
+    posY.addEventListener('input', function () {
+      posYValue.textContent = posY.value + '%';
+    });
+  }
+  if (resetBtn) {
+    resetBtn.addEventListener('click', function () {
+      resetBtn.dataset.resetAuto = '1';
+      resetBtn.textContent = '✓ יאופס לפי הסרטון בשמירה';
+    });
+  }
+}
+
+function readHomeLayoutFields(home, kind) {
+  const fitEl = document.querySelector('input[name="homeVideoFit"]:checked');
+  const zoomEl = document.getElementById('homeFieldVideoZoom');
+  const posXEl = document.getElementById('homeFieldVideoPosX');
+  const posYEl = document.getElementById('homeFieldVideoPosY');
+  const resetBtn = document.getElementById('homeResetAutoSize');
+  const bgModeEl = document.querySelector('input[name="homeVideoBgMode"]:checked');
+  const bgColorEl = document.getElementById('homeFieldVideoBgColor');
+
+  const fit = fitEl && fitEl.value === 'contain' ? 'contain' : 'cover';
+  const zoom = zoomEl ? Number(zoomEl.value) : 100;
+  const posX = posXEl ? Number(posXEl.value) : 50;
+  const posY = posYEl ? Number(posYEl.value) : 50;
+  const resetAuto = !!(resetBtn && resetBtn.dataset.resetAuto === '1');
+  const bgMode = bgModeEl && bgModeEl.value === 'color' ? 'color' : 'transparent';
+  const bgColor = bgColorEl ? bgColorEl.value : '#2f5a28';
+
+  home[kind + 'VideoFit'] = fit;
+  home[kind + 'VideoZoom'] = zoom;
+  home[kind + 'VideoPosX'] = posX;
+  home[kind + 'VideoPosY'] = posY;
+  home[kind + 'VideoBgMode'] = bgMode;
+  home[kind + 'VideoBgColor'] = bgColor;
+  if (resetAuto) home[kind + 'SizeAuto'] = true;
+}
+
+function getSectionMediaHeight(kind) {
+  const el = getSectionHeightEl(kind);
+  if (!el) return 280;
+  const raw = getComputedStyle(el).getPropertyValue('--section-media-height').trim();
+  const num = parseInt(raw, 10);
+  return Number.isFinite(num) ? num : (el.getBoundingClientRect().height || 280);
+}
+
+function syncResizeHandlesVisibility() {
+  document.querySelectorAll('.home-resize-handle').forEach(function (handle) {
+    handle.hidden = !editMode;
+  });
+}
+
+function bindSectionResizeHandles() {
+  document.querySelectorAll('.home-resize-handle[data-resize]').forEach(function (handle) {
+    if (handle.dataset.bound === '1') return;
+    handle.dataset.bound = '1';
+
+    handle.addEventListener('pointerdown', function (e) {
+      if (!editMode) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const kind = handle.dataset.resize;
+      const startY = e.clientY;
+      const startH = getSectionMediaHeight(kind);
+      handle.classList.add('is-dragging');
+      handle.setPointerCapture(e.pointerId);
+
+      function onMove(ev) {
+        const next = Math.min(560, Math.max(120, Math.round(startH + (ev.clientY - startY))));
+        applySectionMediaHeight(kind, next);
+      }
+
+      function onUp(ev) {
+        handle.classList.remove('is-dragging');
+        handle.releasePointerCapture(ev.pointerId);
+        handle.removeEventListener('pointermove', onMove);
+        handle.removeEventListener('pointerup', onUp);
+        handle.removeEventListener('pointercancel', onUp);
+
+        const finalH = getSectionMediaHeight(kind);
+        const patch = {};
+        patch[kind + 'SizeAuto'] = false;
+        patch[kind + 'Height'] = finalH;
+        updateHomeField(patch);
+      }
+
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onUp);
+      handle.addEventListener('pointercancel', onUp);
+    });
+  });
+}
+
+function setOptionalText(el, text, maxLen) {
+  if (!el) return;
+  let value = text == null ? '' : String(text);
+  if (maxLen) value = value.slice(0, maxLen);
+  el.textContent = value;
+  el.hidden = !value.trim();
+}
+
+function setSectionBgOpacity(sectionEl, opacity) {
+  if (!sectionEl) return;
+  const value = clampBgOpacity(opacity);
+  sectionEl.style.setProperty('--section-bg-opacity', String(value));
+  sectionEl.classList.toggle('home-section--no-bg', value <= 0);
+  sectionEl.classList.toggle('home-section--soft-bg', value > 0 && value < 45);
+}
+
+function homeBgOpacityHtml(opacity) {
+  const value = clampBgOpacity(opacity);
+  return (
+    '<div class="form-field form-field--full">' +
+      '<label for="homeFieldBgOpacity">שקיפות רקע: <strong id="homeFieldBgOpacityValue">' + value + '%</strong></label>' +
+      '<input type="range" id="homeFieldBgOpacity" min="0" max="100" step="1" value="' + value + '" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">' +
+      '<p class="field-subhint">0 = שקוף לגמרי · 100 = רקע מלא בצבע המשני של האתר</p>' +
+    '</div>'
+  );
+}
+
+function bindHomeBgOpacityField() {
+  const input = document.getElementById('homeFieldBgOpacity');
+  const label = document.getElementById('homeFieldBgOpacityValue');
+  if (!input || !label) return;
+  input.addEventListener('input', function () {
+    label.textContent = clampBgOpacity(input.value) + '%';
+    scheduleHomeEditorPreview();
+  });
+}
+
+function homeImageFieldHtml(imageUrl, label) {
+  return (
+    '<div class="form-field form-field--full" id="homeImageFieldWrap">' +
+      '<label>' + label + '</label>' +
+      '<label class="upload-box" for="homeFieldImage">' +
+        '<input type="file" id="homeFieldImage" accept="image/*" hidden>' +
+        '<span class="upload-icon">🖼️</span>' +
+        '<span class="upload-text">לחצו להעלאת תמונה / להחלפה</span>' +
+      '</label>' +
+      '<img class="home-edit-preview' + (imageUrl ? ' is-visible' : '') + '" id="homeFieldImagePreview" src="' + (imageUrl || '') + '" alt="">' +
+      (imageUrl ? '<button type="button" class="btn-cancel" id="homeClearImage" style="margin-top:10px;">הסרת תמונה</button>' : '') +
+    '</div>'
+  );
+}
+
+function homeMediaFieldsHtml(options) {
+  const mediaType = options.mediaType === 'video' ? 'video' : 'image';
+  const imageUrl = options.imageUrl || '';
+  const videoName = options.videoName || '';
+
+  return (
+    '<div id="homeMediaFieldWrap">' +
+      '<div class="form-field form-field--full">' +
+        '<span class="field-label">סוג מדיה</span>' +
+        '<div class="action-checks">' +
+          '<label class="action-check" for="homeMediaImage">' +
+            '<input type="radio" name="homeMediaType" id="homeMediaImage" value="image"' +
+              (mediaType === 'image' ? ' checked' : '') + '>' +
+            '<span>תמונה</span>' +
+          '</label>' +
+          '<label class="action-check" for="homeMediaVideo">' +
+            '<input type="radio" name="homeMediaType" id="homeMediaVideo" value="video"' +
+              (mediaType === 'video' ? ' checked' : '') + '>' +
+            '<span>סרטון</span>' +
+          '</label>' +
+        '</div>' +
+      '</div>' +
+      '<div class="form-field form-field--full" id="homeImageOnlyWrap"' + (mediaType === 'video' ? ' hidden' : '') + '>' +
+        '<label>תמונה (אופציונלי)</label>' +
+        '<label class="upload-box" for="homeFieldImage">' +
+          '<input type="file" id="homeFieldImage" accept="image/*" hidden>' +
+          '<span class="upload-icon">🖼️</span>' +
+          '<span class="upload-text">לחצו להעלאת תמונה / להחלפה</span>' +
+        '</label>' +
+        '<img class="home-edit-preview' + (imageUrl ? ' is-visible' : '') + '" id="homeFieldImagePreview" src="' + (imageUrl || '') + '" alt="">' +
+        (imageUrl ? '<button type="button" class="btn-cancel" id="homeClearImage" style="margin-top:10px;">הסרת תמונה</button>' : '') +
+      '</div>' +
+      '<div class="form-field form-field--full" id="homeVideoOnlyWrap"' + (mediaType === 'image' ? ' hidden' : '') + '>' +
+        '<label>בחירת סרטון מהמחשב</label>' +
+        '<label class="upload-box" for="homeFieldVideoFile">' +
+          '<input type="file" id="homeFieldVideoFile" accept="video/*" hidden>' +
+          '<span class="upload-icon">🎬</span>' +
+          '<span class="upload-text">לחצו לבחירת קובץ וידאו</span>' +
+        '</label>' +
+        '<p class="field-subhint">הסרטון נשמר בדפדפן (לא באתר) — בלי מגבלת 4MB, ועובד גם בלי שרת.</p>' +
+        '<p class="field-subhint" id="homeVideoFileName"' + (videoName ? '' : ' hidden') + '>' +
+          'קובץ נוכחי: <strong dir="ltr">' + escapeHtml(videoName) + '</strong>' +
+        '</p>' +
+        (videoName
+          ? '<button type="button" class="btn-cancel" id="homeClearVideo" style="margin-top:10px;">הסרת סרטון</button>'
+          : '') +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function bindHomeNoBgToggle() {
+  // רקע צבעוני לא מסתיר יותר את בחירת המדיה
+}
+
+function bindHomeMediaTypeToggle() {
+  const imageRadio = document.getElementById('homeMediaImage');
+  const videoRadio = document.getElementById('homeMediaVideo');
+  const imageWrap = document.getElementById('homeImageOnlyWrap');
+  const videoWrap = document.getElementById('homeVideoOnlyWrap');
+  const layoutWrap = document.getElementById('homeLayoutFields');
+  if (!imageRadio || !videoRadio || !imageWrap || !videoWrap) return;
+
+  function sync() {
+    const isVideo = videoRadio.checked;
+    imageWrap.hidden = isVideo;
+    videoWrap.hidden = !isVideo;
+    if (layoutWrap) layoutWrap.hidden = !isVideo;
+  }
+
+  imageRadio.addEventListener('change', sync);
+  videoRadio.addEventListener('change', sync);
+  sync();
+}
+
+function getSelectedHomeMediaType() {
+  const checked = document.querySelector('input[name="homeMediaType"]:checked');
+  return checked ? checked.value : 'image';
+}
+
+function applySiteTheme(home) {
+  const bgColor = home.siteBgColor || DEFAULT_HOME.siteBgColor;
+  const bgImage = home.siteBgImage || '';
+  const secondary = home.siteSecondaryColor || DEFAULT_HOME.siteSecondaryColor;
+  const font = home.siteFont || DEFAULT_HOME.siteFont;
+  const perRow = Math.min(6, Math.max(2, Number(home.cardsPerRow) || DEFAULT_HOME.cardsPerRow));
+  const gap = Math.min(48, Math.max(4, Number(home.cardsGap) || DEFAULT_HOME.cardsGap));
+
+  document.body.style.setProperty('--site-bg-color', bgColor);
+  document.body.style.setProperty(
+    '--site-bg-image',
+    bgImage ? 'url(' + JSON.stringify(bgImage) + ')' : 'none'
+  );
+  document.body.style.setProperty('--site-secondary', secondary);
+  document.body.style.setProperty('--site-font', font);
+
+  cardsGrid.style.setProperty('--cards-per-row', String(perRow));
+  cardsGrid.style.setProperty('--cards-gap', gap + 'px');
+
+  const colorInput = document.getElementById('siteBgColor');
+  const secondaryInput = document.getElementById('siteSecondaryColor');
+  const fontSelect = document.getElementById('siteFont');
+  const clearBtn = document.getElementById('siteBgClear');
+  const perRowInput = document.getElementById('cardsPerRow');
+  const gapInput = document.getElementById('cardsGap');
+  const perRowValue = document.getElementById('cardsPerRowValue');
+  const gapValue = document.getElementById('cardsGapValue');
+
+  if (colorInput) colorInput.value = bgColor;
+  if (secondaryInput) secondaryInput.value = secondary;
+  if (fontSelect) setFontSelectValue(fontSelect, font);
+  if (clearBtn) clearBtn.hidden = !bgImage;
+  if (perRowInput) perRowInput.value = String(perRow);
+  if (gapInput) gapInput.value = String(gap);
+  if (perRowValue) perRowValue.textContent = String(perRow);
+  if (gapValue) gapValue.textContent = gap + 'px';
+}
+
+function updateHomeField(patch) {
+  const home = Object.assign(loadHome(), patch);
+  if (!saveHome(home)) {
+    alert('אין מספיק מקום לשמירה. נסו תמונה קטנה יותר.');
+    return false;
+  }
+  applySiteTheme(home);
+  return true;
+}
+
+async function renderHome(homeOverride, previewOptions) {
+  const home = homeOverride || loadHome();
+  previewOptions = previewOptions || {};
+
+  const title = (home.title == null ? DEFAULT_HOME.title : String(home.title)).slice(0, 10);
+  const subtitle = (home.subtitle == null ? DEFAULT_HOME.subtitle : String(home.subtitle)).slice(0, 10);
+  const introText = home.introText == null ? DEFAULT_HOME.introText : String(home.introText);
+  const closingText = home.closingText == null ? DEFAULT_HOME.closingText : String(home.closingText);
+
+  setOptionalText(document.getElementById('homeTitle'), title, 10);
+  setOptionalText(document.getElementById('homeSubtitle'), subtitle, 10);
+  setOptionalText(document.getElementById('homeIntroText'), introText);
+  setOptionalText(document.getElementById('homeClosingText'), closingText);
+
+  if (home.hasIntro2) {
+    setOptionalText(document.getElementById('homeIntro2Subtitle'), home.intro2Subtitle || '', 10);
+    setOptionalText(document.getElementById('homeIntro2Text'), home.intro2Text || '');
+  }
+  if (home.hasClosing2) {
+    setOptionalText(document.getElementById('homeClosing2Text'), home.closing2Text || '');
+  }
+
+  setSectionBackground(
+    document.getElementById('homeHeroBg'),
+    home.titleImage || ''
+  );
+
+  const mediaJobs = [];
+  const kinds = ['intro', 'closing'];
+  if (home.hasIntro2) kinds.push('intro2');
+  if (home.hasClosing2) kinds.push('closing2');
+
+  kinds.forEach(function (kind) {
+    const removedKey = kind + 'VideoRemoved';
+    const fileKey = kind + 'VideoFile';
+    const hasVideo = previewOptions[removedKey]
+      ? false
+      : !!(previewOptions[fileKey] || home[kind + 'Video']);
+
+    mediaJobs.push(setSectionMedia(getSectionBgEl(kind), {
+      noBg: clampBgOpacity(home[kind + 'BgOpacity']) <= 0,
+      mediaType: home[kind + 'MediaType'] || 'image',
+      image: home[kind + 'Image'] || '',
+      videoKey: kind,
+      hasVideo: hasVideo,
+      videoFile: previewOptions[fileKey] || null,
+      videoFit: home[kind + 'VideoFit'],
+      videoZoom: home[kind + 'VideoZoom'],
+      videoPosX: home[kind + 'VideoPosX'],
+      videoPosY: home[kind + 'VideoPosY'],
+      videoBgMode: home[kind + 'VideoBgMode'] || 'transparent',
+      videoBgColor: home[kind + 'VideoBgColor'] || '#2f5a28',
+      sectionEl: getSectionRootEl(kind),
+      onVideoMeta: function (w, h) {
+        if (home[kind + 'SizeAuto'] !== false) {
+          const target = getSectionHeightEl(kind);
+          const width = target
+            ? (kind.indexOf('intro') === 0 ? target.clientWidth : Math.max(0, target.clientWidth - 40))
+            : 1000;
+          const autoH = calcMediaHeight(w, h, width);
+          applySectionMediaHeight(kind, autoH);
+        }
+      },
+    }));
+
+    if (home[kind + 'SizeAuto'] === false) {
+      applySectionMediaHeight(kind, home[kind + 'Height'] || 280);
+    } else if ((home[kind + 'MediaType'] || 'image') !== 'video' || !hasVideo) {
+      applySectionMediaHeight(kind, home[kind + 'Height'] || 280);
+    }
+  });
+
+  await Promise.all(mediaJobs);
+
+  // Clear media on hidden secondary sections
+  if (!home.hasIntro2) {
+    clearSectionMedia(document.getElementById('homeIntro2Bg'));
+  }
+  if (!home.hasClosing2) {
+    clearSectionMedia(document.getElementById('homeClosing2Bg'));
+  }
+
+  setSectionBgOpacity(document.getElementById('homeHero'), home.titleBgOpacity);
+  setSectionBgOpacity(document.getElementById('homeIntro'), home.introBgOpacity);
+  setSectionBgOpacity(document.getElementById('homeClosing'), home.closingBgOpacity);
+  if (home.hasIntro2) setSectionBgOpacity(document.getElementById('homeIntro2'), home.intro2BgOpacity);
+  if (home.hasClosing2) setSectionBgOpacity(document.getElementById('homeClosing2'), home.closing2BgOpacity);
+
+  renderHomeLogo(home);
+  syncHomeSectionControls(home);
+  applySiteTheme(home);
+  document.title = title.trim() || 'פורטל תוכן';
+}
+
+function renderHomeLogo(home) {
+  const section = document.getElementById('homeLogoSection');
+  const wrap = document.getElementById('homeLogoWrap');
+  const img = document.getElementById('homeLogo');
+  if (!section || !wrap || !img) return;
+
+  const enabled = !!home.titleLogoEnabled && !!home.titleLogo;
+  const showInEdit = !!editMode;
+  const align = home.titleLogoAlign === 'left' ? 'left' : 'right';
+
+  section.hidden = !enabled && !showInEdit;
+  section.classList.toggle('home-logo-section--empty', !enabled);
+  section.classList.toggle('home-logo-section--left', align === 'left');
+  section.classList.toggle('home-logo-section--right', align === 'right');
+
+  wrap.hidden = !enabled;
+  wrap.classList.toggle('is-link', enabled && !!home.titleLogoLink);
+
+  if (!enabled) {
+    img.removeAttribute('src');
+    img.alt = '';
+    wrap.removeAttribute('href');
+    wrap.removeAttribute('target');
+    wrap.removeAttribute('rel');
+    return;
+  }
+
+  img.src = home.titleLogo;
+  img.alt = 'לוגו יחידה';
+
+  if (home.titleLogoLink) {
+    wrap.href = home.titleLogoLink;
+    wrap.target = '_blank';
+    wrap.rel = 'noopener noreferrer';
+  } else {
+    wrap.removeAttribute('href');
+    wrap.removeAttribute('target');
+    wrap.removeAttribute('rel');
+  }
+}
+
+let editingHomeSection = null;
+let homeEditImageData = '';
+let homeEditVideoFile = null;
+let homeEditVideoRemoved = false;
+let homeEditLogoData = '';
+let homeEditSnapshot = null;
+let homeEditCommitted = false;
+let homeEditPreviewTimer = null;
+
+const homeEditOverlay = document.getElementById('homeEditOverlay');
+const homeEditFields = document.getElementById('homeEditFields');
+const homeEditForm = document.getElementById('homeEditForm');
+const homeEditTitle = document.getElementById('homeEditTitle');
+
+function buildHomeDraftFromEditor() {
+  const home = JSON.parse(JSON.stringify(homeEditSnapshot || loadHome()));
+
+  if (editingHomeSection === 'hero') {
+    const titleEl = document.getElementById('homeFieldTitle');
+    const opacityEl = document.getElementById('homeFieldBgOpacity');
+    if (titleEl) home.title = titleEl.value.trim().slice(0, 10);
+    if (opacityEl) home.titleBgOpacity = clampBgOpacity(opacityEl.value);
+    home.titleImage = homeEditImageData || '';
+  }
+
+  if (editingHomeSection === 'logo') {
+    const enabledEl = document.getElementById('homeFieldLogoEnabled');
+    const linkEl = document.getElementById('homeFieldLogoLink');
+    const alignChecked = document.querySelector('input[name="homeLogoAlign"]:checked');
+    home.titleLogoEnabled = !!(enabledEl && enabledEl.checked);
+    home.titleLogoAlign = alignChecked && alignChecked.value === 'left' ? 'left' : 'right';
+    if (home.titleLogoEnabled) {
+      home.titleLogo = homeEditLogoData || '';
+      home.titleLogoLink = linkEl ? linkEl.value.trim() : '';
+    } else {
+      home.titleLogo = '';
+      home.titleLogoLink = '';
+    }
+  }
+
+  if (editingHomeSection === 'intro' || editingHomeSection === 'intro2') {
+    const kind = editingHomeSection;
+    const subtitleEl = document.getElementById('homeFieldSubtitle');
+    const introEl = document.getElementById('homeFieldIntro');
+    const opacityEl = document.getElementById('homeFieldBgOpacity');
+    if (kind === 'intro') {
+      if (subtitleEl) home.subtitle = subtitleEl.value.trim().slice(0, 10);
+    } else if (subtitleEl) {
+      home.intro2Subtitle = subtitleEl.value.trim().slice(0, 10);
+    }
+    if (introEl) home[kind + 'Text'] = introEl.value.trim();
+    if (opacityEl) home[kind + 'BgOpacity'] = clampBgOpacity(opacityEl.value);
+    home[kind + 'MediaType'] = getSelectedHomeMediaType();
+    readHomeLayoutFields(home, kind);
+    if (home[kind + 'MediaType'] === 'image') {
+      home[kind + 'Image'] = homeEditImageData || '';
+    }
+  }
+
+  if (editingHomeSection === 'closing' || editingHomeSection === 'closing2') {
+    const kind = editingHomeSection;
+    const closingEl = document.getElementById('homeFieldClosing');
+    const opacityEl = document.getElementById('homeFieldBgOpacity');
+    if (closingEl) home[kind + 'Text'] = closingEl.value.trim();
+    if (opacityEl) home[kind + 'BgOpacity'] = clampBgOpacity(opacityEl.value);
+    home[kind + 'MediaType'] = getSelectedHomeMediaType();
+    readHomeLayoutFields(home, kind);
+    if (home[kind + 'MediaType'] === 'image') {
+      home[kind + 'Image'] = homeEditImageData || '';
+    }
+  }
+
+  return home;
+}
+
+function getHomeEditorPreviewOptions() {
+  const options = {};
+  if (!editingHomeSection) return options;
+  if (
+    editingHomeSection === 'intro' ||
+    editingHomeSection === 'intro2' ||
+    editingHomeSection === 'closing' ||
+    editingHomeSection === 'closing2'
+  ) {
+    options[editingHomeSection + 'VideoFile'] = homeEditVideoFile || null;
+    options[editingHomeSection + 'VideoRemoved'] = homeEditVideoRemoved;
+  }
+  return options;
+}
+
+function scheduleHomeEditorPreview() {
+  if (!editingHomeSection || !homeEditSnapshot) return;
+  clearTimeout(homeEditPreviewTimer);
+  homeEditPreviewTimer = setTimeout(function () {
+    renderHome(buildHomeDraftFromEditor(), getHomeEditorPreviewOptions());
+  }, 50);
+}
+
+function bindHomeEditorLivePreview() {
+  if (!homeEditFields || homeEditFields.dataset.livePreviewBound === '1') return;
+  homeEditFields.dataset.livePreviewBound = '1';
+  homeEditFields.addEventListener('input', scheduleHomeEditorPreview);
+  homeEditFields.addEventListener('change', scheduleHomeEditorPreview);
+}
+
+function openHomeEditor(section) {
+  const home = loadHome();
+  editingHomeSection = section;
+  homeEditSnapshot = JSON.parse(JSON.stringify(home));
+  homeEditCommitted = false;
+  homeEditImageData = '';
+  homeEditVideoFile = null;
+  homeEditVideoRemoved = false;
+  homeEditLogoData = '';
+
+  let fieldsHtml = '';
+  let title = 'עריכת מקטע';
+
+  if (section === 'hero') {
+    title = 'עריכת כותרת';
+    homeEditImageData = home.titleImage || '';
+    fieldsHtml =
+      '<div class="form-field form-field--full">' +
+        '<label for="homeFieldTitle">כותרת (עד 10 תווים, אופציונלי)</label>' +
+        '<input type="text" id="homeFieldTitle" value="' + escapeHtml((home.title || '').slice(0, 10)) + '" maxlength="10">' +
+      '</div>' +
+      homeBgOpacityHtml(home.titleBgOpacity) +
+      homeImageFieldHtml(home.titleImage, 'תמונת כותרת (אופציונלי)');
+  }
+
+  if (section === 'logo') {
+    title = 'עריכת לוגו';
+    homeEditLogoData = home.titleLogo || '';
+    fieldsHtml = homeLogoFieldsHtml(home);
+  }
+
+  if (section === 'intro' || section === 'intro2') {
+    title = section === 'intro' ? 'עריכת כותרת משנה ופתיח' : 'עריכת פתיח 2';
+    homeEditImageData = home[section + 'Image'] || '';
+    const subtitleValue = section === 'intro'
+      ? (home.subtitle || '')
+      : (home.intro2Subtitle || '');
+    fieldsHtml =
+      '<div class="form-field form-field--full">' +
+        '<label for="homeFieldSubtitle">כותרת משנה (עד 10 תווים, אופציונלי)</label>' +
+        '<input type="text" id="homeFieldSubtitle" value="' + escapeHtml(subtitleValue.slice(0, 10)) + '" maxlength="10">' +
+      '</div>' +
+      '<div class="form-field form-field--full">' +
+        '<label for="homeFieldIntro">טקסט פתיח (אופציונלי)</label>' +
+        '<textarea id="homeFieldIntro" rows="4">' + escapeHtml(home[section + 'Text'] || '') + '</textarea>' +
+      '</div>' +
+      homeBgOpacityHtml(home[section + 'BgOpacity']) +
+      homeMediaFieldsHtml({
+        mediaType: home[section + 'MediaType'] || 'image',
+        imageUrl: home[section + 'Image'] || '',
+        videoName: home[section + 'Video'] || '',
+      }) +
+      homeSectionLayoutFieldsHtml(home, section);
+  }
+
+  if (section === 'closing' || section === 'closing2') {
+    title = section === 'closing' ? 'עריכת סגירה' : 'עריכת סגירה 2';
+    homeEditImageData = home[section + 'Image'] || '';
+    fieldsHtml =
+      '<div class="form-field form-field--full">' +
+        '<label for="homeFieldClosing">טקסט סגירה (אופציונלי)</label>' +
+        '<textarea id="homeFieldClosing" rows="4">' + escapeHtml(home[section + 'Text'] || '') + '</textarea>' +
+      '</div>' +
+      homeBgOpacityHtml(home[section + 'BgOpacity']) +
+      homeMediaFieldsHtml({
+        mediaType: home[section + 'MediaType'] || 'image',
+        imageUrl: home[section + 'Image'] || '',
+        videoName: home[section + 'Video'] || '',
+      }) +
+      homeSectionLayoutFieldsHtml(home, section);
+  }
+
+  homeEditTitle.textContent = title;
+  homeEditFields.innerHTML = fieldsHtml;
+  homeEditOverlay.hidden = false;
+  homeEditOverlay.classList.add('home-edit-live');
+
+  bindHomeNoBgToggle();
+  bindHomeMediaTypeToggle();
+  bindHomeLogoToggle();
+  bindHomeLayoutFields();
+  bindHomeBgOpacityField();
+  bindHomeEditorMediaInputs();
+  bindHomeEditorLogoInputs();
+  bindHomeEditorLivePreview();
+}
+
+function homeLogoFieldsHtml(home) {
+  const enabled = !!home.titleLogoEnabled;
+  const logo = home.titleLogo || '';
+  const link = home.titleLogoLink || '';
+  const align = home.titleLogoAlign === 'left' ? 'left' : 'right';
+
+  return (
+    '<div class="form-field form-field--full">' +
+      '<label class="checkbox-label" for="homeFieldLogoEnabled" style="margin-top:0;">' +
+        '<input type="checkbox" id="homeFieldLogoEnabled"' + (enabled ? ' checked' : '') + '>' +
+        '<span>לוגו</span>' +
+      '</label>' +
+      '<p class="field-subhint">הוספת לוגו יחידה בשורה מעל הכותרת, עם קישור אופציונלי לאתר</p>' +
+    '</div>' +
+    '<div id="homeLogoFieldsWrap"' + (enabled ? '' : ' hidden') + '>' +
+      '<div class="form-field form-field--full">' +
+        '<label>תמונת לוגו</label>' +
+        '<label class="upload-box" for="homeFieldLogo">' +
+          '<input type="file" id="homeFieldLogo" accept="image/*" hidden>' +
+          '<span class="upload-icon">🏷️</span>' +
+          '<span class="upload-text">לחצו להעלאת לוגו (תומך בשקיפות PNG)</span>' +
+        '</label>' +
+        '<img class="home-edit-preview' + (logo ? ' is-visible' : '') + '" id="homeFieldLogoPreview" src="' + (logo || '') + '" alt="">' +
+        (logo ? '<button type="button" class="btn-cancel" id="homeClearLogo" style="margin-top:10px;">הסרת לוגו</button>' : '') +
+      '</div>' +
+      '<div class="form-field form-field--full">' +
+        '<span class="field-label">מיקום הלוגו</span>' +
+        '<div class="action-checks">' +
+          '<label class="action-check" for="homeLogoAlignRight">' +
+            '<input type="radio" name="homeLogoAlign" id="homeLogoAlignRight" value="right"' +
+              (align === 'right' ? ' checked' : '') + '>' +
+            '<span>ימין</span>' +
+          '</label>' +
+          '<label class="action-check" for="homeLogoAlignLeft">' +
+            '<input type="radio" name="homeLogoAlign" id="homeLogoAlignLeft" value="left"' +
+              (align === 'left' ? ' checked' : '') + '>' +
+            '<span>שמאל</span>' +
+          '</label>' +
+        '</div>' +
+      '</div>' +
+      '<div class="form-field form-field--full">' +
+        '<label for="homeFieldLogoLink">קישור לאתר (אופציונלי)</label>' +
+        '<input type="text" id="homeFieldLogoLink" placeholder="https://..." value="' + escapeHtml(link) + '">' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function bindHomeLogoToggle() {
+  const checkbox = document.getElementById('homeFieldLogoEnabled');
+  const wrap = document.getElementById('homeLogoFieldsWrap');
+  if (!checkbox || !wrap) return;
+
+  function sync() {
+    wrap.hidden = !checkbox.checked;
+  }
+
+  checkbox.addEventListener('change', sync);
+  sync();
+}
+
+function bindHomeEditorLogoInputs() {
+  const logoInput = document.getElementById('homeFieldLogo');
+  if (logoInput) {
+    logoInput.addEventListener('change', async function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      homeEditLogoData = await readFileAsDataURL(file, 400, null, true);
+      const preview = document.getElementById('homeFieldLogoPreview');
+      preview.src = homeEditLogoData;
+      preview.classList.add('is-visible');
+      scheduleHomeEditorPreview();
+    });
+  }
+
+  const clearLogo = document.getElementById('homeClearLogo');
+  if (clearLogo) {
+    clearLogo.addEventListener('click', function () {
+      homeEditLogoData = '';
+      const preview = document.getElementById('homeFieldLogoPreview');
+      preview.src = '';
+      preview.classList.remove('is-visible');
+      clearLogo.remove();
+      scheduleHomeEditorPreview();
+    });
+  }
+}
+
+function bindHomeEditorMediaInputs() {
+  const imageInput = document.getElementById('homeFieldImage');
+  if (imageInput) {
+    imageInput.addEventListener('change', async function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      homeEditImageData = await readFileAsDataURL(file, 1400, 21 / 9);
+      const preview = document.getElementById('homeFieldImagePreview');
+      preview.src = homeEditImageData;
+      preview.classList.add('is-visible');
+      scheduleHomeEditorPreview();
+    });
+  }
+
+  const clearBtn = document.getElementById('homeClearImage');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function () {
+      homeEditImageData = '';
+      const preview = document.getElementById('homeFieldImagePreview');
+      preview.src = '';
+      preview.classList.remove('is-visible');
+      clearBtn.remove();
+      scheduleHomeEditorPreview();
+    });
+  }
+
+  const videoFile = document.getElementById('homeFieldVideoFile');
+  if (videoFile) {
+    videoFile.addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      homeEditVideoFile = file;
+      homeEditVideoRemoved = false;
+      const nameEl = document.getElementById('homeVideoFileName');
+      if (nameEl) {
+        nameEl.hidden = false;
+        nameEl.innerHTML = 'קובץ נבחר: <strong dir="ltr">' + escapeHtml(file.name) + '</strong>';
+      }
+      scheduleHomeEditorPreview();
+    });
+  }
+
+  const clearVideo = document.getElementById('homeClearVideo');
+  if (clearVideo) {
+    clearVideo.addEventListener('click', function () {
+      homeEditVideoFile = null;
+      homeEditVideoRemoved = true;
+      if (videoFile) videoFile.value = '';
+      const nameEl = document.getElementById('homeVideoFileName');
+      if (nameEl) {
+        nameEl.hidden = true;
+        nameEl.innerHTML = '';
+      }
+      clearVideo.remove();
+      scheduleHomeEditorPreview();
+    });
+  }
+}
+
+function closeHomeEditor() {
+  clearTimeout(homeEditPreviewTimer);
+  const shouldRevert = !homeEditCommitted && !!homeEditSnapshot;
+  homeEditOverlay.hidden = true;
+  homeEditOverlay.classList.remove('home-edit-live');
+  editingHomeSection = null;
+  homeEditImageData = '';
+  homeEditVideoFile = null;
+  homeEditVideoRemoved = false;
+  homeEditLogoData = '';
+
+  if (shouldRevert) {
+    renderHome();
+  }
+
+  homeEditSnapshot = null;
+  homeEditCommitted = false;
+}
+
+async function saveHomeEditor(e) {
+  e.preventDefault();
+  if (!editingHomeSection) return;
+
+  const home = loadHome();
+
+  if (editingHomeSection === 'hero') {
+    home.title = document.getElementById('homeFieldTitle').value.trim().slice(0, 10);
+    home.titleBgOpacity = clampBgOpacity(document.getElementById('homeFieldBgOpacity').value);
+    home.titleImage = homeEditImageData || '';
+  }
+
+  if (editingHomeSection === 'logo') {
+    home.titleLogoEnabled = document.getElementById('homeFieldLogoEnabled').checked;
+    const alignChecked = document.querySelector('input[name="homeLogoAlign"]:checked');
+    home.titleLogoAlign = alignChecked && alignChecked.value === 'left' ? 'left' : 'right';
+    if (home.titleLogoEnabled) {
+      home.titleLogo = homeEditLogoData || '';
+      home.titleLogoLink = document.getElementById('homeFieldLogoLink').value.trim();
+    } else {
+      home.titleLogo = '';
+      home.titleLogoLink = '';
+    }
+  }
+
+  if (editingHomeSection === 'intro' || editingHomeSection === 'intro2') {
+    const kind = editingHomeSection;
+    if (kind === 'intro') {
+      home.subtitle = document.getElementById('homeFieldSubtitle').value.trim().slice(0, 10);
+    } else {
+      home.intro2Subtitle = document.getElementById('homeFieldSubtitle').value.trim().slice(0, 10);
+    }
+    home[kind + 'Text'] = document.getElementById('homeFieldIntro').value.trim();
+    home[kind + 'BgOpacity'] = clampBgOpacity(document.getElementById('homeFieldBgOpacity').value);
+    home[kind + 'MediaType'] = getSelectedHomeMediaType();
+    readHomeLayoutFields(home, kind);
+    if (home[kind + 'MediaType'] === 'video') {
+      try {
+        if (homeEditVideoRemoved) {
+          await deleteHomeVideo(kind);
+          home[kind + 'Video'] = '';
+        } else if (homeEditVideoFile) {
+          await putHomeVideo(kind, homeEditVideoFile);
+          home[kind + 'Video'] = homeEditVideoFile.name;
+          home[kind + 'SizeAuto'] = true;
+        }
+      } catch (err) {
+        alert(err.message || 'שגיאה בשמירת הסרטון');
+        return;
+      }
+    } else {
+      home[kind + 'Image'] = homeEditImageData || '';
+    }
+  }
+
+  if (editingHomeSection === 'closing' || editingHomeSection === 'closing2') {
+    const kind = editingHomeSection;
+    home[kind + 'Text'] = document.getElementById('homeFieldClosing').value.trim();
+    home[kind + 'BgOpacity'] = clampBgOpacity(document.getElementById('homeFieldBgOpacity').value);
+    home[kind + 'MediaType'] = getSelectedHomeMediaType();
+    readHomeLayoutFields(home, kind);
+    if (home[kind + 'MediaType'] === 'video') {
+      try {
+        if (homeEditVideoRemoved) {
+          await deleteHomeVideo(kind);
+          home[kind + 'Video'] = '';
+        } else if (homeEditVideoFile) {
+          await putHomeVideo(kind, homeEditVideoFile);
+          home[kind + 'Video'] = homeEditVideoFile.name;
+          home[kind + 'SizeAuto'] = true;
+        }
+      } catch (err) {
+        alert(err.message || 'שגיאה בשמירת הסרטון');
+        return;
+      }
+    } else {
+      home[kind + 'Image'] = homeEditImageData || '';
+    }
+  }
+
+  if (!saveHome(home)) {
+    alert('אין מספיק מקום לשמירה. נסו תמונה קטנה יותר.');
+    return;
+  }
+
+  homeEditCommitted = true;
+  await renderHome();
+  closeHomeEditor();
+}
+
 /* ===== אירועים ===== */
 
 btnNew.addEventListener('click', openWizard);
 btnEdit.addEventListener('click', toggleEditMode);
 btnCancel.addEventListener('click', closeWizard);
+
+document.getElementById('siteBgColor').addEventListener('input', function (e) {
+  updateHomeField({ siteBgColor: e.target.value });
+});
+
+document.getElementById('siteSecondaryColor').addEventListener('input', function (e) {
+  updateHomeField({ siteSecondaryColor: e.target.value });
+});
+
+document.getElementById('siteFont').addEventListener('change', function (e) {
+  updateHomeField({ siteFont: e.target.value });
+});
+
+document.getElementById('siteFontUpload').addEventListener('change', async function (e) {
+  const file = e.target.files[0];
+  e.target.value = '';
+  await handleFontUpload(file, 'site');
+});
+
+document.getElementById('cardFontUpload').addEventListener('change', async function (e) {
+  const file = e.target.files[0];
+  e.target.value = '';
+  await handleFontUpload(file, 'card');
+});
+
+document.getElementById('siteBgImage').addEventListener('change', async function (e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const dataUrl = await readFileAsDataURL(file, 1600, 16 / 9);
+  updateHomeField({ siteBgImage: dataUrl });
+  e.target.value = '';
+});
+
+document.getElementById('siteBgClear').addEventListener('click', function () {
+  updateHomeField({ siteBgImage: '' });
+});
+
+document.getElementById('cardsPerRow').addEventListener('input', function (e) {
+  const value = Number(e.target.value);
+  document.getElementById('cardsPerRowValue').textContent = String(value);
+  updateHomeField({ cardsPerRow: value });
+});
+
+document.getElementById('cardsGap').addEventListener('input', function (e) {
+  const value = Number(e.target.value);
+  document.getElementById('cardsGapValue').textContent = value + 'px';
+  updateHomeField({ cardsGap: value });
+});
+
+document.querySelectorAll('[data-edit-home]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    openHomeEditor(btn.dataset.editHome);
+  });
+});
+
+document.querySelectorAll('[data-dup-home]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    duplicateHomeSection(btn.dataset.dupHome);
+  });
+});
+
+document.querySelectorAll('[data-delete-home]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    deleteSecondaryHomeSection(btn.dataset.deleteHome);
+  });
+});
+
+homeEditForm.addEventListener('submit', saveHomeEditor);
+document.getElementById('homeEditCancel').addEventListener('click', closeHomeEditor);
+document.getElementById('homeEditCancelBtn').addEventListener('click', closeHomeEditor);
+homeEditOverlay.addEventListener('click', function (e) {
+  if (e.target === homeEditOverlay) closeHomeEditor();
+});
 
 btnPrev.addEventListener('click', function () {
   if (currentStep > 1) goToStep(currentStep - 1);
@@ -1306,7 +3002,9 @@ modalOverlay.addEventListener('click', function (e) {
 
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') {
-    if (!detailOverlay.hidden) {
+    if (!homeEditOverlay.hidden) {
+      closeHomeEditor();
+    } else if (!detailOverlay.hidden) {
       closeCardDetail();
     } else if (!modalOverlay.hidden) {
       closeWizard();
@@ -1322,4 +3020,18 @@ detailOverlay.addEventListener('click', function (e) {
 });
 
 bindLiveInputs();
-renderCards(loadCards());
+bindSectionResizeHandles();
+syncResizeHandlesVisibility();
+
+async function initApp() {
+  try {
+    await loadAndRegisterCustomFonts();
+  } catch (err) {
+    console.warn('Custom fonts unavailable', err);
+  }
+  populateFontSelects();
+  renderHome();
+  renderCards(loadCards());
+}
+
+initApp();
