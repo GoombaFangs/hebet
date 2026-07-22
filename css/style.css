@@ -191,6 +191,67 @@ body {
   transform: scale(1.1);
 }
 
+.card-edit {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(74, 124, 63, 0.95);
+  color: #fff;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.card-edit:hover {
+  background: #3d6834;
+  transform: scale(1.1);
+}
+
+.card--editing .card-edit {
+  right: 42px;
+}
+
+.card-edit--quiet {
+  opacity: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.card--clickable:hover .card-edit--quiet,
+.card-edit--quiet:focus {
+  opacity: 1;
+}
+
+.detail-edit-btn {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px 20px;
+  border: 2px solid var(--card-secondary, #4a7c3f);
+  border-radius: 28px;
+  background: #fff;
+  color: var(--card-secondary, #4a7c3f);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.detail-edit-btn:hover {
+  background: #f0f7ee;
+  transform: scale(1.02);
+}
+
 .card-image {
   height: 140px;
   display: flex;
@@ -198,19 +259,53 @@ body {
   justify-content: center;
   position: relative;
   background-size: cover;
-  background-position: center;
+  background-position: center center;
+  background-repeat: no-repeat;
+  overflow: hidden;
+}
+
+.card-bg-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.card-bg-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(160deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.4));
+}
+
+.card-image .card-logo,
+.card-image .card-title {
+  position: relative;
+  z-index: 2;
+}
+
+.card-image .card-logo {
+  position: absolute;
+  z-index: 3;
 }
 
 .card-logo {
   position: absolute;
   top: 8px;
   left: 8px;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   object-fit: contain;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 2px;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  z-index: 2;
+  mix-blend-mode: normal;
 }
 
 .card-title {
@@ -227,18 +322,20 @@ body {
   padding: 12px 14px;
 }
 
-.card-body p {
+.card-body p,
+.card-notes {
   font-size: 0.82rem;
-  line-height: 1.5;
+  line-height: 1.45;
   color: #444;
   text-align: center;
 }
 
 .card-unit {
-  font-size: 0.78rem !important;
-  font-weight: 600;
-  color: #666 !important;
-  margin-bottom: 4px;
+  font-size: 0.98rem !important;
+  font-weight: 700;
+  color: #222 !important;
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
 }
 
 .card-meta {
@@ -257,7 +354,7 @@ body {
 }
 
 .btn-primary {
-  background-color: #e87722;
+  background-color: var(--card-primary, #e87722);
   color: #fff;
   font-size: 0.85rem;
   font-weight: 600;
@@ -283,13 +380,14 @@ body {
   pointer-events: none;
 }
 
-/* ===== תצוגת פרטים ===== */
+/* ===== תצוגת פרטים — Card Flip ===== */
 .detail-overlay {
   position: fixed;
   inset: 0;
   background: rgba(15, 15, 20, 0.55);
   z-index: 1100;
-  perspective: 1200px;
+  perspective: 1400px;
+  perspective-origin: 50% 45%;
   backdrop-filter: blur(4px);
 }
 
@@ -300,28 +398,96 @@ body {
 .detail-fly {
   position: fixed;
   z-index: 1101;
-  background: #fff;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
   transform-style: preserve-3d;
   transition:
-    top 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-    left 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-    width 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-    height 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-    border-radius 0.45s ease,
-    opacity 0.35s ease;
+    top 0.85s cubic-bezier(0.65, 0, 0.35, 1),
+    left 0.85s cubic-bezier(0.65, 0, 0.35, 1),
+    width 0.85s cubic-bezier(0.65, 0, 0.35, 1),
+    height 0.85s cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-.detail-fly.is-open {
-  top: 50% !important;
-  left: 50% !important;
-  width: min(520px, calc(100vw - 32px)) !important;
-  height: min(88vh, 720px) !important;
-  transform: translate(-50%, -50%) rotateY(360deg) scale(1) !important;
-  border-radius: 16px !important;
-  opacity: 1 !important;
+.detail-fly.is-floating {
+  animation: detail-float 12s ease-in-out infinite;
+}
+
+@keyframes detail-float {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(5px, -10px);
+  }
+  40% {
+    transform: translate(-6px, -6px);
+  }
+  60% {
+    transform: translate(4px, -12px);
+  }
+  80% {
+    transform: translate(-3px, -5px);
+  }
+}
+
+.detail-flipper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.85s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.detail-fly.is-flipped .detail-flipper {
+  transform: rotateY(180deg);
+}
+
+.detail-fly.is-closing .detail-flipper {
+  transform: rotateY(0deg);
+}
+
+.detail-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+/* הפרדה קלה בין הפנים — כמו בסרטון */
+.detail-face--front {
+  transform: translateZ(1px);
+}
+
+.detail-face--back {
+  transform: rotateY(180deg) translateZ(1px);
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-face--front .card {
+  height: 100%;
+  box-shadow: none;
+  border-radius: 0;
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-face--front .card:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.detail-face--front .card-image {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}
+
+.detail-face--front .btn-view {
+  pointer-events: none;
 }
 
 .detail-close {
@@ -365,6 +531,29 @@ body {
   background-size: cover;
   background-position: center;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.detail-hero--photo::after {
+  display: none;
+}
+
+.detail-hero .card-bg-photo {
+  z-index: 0;
+}
+
+.detail-hero .card-bg-shade {
+  z-index: 1;
+}
+
+.detail-hero .detail-logo-wrap,
+.detail-hero .detail-title {
+  position: relative;
+  z-index: 2;
+}
+
+.detail-hero .detail-logo-wrap {
+  position: absolute;
 }
 
 .detail-hero::after {
@@ -394,9 +583,9 @@ body {
   z-index: 2;
   width: 56px;
   height: 56px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 10px;
-  padding: 4px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -429,8 +618,8 @@ body {
 
 .detail-label {
   font-size: 0.82rem;
-  color: #888;
-  font-weight: 600;
+  color: var(--card-secondary, #4a7c3f);
+  font-weight: 700;
   flex-shrink: 0;
 }
 
@@ -491,6 +680,7 @@ body {
   padding: 14px 20px;
   border-radius: 28px;
   margin-top: 8px;
+  background: var(--card-primary, #e87722);
   transition: filter 0.15s ease, transform 0.15s ease;
 }
 
@@ -508,9 +698,9 @@ body {
 .btn-tag {
   font-size: 0.72rem;
   padding: 4px 10px;
-  border: 1px solid #ccc;
+  border: 1.5px solid var(--card-secondary, #4a7c3f);
   border-radius: 20px;
-  color: #555;
+  color: var(--card-secondary, #4a7c3f);
   background: #fff;
   white-space: nowrap;
 }
@@ -676,8 +866,50 @@ body {
   gap: 14px 16px;
 }
 
-.form-grid--colors {
-  max-width: 400px;
+.form-grid--colors,
+.form-grid--design {
+  max-width: 520px;
+}
+
+.field-hint {
+  font-weight: 400;
+  color: #888;
+  font-size: 0.78rem;
+}
+
+.field-subhint {
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.char-count {
+  display: block;
+  text-align: left;
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 4px;
+}
+
+.checkbox-label {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 1rem !important;
+  padding: 12px 14px;
+  background: #f7faf6;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  margin-top: 22px;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #4a7c3f;
+  cursor: pointer;
 }
 
 .form-field--full {
@@ -773,7 +1005,7 @@ body {
 .upload-preview--logo {
   object-fit: contain;
   padding: 8px;
-  background: #fff;
+  background: transparent;
 }
 
 .extra-thumbs {

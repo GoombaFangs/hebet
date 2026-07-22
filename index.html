@@ -27,11 +27,16 @@
 
   <main class="cards-grid" id="cardsGrid"></main>
 
-  <!-- תצוגת פרטי כרטיס -->
+  <!-- תצוגת פרטי כרטיס — card flip -->
   <div class="detail-overlay" id="detailOverlay" hidden>
     <div class="detail-fly" id="detailFly">
-      <button type="button" class="detail-close" id="detailClose" aria-label="סגירה">×</button>
-      <div class="detail-content" id="detailContent"></div>
+      <div class="detail-flipper" id="detailFlipper">
+        <div class="detail-face detail-face--front" id="detailFront"></div>
+        <div class="detail-face detail-face--back">
+          <button type="button" class="detail-close" id="detailClose" aria-label="סגירה">×</button>
+          <div class="detail-content" id="detailContent"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -77,17 +82,17 @@
           <div class="form-grid">
             <div class="form-field">
               <label for="pageName">שם הדף <span class="req">*</span></label>
-              <input type="text" id="pageName" name="pageName" placeholder="לדוגמה: מבוא ליחידה" required>
+              <input type="text" id="pageName" name="pageName" placeholder="לדוגמה: מבוא ליחידה" maxlength="10" required>
             </div>
 
             <div class="form-field">
               <label for="unitName">שם היחידה</label>
-              <input type="text" id="unitName" name="unitName" placeholder="אופציונלי">
+              <input type="text" id="unitName" name="unitName" placeholder="אופציונלי" maxlength="10">
             </div>
 
             <div class="form-field form-field--full">
               <label for="notes">הערות</label>
-              <textarea id="notes" name="notes" rows="2" placeholder="הערות נוספות (אופציונלי)"></textarea>
+              <textarea id="notes" name="notes" rows="2" maxlength="30" placeholder="הערות נוספות (אופציונלי)"></textarea>
             </div>
 
             <div class="form-field">
@@ -173,15 +178,16 @@
         <!-- שלב 3: עיצוב -->
         <section class="wizard-panel" data-panel="3" hidden>
           <h3>עיצוב</h3>
-          <p class="wizard-hint">בחרו את צבעי המותג של הכרטיס</p>
+          <p class="wizard-hint">בחרו צבעים, גופן, והאם להציג את התמונה המייצגת ברקע</p>
 
-          <div class="form-grid form-grid--colors">
+          <div class="form-grid form-grid--design">
             <div class="form-field">
               <label for="primaryColor">צבע ראשי</label>
               <div class="color-picker-row">
                 <input type="color" id="primaryColor" name="primaryColor" value="#e87722">
                 <span class="color-hex" id="primaryColorHex">#e87722</span>
               </div>
+              <p class="field-subhint">כפתור צפייה + חלק משילוב הרקע</p>
             </div>
 
             <div class="form-field">
@@ -190,6 +196,31 @@
                 <input type="color" id="secondaryColor" name="secondaryColor" value="#4a7c3f">
                 <span class="color-hex" id="secondaryColorHex">#4a7c3f</span>
               </div>
+              <p class="field-subhint">מסגרות תגיות, תוויות בכרטיס פתוח + שילוב רקע</p>
+            </div>
+
+            <div class="form-field">
+              <label for="cardFont">גופן</label>
+              <select id="cardFont" name="cardFont">
+                <option value="'Segoe UI', Tahoma, Arial, sans-serif">Segoe UI</option>
+                <option value="Arial, Helvetica, sans-serif">Arial</option>
+                <option value="Tahoma, Geneva, sans-serif">Tahoma</option>
+                <option value="Gisha, Arial, sans-serif">Gisha</option>
+                <option value="David, 'Times New Roman', serif">David</option>
+                <option value="Miriam, Arial, sans-serif">Miriam</option>
+                <option value="Narkisim, Arial, sans-serif">Narkisim</option>
+                <option value="'Times New Roman', Times, serif">Times New Roman</option>
+                <option value="Georgia, serif">Georgia</option>
+                <option value="'Courier New', Courier, monospace">Courier New</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label class="checkbox-label" for="useImageBg">
+                <input type="checkbox" id="useImageBg" name="useImageBg" checked>
+                <span>תמונה</span>
+              </label>
+              <p class="field-subhint">מסומן = התמונה המייצגת ברקע · לא מסומן = רקע מצבעים בלבד</p>
             </div>
           </div>
         </section>
@@ -201,7 +232,7 @@
           <button type="button" class="wizard-nav-btn wizard-nav-btn--back" id="btnPrev" hidden>→ הקודם</button>
           <p class="wizard-nav-hint" id="navHint">בואו נתחיל</p>
           <button type="button" class="wizard-nav-btn wizard-nav-btn--next" id="btnNext">הבא ←</button>
-          <button type="button" class="wizard-nav-btn wizard-nav-btn--finish" id="btnFinish" hidden>✓ סיום</button>
+          <button type="button" class="wizard-nav-btn wizard-nav-btn--finish" id="btnFinish" hidden>✓ שמירה</button>
         </div>
       </form>
     </div>

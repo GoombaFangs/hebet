@@ -42,6 +42,7 @@ const navHint = document.getElementById('navHint');
 let editMode = false;
 let draggedElement = null;
 let currentStep = 1;
+let editingCardId = null;
 const TOTAL_STEPS = 3;
 
 const wizardData = createEmptyWizardData();
@@ -61,6 +62,8 @@ function createEmptyWizardData() {
     logo: '',
     primaryColor: '#e87722',
     secondaryColor: '#4a7c3f',
+    fontFamily: "'Segoe UI', Tahoma, Arial, sans-serif",
+    useImageBg: true,
   };
 }
 
@@ -118,43 +121,81 @@ function formatDate(dateStr) {
 
 /* ===== רינדור כרטיסים ברשת ===== */
 
+function formatNotesHtml(notes) {
+  const text = (notes || '').slice(0, 30);
+  if (!text) return '';
+  if (text.length <= 15) return escapeHtml(text);
+  return escapeHtml(text.slice(0, 15)) + '<br>' + escapeHtml(text.slice(15));
+}
+
+function getColorBlend(primary, secondary) {
+  const p = primary || '#e87722';
+  const s = secondary || '#4a7c3f';
+  return 'linear-gradient(135deg, ' + p + ' 0%, ' + s + ' 100%)';
+}
+
+function shouldShowImageBg(card) {
+  return card.useImageBg !== false && !!card.mainImage;
+}
+
 function getCardImageStyle(card) {
-  if (card.mainImage) {
-    return 'background-image: url(' + JSON.stringify(card.mainImage) + '); background-size: cover; background-position: center;';
+  if (shouldShowImageBg(card)) {
+    return 'background-color: #222;';
   }
-  if (card.primaryColor && card.secondaryColor) {
-    return 'background: linear-gradient(135deg, ' + card.primaryColor + ', ' + card.secondaryColor + ');';
-  }
-  return 'background: ' + (card.gradient || GRADIENTS[0]) + ';';
+  return 'background-image: ' + getColorBlend(card.primaryColor, card.secondaryColor) + ';';
+}
+
+function getCardBgPhotoHtml(card) {
+  if (!shouldShowImageBg(card)) return '';
+  return (
+    '<img class="card-bg-photo" src="' + card.mainImage + '" alt="">' +
+    '<span class="card-bg-shade" aria-hidden="true"></span>'
+  );
+}
+
+function getCardThemeStyle(card) {
+  const primary = card.primaryColor || '#e87722';
+  const secondary = card.secondaryColor || '#4a7c3f';
+  // מרכאות בודדות — כדי לא לשבור את מאפיין style ב-HTML
+  const font = (card.fontFamily || "'Segoe UI', Tahoma, Arial, sans-serif").replace(/"/g, "'");
+  return (
+    'font-family: ' + font + ';' +
+    '--card-primary:' + primary + ';' +
+    '--card-secondary:' + secondary + ';'
+  );
 }
 
 function buildCardInner(card) {
   const typeTag = card.projectType || 'מצגת';
   const classTag = card.classification || 'שמור';
   const primary = card.primaryColor || '#e87722';
+  const secondary = card.secondaryColor || '#4a7c3f';
   const href = card.projectLink || card.link || '';
   const logoHtml = card.logo
     ? '<img class="card-logo" src="' + card.logo + '" alt="">'
     : '';
-  const unitLine = card.unitName
-    ? '<p class="card-unit">' + escapeHtml(card.unitName) + '</p>'
+  const titleRaw = (card.title || '').slice(0, 10);
+  const unitRaw = (card.unitName || '').slice(0, 10);
+  const unitLine = unitRaw
+    ? '<p class="card-unit">' + escapeHtml(unitRaw) + '</p>'
     : '';
   const desc = card.notes || card.description || '';
 
   return (
-    '<div class="card-image" style="' + getCardImageStyle(card) + '">' +
+    '<div class="card-image' + (shouldShowImageBg(card) ? ' card-image--photo' : '') + '" style="' + getCardImageStyle(card) + '">' +
+      getCardBgPhotoHtml(card) +
       logoHtml +
-      '<span class="card-title">' + escapeHtml(card.title) + '</span>' +
+      '<span class="card-title">' + escapeHtml(titleRaw) + '</span>' +
     '</div>' +
     '<div class="card-body">' +
       unitLine +
-      '<p>' + escapeHtml(desc) + '</p>' +
+      '<p class="card-notes">' + formatNotesHtml(desc) + '</p>' +
     '</div>' +
     '<div class="card-footer">' +
-      '<button type="button" class="btn-primary btn-view" data-link="' + escapeHtml(href) + '" style="background-color: ' + primary + ';">צפייה</button>' +
+      '<button type="button" class="btn-primary btn-view" data-link="' + escapeHtml(href) + '" style="background-color:' + primary + ';">צפייה</button>' +
       '<div class="btn-tags">' +
-        '<span class="btn-tag">' + escapeHtml(typeTag) + '</span>' +
-        '<span class="btn-tag">' + escapeHtml(classTag) + '</span>' +
+        '<span class="btn-tag" style="border-color:' + secondary + ';color:' + secondary + ';">' + escapeHtml(typeTag) + '</span>' +
+        '<span class="btn-tag" style="border-color:' + secondary + ';color:' + secondary + ';">' + escapeHtml(classTag) + '</span>' +
       '</div>' +
     '</div>'
   );
@@ -164,7 +205,8 @@ function renderCards(cards) {
   if (editMode) {
     cardsGrid.innerHTML = cards.map(function (card, index) {
       return (
-        '<div class="card card--editing" draggable="true" data-id="' + card.id + '" style="animation-delay: ' + (index % 3) * 0.08 + 's">' +
+        '<div class="card card--editing" draggable="true" data-id="' + card.id + '" style="animation-delay: ' + (index % 3) * 0.08 + 's; ' + getCardThemeStyle(card) + '">' +
+          '<button type="button" class="card-edit" data-id="' + card.id + '" aria-label="עריכת כרטיס" title="עריכה">✎</button>' +
           '<button type="button" class="card-delete" data-id="' + card.id + '" aria-label="מחיקת כרטיס">×</button>' +
           buildCardInner(card) +
         '</div>'
@@ -172,15 +214,18 @@ function renderCards(cards) {
     }).join('');
     setupDragAndDrop();
     setupDeleteButtons();
+    setupEditButtons();
   } else {
     cardsGrid.innerHTML = cards.map(function (card) {
       return (
-        '<div class="card card--clickable" data-id="' + card.id + '" role="button" tabindex="0">' +
+        '<div class="card card--clickable" data-id="' + card.id + '" role="button" tabindex="0" style="' + getCardThemeStyle(card) + '">' +
+          '<button type="button" class="card-edit card-edit--quiet" data-id="' + card.id + '" aria-label="עריכת כרטיס" title="עריכה">✎</button>' +
           buildCardInner(card) +
         '</div>'
       );
     }).join('');
     setupCardClicks();
+    setupEditButtons();
   }
 }
 
@@ -240,10 +285,20 @@ function setupDeleteButtons() {
   });
 }
 
+function setupEditButtons() {
+  cardsGrid.querySelectorAll('.card-edit').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      e.preventDefault();
+      openWizardForEdit(btn.dataset.id);
+    });
+  });
+}
+
 function setupCardClicks() {
   cardsGrid.querySelectorAll('.card--clickable').forEach(function (cardEl) {
     cardEl.addEventListener('click', function (e) {
-      if (e.target.closest('.btn-view')) return;
+      if (e.target.closest('.btn-view') || e.target.closest('.card-edit')) return;
       openCardDetail(cardEl.dataset.id, cardEl);
     });
 
@@ -272,14 +327,14 @@ function setupCardClicks() {
 
 const detailOverlay = document.getElementById('detailOverlay');
 const detailFly = document.getElementById('detailFly');
+const detailFront = document.getElementById('detailFront');
 const detailContent = document.getElementById('detailContent');
 const detailClose = document.getElementById('detailClose');
 
 let detailOriginRect = null;
+let floatTimer = null;
 
 function buildDetailHtml(card) {
-  const primary = card.primaryColor || '#e87722';
-  const secondary = card.secondaryColor || '#4a7c3f';
   const link = card.projectLink || card.link || '';
   const notes = card.notes || card.description || '—';
 
@@ -292,7 +347,8 @@ function buildDetailHtml(card) {
     : '';
 
   return (
-    '<div class="detail-hero" style="' + getCardImageStyle(card) + '">' +
+    '<div class="detail-hero' + (shouldShowImageBg(card) ? ' detail-hero--photo' : '') + '" style="' + getCardImageStyle(card) + '">' +
+      getCardBgPhotoHtml(card) +
       logoBlock +
       '<h2 class="detail-title">' + escapeHtml(card.title) + '</h2>' +
     '</div>' +
@@ -305,15 +361,11 @@ function buildDetailHtml(card) {
         row('סוג פרויקט', card.projectType || '—') +
         row('הערות', notes) +
       '</div>' +
-      '<div class="detail-colors">' +
-        '<span class="detail-color-chip" style="background:' + primary + '" title="צבע ראשי"></span>' +
-        '<span class="detail-color-chip" style="background:' + secondary + '" title="צבע משני"></span>' +
-        '<span class="detail-color-label">צבעי מותג</span>' +
-      '</div>' +
       (extras ? '<div class="detail-extras"><h4>תמונות נוספות</h4><div class="detail-extras-grid">' + extras + '</div></div>' : '') +
       (link
-        ? '<a class="detail-open-link" href="' + escapeHtml(link) + '" target="_blank" rel="noopener" style="background:' + primary + ';">פתיחת קישור ←</a>'
+        ? '<a class="detail-open-link" href="' + escapeHtml(link) + '" target="_blank" rel="noopener">פתיחת קישור ←</a>'
         : '') +
+      '<button type="button" class="detail-edit-btn" data-id="' + card.id + '">✎ עריכת כרטיס</button>' +
     '</div>'
   );
 }
@@ -327,73 +379,114 @@ function row(label, value) {
   );
 }
 
+function getDetailTargetRect() {
+  const width = Math.min(520, window.innerWidth - 32);
+  const height = Math.min(window.innerHeight * 0.88, 720);
+  return {
+    top: (window.innerHeight - height) / 2,
+    left: (window.innerWidth - width) / 2,
+    width: width,
+    height: height,
+  };
+}
+
 function openCardDetail(id, cardEl) {
   const card = loadCards().find(function (c) { return c.id === id; });
   if (!card) return;
 
+  if (floatTimer) {
+    clearTimeout(floatTimer);
+    floatTimer = null;
+  }
+
   detailOriginRect = cardEl.getBoundingClientRect();
+  const target = getDetailTargetRect();
+
+  detailFront.innerHTML = '<div class="card" style="' + getCardThemeStyle(card) + '">' + buildCardInner(card) + '</div>';
   detailContent.innerHTML = buildDetailHtml(card);
+  detailFly.style.setProperty('--card-primary', card.primaryColor || '#e87722');
+  detailFly.style.setProperty('--card-secondary', card.secondaryColor || '#4a7c3f');
+
+  const detailEditBtn = detailContent.querySelector('.detail-edit-btn');
+  if (detailEditBtn) {
+    detailEditBtn.addEventListener('click', function () {
+      const id = card.id;
+      closeCardDetail(true);
+      openWizardForEdit(id);
+    });
+  }
 
   detailOverlay.hidden = false;
-  detailFly.classList.remove('is-open', 'is-closing');
+  detailFly.classList.remove('is-flipped', 'is-closing', 'is-floating');
 
-  // מיקום התחלתי = מיקום הריבוע
   detailFly.style.transition = 'none';
   detailFly.style.top = detailOriginRect.top + 'px';
   detailFly.style.left = detailOriginRect.left + 'px';
   detailFly.style.width = detailOriginRect.width + 'px';
   detailFly.style.height = detailOriginRect.height + 'px';
-  detailFly.style.transform = 'rotateY(0deg) scale(1)';
-  detailFly.style.borderRadius = '10px';
+  detailFly.style.transform = 'none';
 
   cardEl.classList.add('card--ghost');
 
-  // מפעילים אנימציה למרכז
   requestAnimationFrame(function () {
     requestAnimationFrame(function () {
       detailFly.style.transition = '';
-      detailFly.classList.add('is-open');
-      detailFly.style.top = '';
-      detailFly.style.left = '';
-      detailFly.style.width = '';
-      detailFly.style.height = '';
-      detailFly.style.transform = '';
-      detailFly.style.borderRadius = '';
+      detailFly.style.top = target.top + 'px';
+      detailFly.style.left = target.left + 'px';
+      detailFly.style.width = target.width + 'px';
+      detailFly.style.height = target.height + 'px';
+      detailFly.classList.add('is-flipped');
+
+      floatTimer = setTimeout(function () {
+        detailFly.classList.add('is-floating');
+        floatTimer = null;
+      }, 880);
     });
   });
 }
 
-function closeCardDetail() {
+function closeCardDetail(instant) {
   if (detailOverlay.hidden) return;
+
+  if (floatTimer) {
+    clearTimeout(floatTimer);
+    floatTimer = null;
+  }
 
   const ghost = document.querySelector('.card--ghost');
 
-  if (detailOriginRect) {
-    detailFly.classList.add('is-closing');
-    detailFly.classList.remove('is-open');
-    detailFly.style.top = detailOriginRect.top + 'px';
-    detailFly.style.left = detailOriginRect.left + 'px';
-    detailFly.style.width = detailOriginRect.width + 'px';
-    detailFly.style.height = detailOriginRect.height + 'px';
-    detailFly.style.transform = 'rotateY(90deg) scale(0.85)';
-    detailFly.style.borderRadius = '10px';
-    detailFly.style.opacity = '0';
-  }
-
-  setTimeout(function () {
+  function resetDetail() {
     detailOverlay.hidden = true;
-    detailFly.classList.remove('is-open', 'is-closing');
+    detailFly.classList.remove('is-flipped', 'is-closing', 'is-floating');
     detailFly.style.top = '';
     detailFly.style.left = '';
     detailFly.style.width = '';
     detailFly.style.height = '';
     detailFly.style.transform = '';
-    detailFly.style.borderRadius = '';
-    detailFly.style.opacity = '';
     detailFly.style.transition = '';
     if (ghost) ghost.classList.remove('card--ghost');
     detailOriginRect = null;
-  }, 420);
+  }
+
+  if (instant) {
+    detailFly.style.transition = 'none';
+    resetDetail();
+    return;
+  }
+
+  detailFly.classList.remove('is-floating');
+  detailFly.style.transform = 'none';
+  detailFly.classList.add('is-closing');
+  detailFly.classList.remove('is-flipped');
+
+  if (detailOriginRect) {
+    detailFly.style.top = detailOriginRect.top + 'px';
+    detailFly.style.left = detailOriginRect.left + 'px';
+    detailFly.style.width = detailOriginRect.width + 'px';
+    detailFly.style.height = detailOriginRect.height + 'px';
+  }
+
+  setTimeout(resetDetail, 880);
 }
 
 function deleteCard(id) {
@@ -417,27 +510,23 @@ function toggleEditMode() {
 /* ===== תצוגה מקדימה חיה ===== */
 
 function buildPreviewCard() {
-  const title = wizardData.pageName || 'שם הדף';
-  const unit = wizardData.unitName;
-  const notes = wizardData.notes || 'התיאור יופיע כאן...';
-  const typeTag = wizardData.projectType || 'סוג';
-  const classTag = wizardData.classification || 'סיווג';
-  const primary = wizardData.primaryColor || '#e87722';
-  const secondary = wizardData.secondaryColor || '#4a7c3f';
+  const previewCard = {
+    title: wizardData.pageName || 'שם הדף',
+    unitName: wizardData.unitName,
+    notes: wizardData.notes || 'התיאור יופיע כאן...',
+    description: wizardData.notes || 'התיאור יופיע כאן...',
+    projectType: wizardData.projectType || 'סוג',
+    classification: wizardData.classification || 'סיווג',
+    primaryColor: wizardData.primaryColor || '#e87722',
+    secondaryColor: wizardData.secondaryColor || '#4a7c3f',
+    mainImage: wizardData.mainImage,
+    logo: wizardData.logo,
+    fontFamily: wizardData.fontFamily,
+    useImageBg: wizardData.useImageBg,
+    projectLink: '',
+    link: '',
+  };
 
-  let imageStyle;
-  if (wizardData.mainImage) {
-    imageStyle = 'background-image: url(' + JSON.stringify(wizardData.mainImage) + '); background-size: cover; background-position: center;';
-  } else {
-    imageStyle = 'background: linear-gradient(135deg, ' + primary + ', ' + secondary + ');';
-  }
-
-  const logoHtml = wizardData.logo
-    ? '<img class="card-logo" src="' + wizardData.logo + '" alt="">'
-    : '';
-  const unitHtml = unit
-    ? '<p class="card-unit">' + escapeHtml(unit) + '</p>'
-    : '';
   const metaBits = [];
   if (wizardData.status) metaBits.push(wizardData.status);
   if (wizardData.date) metaBits.push(formatDate(wizardData.date));
@@ -445,26 +534,16 @@ function buildPreviewCard() {
     ? '<p class="card-meta">' + escapeHtml(metaBits.join(' · ')) + '</p>'
     : '';
 
-  return (
-    '<div class="card card--preview">' +
-      '<div class="card-image" style="' + imageStyle + '">' +
-        logoHtml +
-        '<span class="card-title">' + escapeHtml(title) + '</span>' +
-      '</div>' +
-      '<div class="card-body">' +
-        unitHtml +
-        '<p>' + escapeHtml(notes) + '</p>' +
-        metaHtml +
-      '</div>' +
-      '<div class="card-footer">' +
-        '<span class="btn-primary" style="background-color: ' + primary + ';">צפייה</span>' +
-        '<div class="btn-tags">' +
-          '<span class="btn-tag">' + escapeHtml(typeTag) + '</span>' +
-          '<span class="btn-tag">' + escapeHtml(classTag) + '</span>' +
-        '</div>' +
-      '</div>' +
-    '</div>'
-  );
+  let inner = buildCardInner(previewCard);
+  if (metaHtml) {
+    inner = inner.replace('</div>\n      <div class="card-footer">', metaHtml + '</div><div class="card-footer">');
+    // fallback without newlines
+    if (inner.indexOf(metaHtml) === -1) {
+      inner = inner.replace('</div><div class="card-footer">', metaHtml + '</div><div class="card-footer">');
+    }
+  }
+
+  return '<div class="card card--preview" style="' + getCardThemeStyle(previewCard) + '">' + inner + '</div>';
 }
 
 function updateLivePreview() {
@@ -536,25 +615,47 @@ function goToStep(step) {
 
 /* ===== קריאת קבצים ===== */
 
-function readFileAsDataURL(file, maxWidth) {
+function readFileAsDataURL(file, maxWidth, aspectRatio, keepTransparency) {
   maxWidth = maxWidth || 900;
+  aspectRatio = aspectRatio || null;
+
   return new Promise(function (resolve, reject) {
     const reader = new FileReader();
     reader.onload = function () {
       const img = new Image();
       img.onload = function () {
         const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
+        let srcX = 0;
+        let srcY = 0;
+        let srcW = img.width;
+        let srcH = img.height;
+
+        if (aspectRatio) {
+          const imgRatio = img.width / img.height;
+          if (imgRatio > aspectRatio) {
+            srcW = Math.round(img.height * aspectRatio);
+            srcX = Math.round((img.width - srcW) / 2);
+          } else {
+            srcH = Math.round(img.width / aspectRatio);
+            srcY = Math.round((img.height - srcH) / 2);
+          }
+        }
+
+        let width = srcW;
+        let height = srcH;
         if (width > maxWidth) {
           height = Math.round((height * maxWidth) / width);
           width = maxWidth;
         }
+
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.75));
+        if (keepTransparency) {
+          ctx.clearRect(0, 0, width, height);
+        }
+        ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, width, height);
+        resolve(canvas.toDataURL(keepTransparency ? 'image/png' : 'image/jpeg', keepTransparency ? undefined : 0.82));
       };
       img.onerror = function () { resolve(reader.result); };
       img.src = reader.result;
@@ -565,9 +666,9 @@ function readFileAsDataURL(file, maxWidth) {
 }
 
 function syncFormToData() {
-  wizardData.pageName = document.getElementById('pageName').value;
-  wizardData.unitName = document.getElementById('unitName').value;
-  wizardData.notes = document.getElementById('notes').value;
+  wizardData.pageName = document.getElementById('pageName').value.slice(0, 10);
+  wizardData.unitName = document.getElementById('unitName').value.slice(0, 10);
+  wizardData.notes = document.getElementById('notes').value.slice(0, 30);
   wizardData.date = document.getElementById('cardDate').value;
   wizardData.status = document.getElementById('status').value;
   wizardData.classification = document.getElementById('classification').value;
@@ -575,6 +676,8 @@ function syncFormToData() {
   wizardData.projectLink = document.getElementById('projectLink').value;
   wizardData.primaryColor = document.getElementById('primaryColor').value;
   wizardData.secondaryColor = document.getElementById('secondaryColor').value;
+  wizardData.fontFamily = document.getElementById('cardFont').value;
+  wizardData.useImageBg = document.getElementById('useImageBg').checked;
 
   document.getElementById('primaryColorHex').textContent = wizardData.primaryColor;
   document.getElementById('secondaryColorHex').textContent = wizardData.secondaryColor;
@@ -584,7 +687,7 @@ function bindLiveInputs() {
   const liveIds = [
     'pageName', 'unitName', 'notes', 'cardDate', 'status',
     'classification', 'projectType', 'projectLink',
-    'primaryColor', 'secondaryColor',
+    'primaryColor', 'secondaryColor', 'cardFont', 'useImageBg',
   ];
 
   liveIds.forEach(function (id) {
@@ -602,7 +705,8 @@ function bindLiveInputs() {
   document.getElementById('mainImage').addEventListener('change', async function (e) {
     const file = e.target.files[0];
     if (!file) return;
-    wizardData.mainImage = await readFileAsDataURL(file, 900);
+    // יחס משוער של אזור התמונה בכרטיס
+    wizardData.mainImage = await readFileAsDataURL(file, 1000, 16 / 10);
     document.getElementById('mainImageText').hidden = true;
     const preview = document.getElementById('mainImagePreview');
     preview.src = wizardData.mainImage;
@@ -613,7 +717,7 @@ function bindLiveInputs() {
   document.getElementById('logoImage').addEventListener('change', async function (e) {
     const file = e.target.files[0];
     if (!file) return;
-    wizardData.logo = await readFileAsDataURL(file, 300);
+    wizardData.logo = await readFileAsDataURL(file, 300, null, true);
     document.getElementById('logoImageText').hidden = true;
     const preview = document.getElementById('logoImagePreview');
     preview.src = wizardData.logo;
@@ -638,28 +742,161 @@ function bindLiveInputs() {
 
 /* ===== פתיחה / סגירה / שמירה ===== */
 
+function fillMediaPreviews() {
+  if (wizardData.mainImage) {
+    document.getElementById('mainImageText').hidden = true;
+    const preview = document.getElementById('mainImagePreview');
+    preview.src = wizardData.mainImage;
+    preview.hidden = false;
+  } else {
+    document.getElementById('mainImageText').hidden = false;
+    document.getElementById('mainImagePreview').hidden = true;
+    document.getElementById('mainImagePreview').src = '';
+  }
+
+  if (wizardData.logo) {
+    document.getElementById('logoImageText').hidden = true;
+    const preview = document.getElementById('logoImagePreview');
+    preview.src = wizardData.logo;
+    preview.hidden = false;
+  } else {
+    document.getElementById('logoImageText').hidden = false;
+    document.getElementById('logoImagePreview').hidden = true;
+    document.getElementById('logoImagePreview').src = '';
+  }
+
+  if (wizardData.extraImages && wizardData.extraImages.length) {
+    document.getElementById('extraImagesText').textContent =
+      wizardData.extraImages.length === 1
+        ? 'תמונה אחת הועלתה'
+        : wizardData.extraImages.length + ' תמונות הועלו';
+    document.getElementById('extraThumbs').innerHTML = wizardData.extraImages.map(function (src) {
+      return '<img src="' + src + '" alt="">';
+    }).join('');
+  } else {
+    document.getElementById('extraImagesText').textContent = 'העלאה (אופציונלי)';
+    document.getElementById('extraThumbs').innerHTML = '';
+  }
+}
+
+function applyWizardDataToForm() {
+  document.getElementById('pageName').value = wizardData.pageName || '';
+  document.getElementById('unitName').value = wizardData.unitName || '';
+  document.getElementById('notes').value = wizardData.notes || '';
+  document.getElementById('cardDate').value = wizardData.date || '';
+  document.getElementById('status').value = wizardData.status || '';
+  document.getElementById('classification').value = wizardData.classification || '';
+  document.getElementById('projectType').value = wizardData.projectType || '';
+  document.getElementById('projectLink').value = wizardData.projectLink || '';
+  document.getElementById('primaryColor').value = wizardData.primaryColor || '#e87722';
+  document.getElementById('secondaryColor').value = wizardData.secondaryColor || '#4a7c3f';
+  document.getElementById('primaryColorHex').textContent = wizardData.primaryColor || '#e87722';
+  document.getElementById('secondaryColorHex').textContent = wizardData.secondaryColor || '#4a7c3f';
+  document.getElementById('cardFont').value = wizardData.fontFamily || "'Segoe UI', Tahoma, Arial, sans-serif";
+  document.getElementById('useImageBg').checked = wizardData.useImageBg !== false;
+  fillMediaPreviews();
+}
+
+function updateWizardChrome() {
+  const isEdit = !!editingCardId;
+  document.getElementById('wizardTitle').textContent = isEdit ? 'עריכת כרטיס' : 'יצירת כרטיס חדש';
+  btnFinish.textContent = isEdit ? '✓ שמירת שינויים' : '✓ שמירה';
+}
+
+function buildCardFromWizard(id) {
+  const projectLink = normalizeProjectLink(wizardData.projectLink);
+  return {
+    id: id,
+    title: wizardData.pageName.trim().slice(0, 10),
+    unitName: wizardData.unitName.trim().slice(0, 10),
+    description: wizardData.notes.trim() || 'כרטיס חדש',
+    notes: wizardData.notes.trim().slice(0, 30),
+    date: wizardData.date,
+    status: wizardData.status,
+    classification: wizardData.classification,
+    projectType: wizardData.projectType,
+    projectLink: projectLink,
+    link: projectLink,
+    mainImage: wizardData.mainImage,
+    extraImages: wizardData.extraImages.slice(),
+    logo: wizardData.logo,
+    primaryColor: wizardData.primaryColor,
+    secondaryColor: wizardData.secondaryColor,
+    fontFamily: wizardData.fontFamily,
+    useImageBg: wizardData.useImageBg,
+    gradient: getColorBlend(wizardData.primaryColor, wizardData.secondaryColor),
+  };
+}
+
+function trySaveCards(cards, card, index) {
+  let saved = saveCards(cards);
+
+  if (!saved && card.extraImages.length) {
+    card.extraImages = [];
+    cards[index] = card;
+    saved = saveCards(cards);
+  }
+
+  if (!saved && card.logo) {
+    card.logo = '';
+    cards[index] = card;
+    saved = saveCards(cards);
+  }
+
+  return saved;
+}
+
 function openWizard() {
+  editingCardId = null;
   resetWizardData();
   wizardForm.reset();
   currentStep = 1;
 
-  document.getElementById('primaryColor').value = wizardData.primaryColor;
-  document.getElementById('secondaryColor').value = wizardData.secondaryColor;
-  document.getElementById('primaryColorHex').textContent = wizardData.primaryColor;
-  document.getElementById('secondaryColorHex').textContent = wizardData.secondaryColor;
-
-  document.getElementById('mainImageText').hidden = false;
-  document.getElementById('mainImagePreview').hidden = true;
-  document.getElementById('mainImagePreview').src = '';
-  document.getElementById('logoImageText').hidden = false;
-  document.getElementById('logoImagePreview').hidden = true;
-  document.getElementById('logoImagePreview').src = '';
-  document.getElementById('extraImagesText').textContent = 'העלאה (אופציונלי)';
-  document.getElementById('extraThumbs').innerHTML = '';
-
   const today = new Date().toISOString().slice(0, 10);
-  document.getElementById('cardDate').value = today;
   wizardData.date = today;
+  wizardData.useImageBg = true;
+  wizardData.primaryColor = '#e87722';
+  wizardData.secondaryColor = '#4a7c3f';
+  wizardData.fontFamily = "'Segoe UI', Tahoma, Arial, sans-serif";
+
+  applyWizardDataToForm();
+  updateWizardChrome();
+
+  modalOverlay.hidden = false;
+  updateStepUI();
+  document.getElementById('pageName').focus();
+}
+
+function openWizardForEdit(cardId) {
+  const card = loadCards().find(function (c) { return c.id === cardId; });
+  if (!card) {
+    alert('הכרטיס לא נמצא');
+    return;
+  }
+
+  editingCardId = cardId;
+  resetWizardData();
+  wizardForm.reset();
+  currentStep = 1;
+
+  wizardData.pageName = card.title || '';
+  wizardData.unitName = card.unitName || '';
+  wizardData.notes = card.notes || card.description || '';
+  wizardData.date = card.date || new Date().toISOString().slice(0, 10);
+  wizardData.status = card.status || '';
+  wizardData.classification = card.classification || '';
+  wizardData.projectType = card.projectType || '';
+  wizardData.projectLink = card.projectLink || card.link || '';
+  wizardData.mainImage = card.mainImage || '';
+  wizardData.extraImages = (card.extraImages || []).slice();
+  wizardData.logo = card.logo || '';
+  wizardData.primaryColor = card.primaryColor || '#e87722';
+  wizardData.secondaryColor = card.secondaryColor || '#4a7c3f';
+  wizardData.fontFamily = card.fontFamily || "'Segoe UI', Tahoma, Arial, sans-serif";
+  wizardData.useImageBg = card.useImageBg !== false;
+
+  applyWizardDataToForm();
+  updateWizardChrome();
 
   modalOverlay.hidden = false;
   updateStepUI();
@@ -668,6 +905,7 @@ function openWizard() {
 
 function closeWizard() {
   modalOverlay.hidden = true;
+  editingCardId = null;
   showError('');
 }
 
@@ -683,50 +921,30 @@ function finishWizard() {
     }
   }
 
-  const projectLink = normalizeProjectLink(wizardData.projectLink);
-  const id = createCardId();
-  const newCard = {
-    id: id,
-    title: wizardData.pageName.trim(),
-    unitName: wizardData.unitName.trim(),
-    description: wizardData.notes.trim() || 'כרטיס חדש',
-    notes: wizardData.notes.trim(),
-    date: wizardData.date,
-    status: wizardData.status,
-    classification: wizardData.classification,
-    projectType: wizardData.projectType,
-    projectLink: projectLink,
-    link: projectLink,
-    mainImage: wizardData.mainImage,
-    extraImages: wizardData.extraImages.slice(),
-    logo: wizardData.logo,
-    primaryColor: wizardData.primaryColor,
-    secondaryColor: wizardData.secondaryColor,
-    gradient: 'linear-gradient(135deg, ' + wizardData.primaryColor + ', ' + wizardData.secondaryColor + ')',
-  };
-
   const cards = loadCards();
-  cards.push(newCard);
 
-  let saved = saveCards(cards);
+  if (editingCardId) {
+    const index = cards.findIndex(function (c) { return c.id === editingCardId; });
+    if (index === -1) {
+      showError('הכרטיס לעריכה לא נמצא');
+      return;
+    }
 
-  // אם אין מקום בזיכרון — מנסים בלי תמונות נוספות
-  if (!saved && newCard.extraImages.length) {
-    newCard.extraImages = [];
-    cards[cards.length - 1] = newCard;
-    saved = saveCards(cards);
-  }
+    const updated = buildCardFromWizard(editingCardId);
+    cards[index] = updated;
 
-  // ניסיון אחרון — בלי לוגו
-  if (!saved && newCard.logo) {
-    newCard.logo = '';
-    cards[cards.length - 1] = newCard;
-    saved = saveCards(cards);
-  }
+    if (!trySaveCards(cards, updated, index)) {
+      showError('אין מספיק מקום לשמירה. נסו תמונה קטנה יותר וחזרו על שמירה.');
+      return;
+    }
+  } else {
+    const newCard = buildCardFromWizard(createCardId());
+    cards.push(newCard);
 
-  if (!saved) {
-    showError('אין מספיק מקום לשמירה. נסו תמונה קטנה יותר וחזרו על סיום.');
-    return;
+    if (!trySaveCards(cards, newCard, cards.length - 1)) {
+      showError('אין מספיק מקום לשמירה. נסו תמונה קטנה יותר וחזרו על שמירה.');
+      return;
+    }
   }
 
   renderCards(cards);
