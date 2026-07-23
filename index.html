@@ -51,21 +51,16 @@
     </div>
   </header>
 
-  <!-- לוגו יחידה -->
-  <section class="home-logo-section" id="homeLogoSection" data-home-section="logo" hidden>
-      <a class="home-logo-wrap" id="homeLogoWrap" hidden>
-        <img class="home-logo" id="homeLogo" alt="">
-      </a>
-    <button type="button" class="home-section-edit" data-edit-home="logo" hidden title="עריכת לוגו">✎</button>
-  </section>
-
-  <!-- כותרת ראשית -->
-  <section class="home-section home-hero" id="homeHero" data-home-section="hero">
-    <div class="home-section-bg" id="homeHeroBg"></div>
-    <div class="home-section-content">
-      <h1 class="home-title" id="homeTitle">פורטל תוכן</h1>
+  <!-- כותרת מאוחדת (לוגואים + טקסטים) -->
+  <section class="home-section home-header" id="homeHeader" data-home-section="header">
+    <div class="home-header-canvas" id="homeHeaderCanvas">
+      <div class="home-section-bg" id="homeHeaderBg"></div>
+      <div class="home-header-items" id="homeHeaderItems"></div>
+      <div class="home-resize-handle" data-resize="header" hidden title="גררו לשינוי גובה">
+        <span class="home-resize-grip"></span>
+      </div>
     </div>
-    <button type="button" class="home-section-edit" data-edit-home="hero" hidden title="עריכת כותרת">✎</button>
+    <button type="button" class="home-section-edit" data-edit-home="header" hidden title="עריכת כותרת">✎</button>
   </section>
 
   <!-- כותרת משנה + פתיח -->
@@ -403,22 +398,69 @@
   </button>
 
   <div class="hsla-popover" id="hslaPopover" hidden>
-    <div class="hsla-popover-preview" id="hslaPreview"></div>
-    <label class="hsla-slider">
-      <span>גוון (Hue) <strong id="hslaHVal">0</strong></span>
-      <input type="range" id="hslaH" min="0" max="360" step="1" value="0">
-    </label>
-    <label class="hsla-slider">
-      <span>רוויה (Saturation) <strong id="hslaSVal">0%</strong></span>
-      <input type="range" id="hslaS" min="0" max="100" step="1" value="0">
-    </label>
-    <label class="hsla-slider">
-      <span>בהירות <strong id="hslaLVal">50%</strong></span>
-      <input type="range" id="hslaL" min="0" max="100" step="1" value="50">
-    </label>
-    <label class="hsla-slider">
-      <span>שקיפות (Opacity) <strong id="hslaAVal">100%</strong></span>
-      <input type="range" id="hslaA" min="0" max="100" step="1" value="100">
+    <div class="color-picker-top">
+      <button type="button" class="color-eyedropper" id="colorEyedropper" title="בחירת צבע מהמסך" aria-label="בחירת צבע מהמסך">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+          <path fill="currentColor" d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-3.12 3.12-1.23-1.21 1.42-1.42-1.42-1.41-6.36 6.36 1.41 1.41 1.42-1.41 1.22 1.22-6.77 6.76a3 3 0 0 0-.73 1.2l-.85 3.06a1 1 0 0 0 1.22 1.22l3.06-.85a3 3 0 0 0 1.2-.73l10.44-10.44a1 1 0 0 0 0-1.41zM7.3 18.28l-1.66.46.46-1.66 7.58-7.58 1.2 1.2-7.58 7.58z"/>
+        </svg>
+      </button>
+      <div class="hsla-popover-preview" id="hslaPreview"></div>
+    </div>
+
+    <div class="color-picker-tabs" role="tablist">
+      <button type="button" class="color-tab is-active" data-color-tab="rgba" role="tab" aria-selected="true">RGBA</button>
+      <button type="button" class="color-tab" data-color-tab="hsva" role="tab" aria-selected="false">HSVA</button>
+    </div>
+
+    <div class="color-tab-panel" id="colorTabRgba" data-panel="rgba">
+      <label class="color-channel">
+        <span>R</span>
+        <input type="range" id="colorRRange" min="0" max="255" step="1" value="0">
+        <input type="number" id="colorRNum" min="0" max="255" step="1" value="0" inputmode="numeric">
+      </label>
+      <label class="color-channel">
+        <span>G</span>
+        <input type="range" id="colorGRange" min="0" max="255" step="1" value="0">
+        <input type="number" id="colorGNum" min="0" max="255" step="1" value="0" inputmode="numeric">
+      </label>
+      <label class="color-channel">
+        <span>B</span>
+        <input type="range" id="colorBRange" min="0" max="255" step="1" value="0">
+        <input type="number" id="colorBNum" min="0" max="255" step="1" value="0" inputmode="numeric">
+      </label>
+      <label class="color-channel">
+        <span>A</span>
+        <input type="range" id="colorARangeRgba" min="0" max="100" step="1" value="100">
+        <input type="number" id="colorANumRgba" min="0" max="100" step="1" value="100" inputmode="numeric">
+      </label>
+    </div>
+
+    <div class="color-tab-panel" id="colorTabHsva" data-panel="hsva" hidden>
+      <label class="color-channel">
+        <span>H</span>
+        <input type="range" id="colorHRange" class="color-hue-range" min="0" max="360" step="1" value="0">
+        <input type="number" id="colorHNum" min="0" max="360" step="1" value="0" inputmode="numeric">
+      </label>
+      <label class="color-channel">
+        <span>S</span>
+        <input type="range" id="colorSRange" min="0" max="100" step="1" value="0">
+        <input type="number" id="colorSNum" min="0" max="100" step="1" value="0" inputmode="numeric">
+      </label>
+      <label class="color-channel">
+        <span>V</span>
+        <input type="range" id="colorVRange" min="0" max="100" step="1" value="0">
+        <input type="number" id="colorVNum" min="0" max="100" step="1" value="0" inputmode="numeric">
+      </label>
+      <label class="color-channel">
+        <span>A</span>
+        <input type="range" id="colorARangeHsva" min="0" max="100" step="1" value="100">
+        <input type="number" id="colorANumHsva" min="0" max="100" step="1" value="100" inputmode="numeric">
+      </label>
+    </div>
+
+    <label class="color-hex-row">
+      <span>HEX</span>
+      <input type="text" id="colorHexInput" spellcheck="false" dir="ltr" maxlength="9" value="#000000">
     </label>
   </div>
 

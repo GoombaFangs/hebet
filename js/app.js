@@ -26,17 +26,23 @@ let pendingCardPopId = null;
 
 const DEFAULT_HOME = {
   title: 'פורטל תוכן',
-  titleImage: '',
-  titleBgOpacity: 100,
-  titleLogoEnabled: false,
-  titleLogo: '',
-  titleLogoLink: '',
-  titleLogoAlign: 'right',
+  header: {
+    height: 180,
+    bgOpacity: 100,
+    bgImage: '',
+    items: [
+      { id: 'hdr-title', type: 'title', text: 'פורטל תוכן', x: 50, y: 45, align: 'center' },
+    ],
+  },
   subtitle: 'צפייה מהנה',
+  subtitleSize: 20,
+  subtitleColor: '#ffffff',
   introText: 'ברוכים הבאים לפורטל התוכן. כאן תמצאו מצגות, לומדות וסרטים.',
+  introTextSize: 16,
+  introTextColor: '#ffffff',
   introImage: '',
   introVideo: '',
-  introMediaType: 'image',
+  introMediaType: 'bg',
   introBgOpacity: 100,
   introSizeAuto: true,
   introHeight: 280,
@@ -48,10 +54,14 @@ const DEFAULT_HOME = {
   introVideoBgColor: '#2f5a28',
   hasIntro2: false,
   intro2Subtitle: '',
+  intro2SubtitleSize: 20,
+  intro2SubtitleColor: '#ffffff',
   intro2Text: '',
+  intro2TextSize: 16,
+  intro2TextColor: '#ffffff',
   intro2Image: '',
   intro2Video: '',
-  intro2MediaType: 'image',
+  intro2MediaType: 'bg',
   intro2BgOpacity: 100,
   intro2SizeAuto: true,
   intro2Height: 280,
@@ -62,9 +72,11 @@ const DEFAULT_HOME = {
   intro2VideoBgMode: 'transparent',
   intro2VideoBgColor: '#2f5a28',
   closingText: 'תודה שביקרתם. נשתמע בפעם הבאה.',
+  closingTextSize: 17,
+  closingTextColor: '#ffffff',
   closingImage: '',
   closingVideo: '',
-  closingMediaType: 'image',
+  closingMediaType: 'bg',
   closingBgOpacity: 100,
   closingSizeAuto: true,
   closingHeight: 280,
@@ -76,9 +88,11 @@ const DEFAULT_HOME = {
   closingVideoBgColor: '#2f5a28',
   hasClosing2: false,
   closing2Text: '',
+  closing2TextSize: 17,
+  closing2TextColor: '#ffffff',
   closing2Image: '',
   closing2Video: '',
-  closing2MediaType: 'image',
+  closing2MediaType: 'bg',
   closing2BgOpacity: 100,
   closing2SizeAuto: true,
   closing2Height: 280,
@@ -322,13 +336,69 @@ function hslaToCss(h, s, l, a) {
 
 function hslaToHex(h, s, l, a) {
   const rgb = hslToRgb(h, s, l);
+  return rgbaToHex(rgb.r, rgb.g, rgb.b, a);
+}
+
+function rgbaToHex(r, g, b, a) {
   const toHex = function (n) {
     return clampNumber(n, 0, 255).toString(16).padStart(2, '0');
   };
   const alpha = clampNumber(a, 0, 1);
-  const base = '#' + toHex(rgb.r) + toHex(rgb.g) + toHex(rgb.b);
+  const base = '#' + toHex(r) + toHex(g) + toHex(b);
   if (alpha >= 0.999) return base;
   return base + toHex(Math.round(alpha * 255));
+}
+
+function rgbToHsv(r, g, b) {
+  const rr = clampNumber(r, 0, 255) / 255;
+  const gg = clampNumber(g, 0, 255) / 255;
+  const bb = clampNumber(b, 0, 255) / 255;
+  const max = Math.max(rr, gg, bb);
+  const min = Math.min(rr, gg, bb);
+  const d = max - min;
+  let h = 0;
+  const sat = max === 0 ? 0 : d / max;
+  const v = max;
+  if (d !== 0) {
+    switch (max) {
+      case rr: h = (gg - bb) / d + (gg < bb ? 6 : 0); break;
+      case gg: h = (bb - rr) / d + 2; break;
+      default: h = (rr - gg) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return {
+    h: Math.round(h * 360),
+    s: Math.round(sat * 100),
+    v: Math.round(v * 100),
+  };
+}
+
+function hsvToRgb(h, s, v) {
+  const hh = (((Number(h) % 360) + 360) % 360) / 360;
+  const ss = clampNumber(s, 0, 100) / 100;
+  const vv = clampNumber(v, 0, 100) / 100;
+  const i = Math.floor(hh * 6);
+  const f = hh * 6 - i;
+  const p = vv * (1 - ss);
+  const q = vv * (1 - f * ss);
+  const t = vv * (1 - (1 - f) * ss);
+  let rr;
+  let gg;
+  let bb;
+  switch (i % 6) {
+    case 0: rr = vv; gg = t; bb = p; break;
+    case 1: rr = q; gg = vv; bb = p; break;
+    case 2: rr = p; gg = vv; bb = t; break;
+    case 3: rr = p; gg = q; bb = vv; break;
+    case 4: rr = t; gg = p; bb = vv; break;
+    default: rr = vv; gg = p; bb = q; break;
+  }
+  return {
+    r: Math.round(rr * 255),
+    g: Math.round(gg * 255),
+    b: Math.round(bb * 255),
+  };
 }
 
 function colorToCss(input) {
@@ -341,20 +411,41 @@ function colorToDisplayHex(input) {
   return hslaToHex(c.h, c.s, c.l, c.a);
 }
 
+function parseColorToRgba(input) {
+  const hsla = parseColorToHsla(input);
+  const rgb = hslToRgb(hsla.h, hsla.s, hsla.l);
+  return { r: rgb.r, g: rgb.g, b: rgb.b, a: hsla.a };
+}
+
 let activeHslaTarget = null;
+let colorPickerTab = 'rgba';
+let colorPickerState = { r: 74, g: 124, b: 63, a: 1 };
+let colorPickerSyncing = false;
 
 function getHslaPopoverEls() {
   return {
     popover: document.getElementById('hslaPopover'),
     preview: document.getElementById('hslaPreview'),
-    h: document.getElementById('hslaH'),
-    s: document.getElementById('hslaS'),
-    l: document.getElementById('hslaL'),
-    a: document.getElementById('hslaA'),
-    hVal: document.getElementById('hslaHVal'),
-    sVal: document.getElementById('hslaSVal'),
-    lVal: document.getElementById('hslaLVal'),
-    aVal: document.getElementById('hslaAVal'),
+    eyedropper: document.getElementById('colorEyedropper'),
+    hex: document.getElementById('colorHexInput'),
+    tabRgba: document.getElementById('colorTabRgba'),
+    tabHsva: document.getElementById('colorTabHsva'),
+    rRange: document.getElementById('colorRRange'),
+    gRange: document.getElementById('colorGRange'),
+    bRange: document.getElementById('colorBRange'),
+    aRangeRgba: document.getElementById('colorARangeRgba'),
+    rNum: document.getElementById('colorRNum'),
+    gNum: document.getElementById('colorGNum'),
+    bNum: document.getElementById('colorBNum'),
+    aNumRgba: document.getElementById('colorANumRgba'),
+    hRange: document.getElementById('colorHRange'),
+    sRange: document.getElementById('colorSRange'),
+    vRange: document.getElementById('colorVRange'),
+    aRangeHsva: document.getElementById('colorARangeHsva'),
+    hNum: document.getElementById('colorHNum'),
+    sNum: document.getElementById('colorSNum'),
+    vNum: document.getElementById('colorVNum'),
+    aNumHsva: document.getElementById('colorANumHsva'),
   };
 }
 
@@ -369,51 +460,138 @@ function updateHslaSwatch(field) {
   if (hexLabel) hexLabel.textContent = colorToDisplayHex(input.value);
 }
 
-function syncHslaPopoverFromState(state) {
+function setColorPickerTab(tab) {
+  colorPickerTab = tab === 'hsva' ? 'hsva' : 'rgba';
   const els = getHslaPopoverEls();
   if (!els.popover) return;
-  els.h.value = String(Math.round(state.h));
-  els.s.value = String(Math.round(state.s));
-  els.l.value = String(Math.round(state.l));
-  els.a.value = String(Math.round(state.a * 100));
-  els.hVal.textContent = String(Math.round(state.h));
-  els.sVal.textContent = Math.round(state.s) + '%';
-  els.lVal.textContent = Math.round(state.l) + '%';
-  els.aVal.textContent = Math.round(state.a * 100) + '%';
-  const css = hslaToCss(state.h, state.s, state.l, state.a);
-  els.preview.style.setProperty('--preview-color', css);
-  els.s.style.background = 'linear-gradient(to left, hsl(' + state.h + ', 0%, ' + state.l + '%), hsl(' + state.h + ', 100%, ' + state.l + '%))';
-  els.l.style.background = 'linear-gradient(to left, #000, hsl(' + state.h + ', ' + state.s + '%, 50%), #fff)';
+  if (els.tabRgba) els.tabRgba.hidden = colorPickerTab !== 'rgba';
+  if (els.tabHsva) els.tabHsva.hidden = colorPickerTab !== 'hsva';
+  els.popover.querySelectorAll('.color-tab').forEach(function (btn) {
+    const active = btn.dataset.colorTab === colorPickerTab;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  syncColorPickerUiFromState();
 }
 
-function readHslaPopoverState() {
+function syncColorPickerUiFromState() {
   const els = getHslaPopoverEls();
-  return {
-    h: clampNumber(els.h.value, 0, 360),
-    s: clampNumber(els.s.value, 0, 100),
-    l: clampNumber(els.l.value, 0, 100),
-    a: clampNumber(els.a.value, 0, 100) / 100,
-  };
+  if (!els.popover) return;
+  colorPickerSyncing = true;
+
+  const state = colorPickerState;
+  const hsv = rgbToHsv(state.r, state.g, state.b);
+  const alphaPct = Math.round(clampNumber(state.a, 0, 1) * 100);
+  const hex = rgbaToHex(state.r, state.g, state.b, state.a);
+  const css = 'rgba(' + state.r + ', ' + state.g + ', ' + state.b + ', ' + (Math.round(state.a * 1000) / 1000) + ')';
+
+  if (els.preview) els.preview.style.setProperty('--preview-color', css);
+  if (els.hex) els.hex.value = hex;
+
+  if (els.rRange) els.rRange.value = String(state.r);
+  if (els.gRange) els.gRange.value = String(state.g);
+  if (els.bRange) els.bRange.value = String(state.b);
+  if (els.aRangeRgba) els.aRangeRgba.value = String(alphaPct);
+  if (els.rNum) els.rNum.value = String(state.r);
+  if (els.gNum) els.gNum.value = String(state.g);
+  if (els.bNum) els.bNum.value = String(state.b);
+  if (els.aNumRgba) els.aNumRgba.value = String(alphaPct);
+
+  if (els.hRange) els.hRange.value = String(hsv.h);
+  if (els.sRange) els.sRange.value = String(hsv.s);
+  if (els.vRange) els.vRange.value = String(hsv.v);
+  if (els.aRangeHsva) els.aRangeHsva.value = String(alphaPct);
+  if (els.hNum) els.hNum.value = String(hsv.h);
+  if (els.sNum) els.sNum.value = String(hsv.s);
+  if (els.vNum) els.vNum.value = String(hsv.v);
+  if (els.aNumHsva) els.aNumHsva.value = String(alphaPct);
+
+  const hue = hsv.h;
+  if (els.sRange) {
+    els.sRange.style.background =
+      'linear-gradient(to left, hsl(' + hue + ', 0%, ' + Math.max(18, hsv.v * 0.5) + '%), hsl(' + hue + ', 100%, 50%))';
+  }
+  if (els.vRange) {
+    els.vRange.style.background =
+      'linear-gradient(to left, #000, hsl(' + hue + ', ' + hsv.s + '%, 50%))';
+  }
+  if (els.aRangeRgba) {
+    els.aRangeRgba.style.background =
+      'linear-gradient(to left, transparent, rgb(' + state.r + ', ' + state.g + ', ' + state.b + ')),' +
+      'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 12px 12px';
+  }
+  if (els.aRangeHsva) {
+    els.aRangeHsva.style.background =
+      'linear-gradient(to left, transparent, rgb(' + state.r + ', ' + state.g + ', ' + state.b + ')),' +
+      'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 12px 12px';
+  }
+
+  colorPickerSyncing = false;
 }
 
-function applyActiveHslaState(state, commit) {
+function applyColorPickerState(commit) {
   if (!activeHslaTarget) return;
-  const hex = hslaToHex(state.h, state.s, state.l, state.a);
+  const hex = rgbaToHex(colorPickerState.r, colorPickerState.g, colorPickerState.b, colorPickerState.a);
   activeHslaTarget.input.value = hex;
   updateHslaSwatch(activeHslaTarget.field);
-  syncHslaPopoverFromState(state);
+  syncColorPickerUiFromState();
   if (typeof activeHslaTarget.onChange === 'function') {
     activeHslaTarget.onChange(hex, commit);
   }
 }
 
+function updateColorFromRgbaFields(source) {
+  if (colorPickerSyncing) return;
+  const els = getHslaPopoverEls();
+  const useNum = source === 'num';
+  colorPickerState = {
+    r: clampNumber(useNum ? els.rNum.value : els.rRange.value, 0, 255),
+    g: clampNumber(useNum ? els.gNum.value : els.gRange.value, 0, 255),
+    b: clampNumber(useNum ? els.bNum.value : els.bRange.value, 0, 255),
+    a: clampNumber(useNum ? els.aNumRgba.value : els.aRangeRgba.value, 0, 100) / 100,
+  };
+  applyColorPickerState(false);
+}
+
+function updateColorFromHsvaFields(source) {
+  if (colorPickerSyncing) return;
+  const els = getHslaPopoverEls();
+  const useNum = source === 'num';
+  const rgb = hsvToRgb(
+    useNum ? els.hNum.value : els.hRange.value,
+    useNum ? els.sNum.value : els.sRange.value,
+    useNum ? els.vNum.value : els.vRange.value
+  );
+  colorPickerState = {
+    r: rgb.r,
+    g: rgb.g,
+    b: rgb.b,
+    a: clampNumber(useNum ? els.aNumHsva.value : els.aRangeHsva.value, 0, 100) / 100,
+  };
+  applyColorPickerState(false);
+}
+
+function updateColorFromHexInput(commit) {
+  if (colorPickerSyncing) return;
+  const els = getHslaPopoverEls();
+  let raw = String(els.hex.value || '').trim();
+  if (!raw) return;
+  if (raw[0] !== '#') raw = '#' + raw;
+  if (!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(raw)) {
+    if (commit) syncColorPickerUiFromState();
+    return;
+  }
+  colorPickerState = parseColorToRgba(raw);
+  applyColorPickerState(!!commit);
+}
+
 function positionHslaPopover(anchor) {
   const els = getHslaPopoverEls();
   if (!els.popover || !anchor) return;
-  const rect = anchor.getBoundingClientRect();
   const pad = 8;
-  const width = els.popover.offsetWidth || 280;
-  const height = els.popover.offsetHeight || 240;
+  const width = els.popover.offsetWidth || 300;
+  const height = els.popover.offsetHeight || 360;
+  const rect = anchor.getBoundingClientRect();
   let left = rect.left;
   let top = rect.bottom + pad;
   if (left + width > window.innerWidth - pad) {
@@ -439,10 +617,37 @@ function openHslaPopover(field, onChange) {
   if (!input || !swatch || !els.popover) return;
 
   activeHslaTarget = { field: field, input: input, onChange: onChange };
-  const state = parseColorToHsla(input.value);
-  syncHslaPopoverFromState(state);
+  colorPickerState = parseColorToRgba(input.value);
+  setColorPickerTab(colorPickerTab || 'rgba');
   els.popover.hidden = false;
   positionHslaPopover(swatch);
+}
+
+async function pickColorFromScreen() {
+  if (!window.EyeDropper) {
+    alert('בחירת צבע מהמסך לא נתמכת בדפדפן הזה. נסו Chrome או Edge.');
+    return;
+  }
+  try {
+    const result = await new window.EyeDropper().open();
+    if (!result || !result.sRGBHex) return;
+    colorPickerState = parseColorToRgba(result.sRGBHex);
+    applyColorPickerState(true);
+  } catch (_) {
+    // המשתמש ביטל
+  }
+}
+
+function bindPair(rangeEl, numEl, onInput, onCommit) {
+  if (!rangeEl || !numEl) return;
+  rangeEl.addEventListener('input', function () { onInput('range'); });
+  rangeEl.addEventListener('change', function () { onCommit(); });
+  numEl.addEventListener('input', function () {
+    if (numEl.value === '' || numEl.value === '-') return;
+    onInput('num');
+  });
+  numEl.addEventListener('change', function () { onCommit(); });
+  numEl.addEventListener('blur', function () { onCommit(); });
 }
 
 function bindHslaPickers() {
@@ -450,14 +655,59 @@ function bindHslaPickers() {
   if (!els.popover || els.popover.dataset.bound === '1') return;
   els.popover.dataset.bound = '1';
 
-  ['h', 's', 'l', 'a'].forEach(function (key) {
-    els[key].addEventListener('input', function () {
-      applyActiveHslaState(readHslaPopoverState(), false);
-    });
-    els[key].addEventListener('change', function () {
-      applyActiveHslaState(readHslaPopoverState(), true);
+  els.popover.querySelectorAll('.color-tab').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      setColorPickerTab(btn.dataset.colorTab);
     });
   });
+
+  if (els.eyedropper) {
+    els.eyedropper.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      pickColorFromScreen();
+    });
+  }
+
+  bindPair(els.rRange, els.rNum, updateColorFromRgbaFields, function () {
+    updateColorFromRgbaFields('range');
+    applyColorPickerState(true);
+  });
+  bindPair(els.gRange, els.gNum, updateColorFromRgbaFields, function () {
+    updateColorFromRgbaFields('range');
+    applyColorPickerState(true);
+  });
+  bindPair(els.bRange, els.bNum, updateColorFromRgbaFields, function () {
+    updateColorFromRgbaFields('range');
+    applyColorPickerState(true);
+  });
+  bindPair(els.aRangeRgba, els.aNumRgba, updateColorFromRgbaFields, function () {
+    updateColorFromRgbaFields('range');
+    applyColorPickerState(true);
+  });
+
+  bindPair(els.hRange, els.hNum, updateColorFromHsvaFields, function () {
+    updateColorFromHsvaFields('range');
+    applyColorPickerState(true);
+  });
+  bindPair(els.sRange, els.sNum, updateColorFromHsvaFields, function () {
+    updateColorFromHsvaFields('range');
+    applyColorPickerState(true);
+  });
+  bindPair(els.vRange, els.vNum, updateColorFromHsvaFields, function () {
+    updateColorFromHsvaFields('range');
+    applyColorPickerState(true);
+  });
+  bindPair(els.aRangeHsva, els.aNumHsva, updateColorFromHsvaFields, function () {
+    updateColorFromHsvaFields('range');
+    applyColorPickerState(true);
+  });
+
+  if (els.hex) {
+    els.hex.addEventListener('input', function () { updateColorFromHexInput(false); });
+    els.hex.addEventListener('change', function () { updateColorFromHexInput(true); });
+    els.hex.addEventListener('blur', function () { updateColorFromHexInput(true); });
+  }
 
   document.addEventListener('click', function (e) {
     if (els.popover.hidden) return;
@@ -481,8 +731,8 @@ function setupHslaField(field, onChange) {
   swatch.addEventListener('click', function (e) {
     e.preventDefault();
     e.stopPropagation();
-    const els = getHslaPopoverEls();
-    if (!els.popover.hidden && activeHslaTarget && activeHslaTarget.field === field) {
+    const pop = getHslaPopoverEls();
+    if (!pop.popover.hidden && activeHslaTarget && activeHslaTarget.field === field) {
       closeHslaPopover();
       return;
     }
@@ -1124,7 +1374,7 @@ function toggleEditMode() {
   document.getElementById('cardsLayoutBar').hidden = !editMode;
   syncHomeSectionControls(loadHome());
   syncResizeHandlesVisibility();
-  renderHomeLogo(loadHome());
+  renderHomeHeader(loadHome());
   renderCards(loadCards());
 }
 
@@ -1706,22 +1956,285 @@ function finishWizard() {
 
 /* ===== דף בית ===== */
 
+function createHeaderItemId() {
+  return 'hdr-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+}
+
+function clampPercent(value, fallback) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.min(100, Math.max(0, Math.round(num * 10) / 10));
+}
+
+function clampHeaderHeight(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 180;
+  return Math.min(560, Math.max(100, Math.round(num)));
+}
+
+function clampLogoWidth(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 14;
+  return Math.min(40, Math.max(6, Math.round(num)));
+}
+
+function defaultHeaderFontSize(type) {
+  if (type === 'title') return 36;
+  if (type === 'subtitle') return 20;
+  if (type === 'badge') return 16;
+  if (type === 'logo') return 12;
+  return 16;
+}
+
+function clampFontSize(value, fallback) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback || 16;
+  return Math.min(56, Math.max(10, Math.round(num)));
+}
+
+function homeTextSizeHtml(id, value, fallback, labelText) {
+  const size = clampFontSize(value, fallback || 16);
+  const label = labelText || 'גודל גופן';
+  return (
+    '<div class="form-field form-field--full">' +
+      '<label for="' + id + 'Num">' + label + '</label>' +
+      '<div class="size-control-row">' +
+        '<input type="range" id="' + id + '" min="10" max="56" step="1" value="' + size + '"' +
+          ' class="size-control-range" aria-label="' + label + '">' +
+        '<input type="number" id="' + id + 'Num" min="10" max="56" step="1" value="' + size + '"' +
+          ' class="size-control-num" inputmode="numeric">' +
+        '<span class="size-control-unit">px</span>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function normalizeTextColor(value, fallback) {
+  const fallbackColor = fallback || '#ffffff';
+  try {
+    return colorToDisplayHex(value || fallbackColor);
+  } catch (_) {
+    return fallbackColor;
+  }
+}
+
+function homeTextColorHtml(id, value, labelText) {
+  const color = normalizeTextColor(value, '#ffffff');
+  const label = labelText || 'צבע טקסט';
+  return (
+    '<div class="form-field form-field--full">' +
+      '<span class="field-label">' + label + '</span>' +
+      '<div class="hsla-field" id="' + id + 'Picker" data-hsla-for="' + id + '">' +
+        '<button type="button" class="hsla-swatch" title="' + label + '" aria-label="' + label + '"></button>' +
+        '<span class="color-hex">' + escapeHtml(color) + '</span>' +
+        '<input type="hidden" id="' + id + '" value="' + escapeHtml(color) + '">' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function bindHomeTextColorField(id) {
+  const picker = document.getElementById(id + 'Picker');
+  if (!picker) return;
+  picker.dataset.hslaReady = '';
+  setupHslaField(picker, function () {
+    scheduleHomeEditorPreview();
+  });
+}
+
+function bindHomeTextSizeField(id) {
+  const range = document.getElementById(id);
+  const num = document.getElementById(id + 'Num');
+  if (!range || !num) return;
+
+  function apply(raw, from) {
+    const size = clampFontSize(raw, 16);
+    if (from !== 'range') range.value = String(size);
+    if (from !== 'num') num.value = String(size);
+    scheduleHomeEditorPreview();
+    return size;
+  }
+
+  range.addEventListener('input', function () {
+    apply(range.value, 'range');
+  });
+
+  num.addEventListener('input', function () {
+    if (num.value === '' || num.value === '-') return;
+    apply(num.value, 'num');
+  });
+
+  num.addEventListener('change', function () {
+    apply(num.value === '' ? range.value : num.value, 'num');
+  });
+
+  num.addEventListener('blur', function () {
+    apply(num.value === '' ? range.value : num.value, 'num');
+  });
+}
+
+function normalizeHeaderItem(item) {
+  if (!item || typeof item !== 'object') return null;
+  const type = item.type;
+  if (type !== 'logo' && type !== 'title' && type !== 'subtitle' && type !== 'badge') return null;
+
+  const base = {
+    id: item.id || createHeaderItemId(),
+    type: type,
+    x: clampPercent(item.x, 50),
+    y: clampPercent(item.y, 50),
+  };
+
+  if (type === 'logo') {
+    return Object.assign(base, {
+      src: item.src || '',
+      link: item.link || '',
+      caption: item.caption || '',
+      w: clampLogoWidth(item.w),
+      fontSize: clampFontSize(item.fontSize, defaultHeaderFontSize('logo')),
+      color: normalizeTextColor(item.color, '#ffffff'),
+    });
+  }
+
+  const maxLen = type === 'badge' ? 20 : 40;
+  return Object.assign(base, {
+    text: item.text == null ? '' : String(item.text).slice(0, maxLen),
+    align: item.align === 'left' || item.align === 'right' ? item.align : 'center',
+    fontSize: clampFontSize(item.fontSize, defaultHeaderFontSize(type)),
+    color: normalizeTextColor(item.color, '#ffffff'),
+  });
+}
+
+function normalizeHeader(header, fallbackTitle) {
+  const source = header && typeof header === 'object' ? header : {};
+  const items = Array.isArray(source.items)
+    ? source.items.map(normalizeHeaderItem).filter(Boolean)
+    : [];
+
+  if (!items.some(function (item) { return item.type === 'title'; })) {
+    items.push({
+      id: createHeaderItemId(),
+      type: 'title',
+      text: String(fallbackTitle || 'פורטל תוכן').slice(0, 40),
+      x: 50,
+      y: 45,
+      align: 'center',
+    });
+  }
+
+  return {
+    height: clampHeaderHeight(source.height),
+    bgOpacity: clampBgOpacity(source.bgOpacity),
+    bgImage: source.bgImage || '',
+    items: items,
+  };
+}
+
+function migrateLegacyHeader(parsed) {
+  const items = [];
+  const logos = Array.isArray(parsed.titleLogos) ? parsed.titleLogos : null;
+
+  if (logos && logos.length) {
+    logos.forEach(function (logo, idx) {
+      if (!logo || !logo.src) return;
+      const align = logo.align === 'left' ? 'left' : 'right';
+      items.push(normalizeHeaderItem({
+        type: 'logo',
+        src: logo.src,
+        link: logo.link || '',
+        caption: logo.caption || '',
+        x: align === 'left' ? 12 : (88 - idx * 16),
+        y: 18,
+        w: logo.w || 14,
+      }));
+    });
+  } else if (parsed.titleLogoEnabled && parsed.titleLogo) {
+    const align = parsed.titleLogoAlign === 'left' ? 'left' : 'right';
+    items.push(normalizeHeaderItem({
+      type: 'logo',
+      src: parsed.titleLogo,
+      link: parsed.titleLogoLink || '',
+      caption: '',
+      x: align === 'left' ? 12 : 88,
+      y: 18,
+      w: 14,
+    }));
+  }
+
+  items.push(normalizeHeaderItem({
+    type: 'title',
+    text: (parsed.title || DEFAULT_HOME.title || 'פורטל תוכן').slice(0, 40),
+    x: 50,
+    y: 48,
+    align: 'center',
+  }));
+
+  return normalizeHeader({
+    height: 180,
+    bgOpacity: migrateBgOpacity(parsed, 'title'),
+    bgImage: parsed.titleImage || '',
+    items: items,
+  }, parsed.title);
+}
+
+function buildHomeHeader(parsed) {
+  if (parsed && parsed.header && Array.isArray(parsed.header.items)) {
+    return normalizeHeader(parsed.header, parsed.title);
+  }
+  if (parsed && (
+    Object.prototype.hasOwnProperty.call(parsed, 'title') ||
+    Object.prototype.hasOwnProperty.call(parsed, 'titleLogo') ||
+    Object.prototype.hasOwnProperty.call(parsed, 'titleImage') ||
+    Object.prototype.hasOwnProperty.call(parsed, 'titleLogos')
+  )) {
+    return migrateLegacyHeader(parsed);
+  }
+  return normalizeHeader(DEFAULT_HOME.header, DEFAULT_HOME.title);
+}
+
+function syncTitleFromHeader(home) {
+  const titleItem = (home.header && home.header.items || []).find(function (item) {
+    return item.type === 'title';
+  });
+  home.title = titleItem ? String(titleItem.text || '').slice(0, 40) : '';
+  return home.title;
+}
+
+function getHeaderTitleText(home) {
+  const titleItem = (home.header && home.header.items || []).find(function (item) {
+    return item.type === 'title';
+  });
+  if (titleItem) return String(titleItem.text || '');
+  return home.title == null ? DEFAULT_HOME.title : String(home.title);
+}
+
+function formatClassificationBadge(text) {
+  const raw = String(text || '').trim().replace(/^[\s\-–—]+|[\s\-–—]+$/g, '').trim();
+  const label = raw || 'תג';
+  return '- ' + label + ' -';
+}
+
 function loadHome() {
   const saved = localStorage.getItem(HOME_STORAGE_KEY);
   let home = Object.assign({}, DEFAULT_HOME);
+  home.header = normalizeHeader(DEFAULT_HOME.header, DEFAULT_HOME.title);
+
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
       home = Object.assign({}, DEFAULT_HOME, parsed);
-      home.titleBgOpacity = migrateBgOpacity(parsed, 'title');
       home.introBgOpacity = migrateBgOpacity(parsed, 'intro');
       home.intro2BgOpacity = migrateBgOpacity(parsed, 'intro2');
       home.closingBgOpacity = migrateBgOpacity(parsed, 'closing');
       home.closing2BgOpacity = migrateBgOpacity(parsed, 'closing2');
       home.hasIntro2 = !!home.hasIntro2;
       home.hasClosing2 = !!home.hasClosing2;
+      home.header = buildHomeHeader(parsed);
+      syncTitleFromHeader(home);
+      stripLegacyHeaderFields(home);
     } catch {
       home = Object.assign({}, DEFAULT_HOME);
+      home.header = normalizeHeader(DEFAULT_HOME.header, DEFAULT_HOME.title);
     }
   }
   return home;
@@ -1750,8 +2263,26 @@ function clampBgOpacity(value) {
   return Math.min(100, Math.max(0, Math.round(num)));
 }
 
+function stripLegacyHeaderFields(home) {
+  delete home.titleImage;
+  delete home.titleBgOpacity;
+  delete home.titleLogoEnabled;
+  delete home.titleLogo;
+  delete home.titleLogoLink;
+  delete home.titleLogoAlign;
+  delete home.titleLogos;
+  delete home.titleHasBg;
+  delete home.titleNoBg;
+  return home;
+}
+
 function saveHome(home) {
   try {
+    stripLegacyHeaderFields(home);
+    if (home.header) {
+      home.header = normalizeHeader(home.header, home.title);
+      syncTitleFromHeader(home);
+    }
     localStorage.setItem(HOME_STORAGE_KEY, JSON.stringify(home));
     return true;
   } catch (err) {
@@ -1761,7 +2292,7 @@ function saveHome(home) {
 }
 
 const MEDIA_SECTION_KEYS = [
-  'Text', 'Image', 'Video', 'MediaType', 'BgOpacity', 'SizeAuto', 'Height',
+  'Text', 'TextSize', 'TextColor', 'Image', 'Video', 'MediaType', 'BgOpacity', 'SizeAuto', 'Height',
   'VideoFit', 'VideoZoom', 'VideoPosX', 'VideoPosY', 'VideoBgMode', 'VideoBgColor',
 ];
 
@@ -1776,7 +2307,9 @@ function clearMediaSectionFields(home, kind) {
   MEDIA_SECTION_KEYS.forEach(function (suffix) {
     const key = kind + suffix;
     home[key] = Object.prototype.hasOwnProperty.call(defaults, key) ? defaults[key] : (
-      suffix === 'MediaType' ? 'image' :
+      suffix === 'MediaType' ? 'bg' :
+      suffix === 'TextSize' ? 16 :
+      suffix === 'TextColor' ? '#ffffff' :
       suffix === 'BgOpacity' || suffix === 'VideoZoom' ? (suffix === 'VideoZoom' ? 100 : 100) :
       suffix === 'Height' ? 280 :
       suffix === 'SizeAuto' ? true :
@@ -1790,6 +2323,7 @@ function clearMediaSectionFields(home, kind) {
 }
 
 function getSectionHeightEl(kind) {
+  if (kind === 'header') return document.getElementById('homeHeaderCanvas');
   if (kind === 'intro') return document.getElementById('homeIntroMain');
   if (kind === 'intro2') return document.getElementById('homeIntro2Main');
   if (kind === 'closing') return document.getElementById('homeClosing');
@@ -1865,6 +2399,8 @@ async function duplicateHomeSection(kind) {
   copyMediaSectionFields(home, kind, toKind);
   if (kind === 'intro') {
     home.intro2Subtitle = (home.subtitle || '').slice(0, 10);
+    home.intro2SubtitleSize = home.subtitleSize || DEFAULT_HOME.subtitleSize;
+    home.intro2SubtitleColor = home.subtitleColor || DEFAULT_HOME.subtitleColor;
   }
   home[flag] = true;
 
@@ -1883,7 +2419,7 @@ async function duplicateHomeSection(kind) {
     } catch (err) {
       console.warn('Video copy failed', err);
       home[toKind + 'Video'] = '';
-      home[toKind + 'MediaType'] = 'image';
+      home[toKind + 'MediaType'] = 'bg';
     }
   }
 
@@ -2231,12 +2767,16 @@ async function setSectionMedia(el, options) {
       el.style.backgroundImage = 'none';
       el.classList.remove('has-video-bg-color');
       el.style.removeProperty('background');
-      el.style.removeProperty('background-color');
+      el.style.removeProperty('--video-underlay-color');
 
       if (options.videoBgMode === 'color') {
         const underlay = options.videoBgColor || '#2f5a28';
         el.style.setProperty('--video-underlay-color', underlay);
         el.classList.add('has-video-bg-color');
+        el.style.removeProperty('background-color');
+      } else {
+        // שקיפות מלאה מאחורי הסרטון — לא תלויה בשקיפות רקע של המקטע
+        el.style.backgroundColor = 'transparent';
       }
 
       const video = document.createElement('video');
@@ -2292,13 +2832,19 @@ function calcMediaHeight(mediaWidth, mediaHeight, containerWidth) {
 }
 
 function applySectionMediaHeight(kind, heightPx) {
+  if (kind === 'header') {
+    const value = clampHeaderHeight(heightPx);
+    const el = getSectionHeightEl('header');
+    if (el) el.style.setProperty('--header-height', value + 'px');
+    return;
+  }
   const value = Math.min(560, Math.max(120, Number(heightPx) || 280)) + 'px';
   const el = getSectionHeightEl(kind);
   if (el) el.style.setProperty('--section-media-height', value);
 }
 
 function homeSectionLayoutFieldsHtml(home, kind) {
-  const mediaType = home[kind + 'MediaType'] || 'image';
+  const mediaType = normalizeHomeMediaType(home[kind + 'MediaType']);
   const fit = home[kind + 'VideoFit'] === 'contain' ? 'contain' : 'cover';
   const zoom = Number(home[kind + 'VideoZoom']) || 100;
   const posX = Number(home[kind + 'VideoPosX']) || 50;
@@ -2323,10 +2869,12 @@ function homeSectionLayoutFieldsHtml(home, kind) {
         '</label>' +
       '</div>' +
       '<div id="homeVideoBgColorWrap"' + (bgMode === 'color' ? '' : ' hidden') + ' style="margin-top:10px;">' +
-        '<label class="site-theme-control" for="homeFieldVideoBgColor" style="gap:10px;">' +
+        '<div class="hsla-field" id="homeVideoBgColorPicker" data-hsla-for="homeFieldVideoBgColor">' +
           '<span>צבע רקע</span>' +
-          '<input type="color" id="homeFieldVideoBgColor" value="' + escapeHtml(bgColor) + '">' +
-        '</label>' +
+          '<button type="button" class="hsla-swatch" title="בחירת צבע רקע" aria-label="בחירת צבע רקע"></button>' +
+          '<span class="color-hex" id="homeFieldVideoBgColorHex">' + escapeHtml(colorToDisplayHex(bgColor)) + '</span>' +
+          '<input type="hidden" id="homeFieldVideoBgColor" value="' + escapeHtml(colorToDisplayHex(bgColor)) + '">' +
+        '</div>' +
       '</div>' +
       '<p class="field-subhint">את גובה המקטע משנים במסך עצמו: במצב עריכה גררו את הידית בתחתית המסגרת.</p>' +
       '<span class="field-label" style="margin-top:14px; display:block;">חיתוך והתאמת סרטון</span>' +
@@ -2373,6 +2921,14 @@ function bindHomeLayoutFields() {
   if (bgTransparent) bgTransparent.addEventListener('change', syncBgMode);
   if (bgColorMode) bgColorMode.addEventListener('change', syncBgMode);
   syncBgMode();
+
+  const videoBgPicker = document.getElementById('homeVideoBgColorPicker');
+  if (videoBgPicker) {
+    videoBgPicker.dataset.hslaReady = '';
+    setupHslaField(videoBgPicker, function () {
+      scheduleHomeEditorPreview();
+    });
+  }
 
   if (zoom && zoomValue) {
     zoom.addEventListener('input', function () {
@@ -2425,10 +2981,11 @@ function readHomeLayoutFields(home, kind) {
 
 function getSectionMediaHeight(kind) {
   const el = getSectionHeightEl(kind);
-  if (!el) return 280;
-  const raw = getComputedStyle(el).getPropertyValue('--section-media-height').trim();
+  if (!el) return kind === 'header' ? 180 : 280;
+  const prop = kind === 'header' ? '--header-height' : '--section-media-height';
+  const raw = getComputedStyle(el).getPropertyValue(prop).trim();
   const num = parseInt(raw, 10);
-  return Number.isFinite(num) ? num : (el.getBoundingClientRect().height || 280);
+  return Number.isFinite(num) ? num : (el.getBoundingClientRect().height || (kind === 'header' ? 180 : 280));
 }
 
 function syncResizeHandlesVisibility() {
@@ -2454,7 +3011,8 @@ function bindSectionResizeHandles() {
       handle.setPointerCapture(e.pointerId);
 
       function onMove(ev) {
-        const next = Math.min(560, Math.max(120, Math.round(startH + (ev.clientY - startY))));
+        const minH = kind === 'header' ? 100 : 120;
+        const next = Math.min(560, Math.max(minH, Math.round(startH + (ev.clientY - startY))));
         applySectionMediaHeight(kind, next);
       }
 
@@ -2466,6 +3024,15 @@ function bindSectionResizeHandles() {
         handle.removeEventListener('pointercancel', onUp);
 
         const finalH = getSectionMediaHeight(kind);
+        if (kind === 'header') {
+          const home = loadHome();
+          home.header = normalizeHeader(home.header, home.title);
+          home.header.height = clampHeaderHeight(finalH);
+          if (!saveHome(home)) {
+            alert('אין מספיק מקום לשמירה.');
+          }
+          return;
+        }
         const patch = {};
         patch[kind + 'SizeAuto'] = false;
         patch[kind + 'Height'] = finalH;
@@ -2487,6 +3054,16 @@ function setOptionalText(el, text, maxLen) {
   el.hidden = !value.trim();
 }
 
+function applyTextFontSize(el, size, fallback) {
+  if (!el) return;
+  el.style.fontSize = clampFontSize(size, fallback) + 'px';
+}
+
+function applyTextColor(el, color, fallback) {
+  if (!el) return;
+  el.style.color = colorToCss(normalizeTextColor(color, fallback || '#ffffff'));
+}
+
 function setSectionBgOpacity(sectionEl, opacity) {
   if (!sectionEl) return;
   const value = clampBgOpacity(opacity);
@@ -2498,7 +3075,7 @@ function setSectionBgOpacity(sectionEl, opacity) {
 function homeBgOpacityHtml(opacity) {
   const value = clampBgOpacity(opacity);
   return (
-    '<div class="form-field form-field--full">' +
+    '<div class="form-field form-field--full" id="homeBgOpacityField">' +
       '<label for="homeFieldBgOpacity">שקיפות רקע: <strong id="homeFieldBgOpacityValue">' + value + '%</strong></label>' +
       '<input type="range" id="homeFieldBgOpacity" min="0" max="100" step="1" value="' + value + '" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">' +
       '<p class="field-subhint">0 = שקוף לגמרי · 100 = רקע מלא בצבע המשני של האתר</p>' +
@@ -2531,16 +3108,29 @@ function homeImageFieldHtml(imageUrl, label) {
   );
 }
 
+function normalizeHomeMediaType(value) {
+  if (value === 'image' || value === 'video' || value === 'bg') return value;
+  return 'bg';
+}
+
 function homeMediaFieldsHtml(options) {
-  const mediaType = options.mediaType === 'video' ? 'video' : 'image';
+  const mediaType = normalizeHomeMediaType(options.mediaType);
   const imageUrl = options.imageUrl || '';
   const videoName = options.videoName || '';
+  const bgOpacity = Object.prototype.hasOwnProperty.call(options, 'bgOpacity')
+    ? options.bgOpacity
+    : 100;
 
   return (
     '<div id="homeMediaFieldWrap">' +
       '<div class="form-field form-field--full">' +
         '<span class="field-label">סוג מדיה</span>' +
         '<div class="action-checks">' +
+          '<label class="action-check" for="homeMediaBg">' +
+            '<input type="radio" name="homeMediaType" id="homeMediaBg" value="bg"' +
+              (mediaType === 'bg' ? ' checked' : '') + '>' +
+            '<span>רקע</span>' +
+          '</label>' +
           '<label class="action-check" for="homeMediaImage">' +
             '<input type="radio" name="homeMediaType" id="homeMediaImage" value="image"' +
               (mediaType === 'image' ? ' checked' : '') + '>' +
@@ -2553,7 +3143,10 @@ function homeMediaFieldsHtml(options) {
           '</label>' +
         '</div>' +
       '</div>' +
-      '<div class="form-field form-field--full" id="homeImageOnlyWrap"' + (mediaType === 'video' ? ' hidden' : '') + '>' +
+      '<div id="homeBgOpacityWrap"' + (mediaType === 'bg' ? '' : ' hidden') + '>' +
+        homeBgOpacityHtml(bgOpacity) +
+      '</div>' +
+      '<div class="form-field form-field--full" id="homeImageOnlyWrap"' + (mediaType === 'image' ? '' : ' hidden') + '>' +
         '<label>תמונה (אופציונלי)</label>' +
         '<label class="upload-box" for="homeFieldImage">' +
           '<input type="file" id="homeFieldImage" accept="image/*" hidden>' +
@@ -2563,7 +3156,7 @@ function homeMediaFieldsHtml(options) {
         '<img class="home-edit-preview' + (imageUrl ? ' is-visible' : '') + '" id="homeFieldImagePreview" src="' + (imageUrl || '') + '" alt="">' +
         (imageUrl ? '<button type="button" class="btn-cancel" id="homeClearImage" style="margin-top:10px;">הסרת תמונה</button>' : '') +
       '</div>' +
-      '<div class="form-field form-field--full" id="homeVideoOnlyWrap"' + (mediaType === 'image' ? ' hidden' : '') + '>' +
+      '<div class="form-field form-field--full" id="homeVideoOnlyWrap"' + (mediaType === 'video' ? '' : ' hidden') + '>' +
         '<label>בחירת סרטון מהמחשב</label>' +
         '<label class="upload-box" for="homeFieldVideoFile">' +
           '<input type="file" id="homeFieldVideoFile" accept="video/*" hidden>' +
@@ -2587,20 +3180,24 @@ function bindHomeNoBgToggle() {
 }
 
 function bindHomeMediaTypeToggle() {
+  const bgRadio = document.getElementById('homeMediaBg');
   const imageRadio = document.getElementById('homeMediaImage');
   const videoRadio = document.getElementById('homeMediaVideo');
+  const opacityWrap = document.getElementById('homeBgOpacityWrap');
   const imageWrap = document.getElementById('homeImageOnlyWrap');
   const videoWrap = document.getElementById('homeVideoOnlyWrap');
   const layoutWrap = document.getElementById('homeLayoutFields');
   if (!imageRadio || !videoRadio || !imageWrap || !videoWrap) return;
 
   function sync() {
-    const isVideo = videoRadio.checked;
-    imageWrap.hidden = isVideo;
-    videoWrap.hidden = !isVideo;
-    if (layoutWrap) layoutWrap.hidden = !isVideo;
+    const type = getSelectedHomeMediaType();
+    if (opacityWrap) opacityWrap.hidden = type !== 'bg';
+    imageWrap.hidden = type !== 'image';
+    videoWrap.hidden = type !== 'video';
+    if (layoutWrap) layoutWrap.hidden = type !== 'video';
   }
 
+  if (bgRadio) bgRadio.addEventListener('change', sync);
   imageRadio.addEventListener('change', sync);
   videoRadio.addEventListener('change', sync);
   sync();
@@ -2608,7 +3205,7 @@ function bindHomeMediaTypeToggle() {
 
 function getSelectedHomeMediaType() {
   const checked = document.querySelector('input[name="homeMediaType"]:checked');
-  return checked ? checked.value : 'image';
+  return normalizeHomeMediaType(checked ? checked.value : 'bg');
 }
 
 function applySiteTheme(home) {
@@ -2662,29 +3259,36 @@ function updateHomeField(patch) {
 async function renderHome(homeOverride, previewOptions) {
   const home = homeOverride || loadHome();
   previewOptions = previewOptions || {};
+  home.header = normalizeHeader(home.header, home.title);
 
-  const title = (home.title == null ? DEFAULT_HOME.title : String(home.title)).slice(0, 10);
+  const title = getHeaderTitleText(home).slice(0, 40);
   const subtitle = (home.subtitle == null ? DEFAULT_HOME.subtitle : String(home.subtitle)).slice(0, 10);
   const introText = home.introText == null ? DEFAULT_HOME.introText : String(home.introText);
   const closingText = home.closingText == null ? DEFAULT_HOME.closingText : String(home.closingText);
 
-  setOptionalText(document.getElementById('homeTitle'), title, 10);
   setOptionalText(document.getElementById('homeSubtitle'), subtitle, 10);
   setOptionalText(document.getElementById('homeIntroText'), introText);
   setOptionalText(document.getElementById('homeClosingText'), closingText);
+  applyTextFontSize(document.getElementById('homeSubtitle'), home.subtitleSize, 20);
+  applyTextFontSize(document.getElementById('homeIntroText'), home.introTextSize, 16);
+  applyTextFontSize(document.getElementById('homeClosingText'), home.closingTextSize, 17);
+  applyTextColor(document.getElementById('homeSubtitle'), home.subtitleColor, '#ffffff');
+  applyTextColor(document.getElementById('homeIntroText'), home.introTextColor, '#ffffff');
+  applyTextColor(document.getElementById('homeClosingText'), home.closingTextColor, '#ffffff');
 
   if (home.hasIntro2) {
     setOptionalText(document.getElementById('homeIntro2Subtitle'), home.intro2Subtitle || '', 10);
     setOptionalText(document.getElementById('homeIntro2Text'), home.intro2Text || '');
+    applyTextFontSize(document.getElementById('homeIntro2Subtitle'), home.intro2SubtitleSize, 20);
+    applyTextFontSize(document.getElementById('homeIntro2Text'), home.intro2TextSize, 16);
+    applyTextColor(document.getElementById('homeIntro2Subtitle'), home.intro2SubtitleColor, '#ffffff');
+    applyTextColor(document.getElementById('homeIntro2Text'), home.intro2TextColor, '#ffffff');
   }
   if (home.hasClosing2) {
     setOptionalText(document.getElementById('homeClosing2Text'), home.closing2Text || '');
+    applyTextFontSize(document.getElementById('homeClosing2Text'), home.closing2TextSize, 17);
+    applyTextColor(document.getElementById('homeClosing2Text'), home.closing2TextColor, '#ffffff');
   }
-
-  setSectionBackground(
-    document.getElementById('homeHeroBg'),
-    home.titleImage || ''
-  );
 
   const mediaJobs = [];
   const kinds = ['intro', 'closing'];
@@ -2694,14 +3298,16 @@ async function renderHome(homeOverride, previewOptions) {
   kinds.forEach(function (kind) {
     const removedKey = kind + 'VideoRemoved';
     const fileKey = kind + 'VideoFile';
-    const hasVideo = previewOptions[removedKey]
+    const mediaType = normalizeHomeMediaType(home[kind + 'MediaType']);
+    const hasVideo = mediaType === 'video' && (previewOptions[removedKey]
       ? false
-      : !!(previewOptions[fileKey] || home[kind + 'Video']);
+      : !!(previewOptions[fileKey] || home[kind + 'Video']));
+    const bgOpacity = mediaType === 'bg' ? home[kind + 'BgOpacity'] : 100;
 
     mediaJobs.push(setSectionMedia(getSectionBgEl(kind), {
-      noBg: clampBgOpacity(home[kind + 'BgOpacity']) <= 0,
-      mediaType: home[kind + 'MediaType'] || 'image',
-      image: home[kind + 'Image'] || '',
+      noBg: mediaType === 'bg' && clampBgOpacity(bgOpacity) <= 0,
+      mediaType: mediaType === 'video' ? 'video' : 'image',
+      image: mediaType === 'image' ? (home[kind + 'Image'] || '') : '',
       videoKey: kind,
       hasVideo: hasVideo,
       videoFile: previewOptions[fileKey] || null,
@@ -2726,7 +3332,7 @@ async function renderHome(homeOverride, previewOptions) {
 
     if (home[kind + 'SizeAuto'] === false) {
       applySectionMediaHeight(kind, home[kind + 'Height'] || 280);
-    } else if ((home[kind + 'MediaType'] || 'image') !== 'video' || !hasVideo) {
+    } else if (mediaType !== 'video' || !hasVideo) {
       applySectionMediaHeight(kind, home[kind + 'Height'] || 280);
     }
   });
@@ -2741,64 +3347,188 @@ async function renderHome(homeOverride, previewOptions) {
     clearSectionMedia(document.getElementById('homeClosing2Bg'));
   }
 
-  setSectionBgOpacity(document.getElementById('homeHero'), home.titleBgOpacity);
-  setSectionBgOpacity(document.getElementById('homeIntro'), home.introBgOpacity);
-  setSectionBgOpacity(document.getElementById('homeClosing'), home.closingBgOpacity);
-  if (home.hasIntro2) setSectionBgOpacity(document.getElementById('homeIntro2'), home.intro2BgOpacity);
-  if (home.hasClosing2) setSectionBgOpacity(document.getElementById('homeClosing2'), home.closing2BgOpacity);
+  function sectionDisplayOpacity(kind) {
+    const mediaType = normalizeHomeMediaType(home[kind + 'MediaType']);
+    if (mediaType === 'bg') return home[kind + 'BgOpacity'];
+    // תמונה / סרטון: בלי צבע משני מאחור — סרטון שקוף נשאר שקוף לגמרי
+    return 0;
+  }
 
-  renderHomeLogo(home);
+  setSectionBgOpacity(document.getElementById('homeIntro'), sectionDisplayOpacity('intro'));
+  setSectionBgOpacity(document.getElementById('homeClosing'), sectionDisplayOpacity('closing'));
+  if (home.hasIntro2) {
+    setSectionBgOpacity(document.getElementById('homeIntro2'), sectionDisplayOpacity('intro2'));
+  }
+  if (home.hasClosing2) {
+    setSectionBgOpacity(document.getElementById('homeClosing2'), sectionDisplayOpacity('closing2'));
+  }
+
+  renderHomeHeader(home);
   syncHomeSectionControls(home);
   applySiteTheme(home);
   document.title = title.trim() || 'פורטל תוכן';
 }
 
-function renderHomeLogo(home) {
-  const section = document.getElementById('homeLogoSection');
-  const wrap = document.getElementById('homeLogoWrap');
-  const img = document.getElementById('homeLogo');
-  if (!section || !wrap || !img) return;
+function renderHomeHeader(home) {
+  const section = document.getElementById('homeHeader');
+  const canvas = document.getElementById('homeHeaderCanvas');
+  const itemsEl = document.getElementById('homeHeaderItems');
+  const bgEl = document.getElementById('homeHeaderBg');
+  if (!section || !canvas || !itemsEl || !bgEl) return;
 
-  const enabled = !!home.titleLogoEnabled && !!home.titleLogo;
-  const showInEdit = !!editMode;
-  const align = home.titleLogoAlign === 'left' ? 'left' : 'right';
+  const header = normalizeHeader(home.header, home.title);
+  applySectionMediaHeight('header', header.height);
+  setSectionBackground(bgEl, header.bgImage || '');
+  setSectionBgOpacity(section, header.bgOpacity);
 
-  section.hidden = !enabled && !showInEdit;
-  section.classList.toggle('home-logo-section--empty', !enabled);
-  section.classList.toggle('home-logo-section--left', align === 'left');
-  section.classList.toggle('home-logo-section--right', align === 'right');
+  const html = header.items.map(function (item) {
+    if (item.type === 'logo') {
+      if (!item.src && !editMode) return '';
+      const tag = item.link && !editMode ? 'a' : 'div';
+      const linkAttrs = item.link && !editMode
+        ? ' href="' + escapeHtml(item.link) + '" target="_blank" rel="noopener noreferrer"'
+        : '';
+      const linkClass = item.link ? ' is-link' : '';
+      const caption = item.caption
+        ? '<span class="home-header-caption" style="font-size:' + clampFontSize(item.fontSize, 12) + 'px;color:' + colorToCss(item.color || '#ffffff') + ';">' + escapeHtml(item.caption) + '</span>'
+        : '';
+      const img = item.src
+        ? '<img class="home-header-logo-img" src="' + item.src + '" alt="' + escapeHtml(item.caption || 'לוגו') + '">'
+        : '<span class="home-header-caption">לוגו</span>';
+      return (
+        '<' + tag + ' class="home-header-item home-header-item--logo' + linkClass + '"' +
+          ' data-header-id="' + escapeHtml(item.id) + '"' +
+          ' data-header-type="logo"' +
+          ' style="--hx:' + item.x + '%;--hy:' + item.y + '%;--hw:' + item.w + '%;"' +
+          linkAttrs + '>' +
+          img + caption +
+        '</' + tag + '>'
+      );
+    }
 
-  wrap.hidden = !enabled;
-  wrap.classList.toggle('is-link', enabled && !!home.titleLogoLink);
+    const text = String(item.text || '').trim();
+    if (!text && !editMode) return '';
+    const tagName = item.type === 'title' ? 'h1' : 'div';
+    let display = text || (item.type === 'title' ? 'כותרת' : item.type === 'subtitle' ? 'כותרת משנה' : 'תג');
+    if (item.type === 'badge') {
+      display = formatClassificationBadge(display);
+    }
+    const fontSize = clampFontSize(item.fontSize, defaultHeaderFontSize(item.type));
+    const textColor = colorToCss(item.color || '#ffffff');
+    return (
+      '<' + tagName + ' class="home-header-item home-header-item--' + item.type + '"' +
+        ' data-header-id="' + escapeHtml(item.id) + '"' +
+        ' data-header-type="' + item.type + '"' +
+        ' data-align="' + (item.align || 'center') + '"' +
+        ' style="--hx:' + item.x + '%;--hy:' + item.y + '%;font-size:' + fontSize + 'px;color:' + textColor + ';">' +
+        escapeHtml(display) +
+      '</' + tagName + '>'
+    );
+  }).join('');
 
-  if (!enabled) {
-    img.removeAttribute('src');
-    img.alt = '';
-    wrap.removeAttribute('href');
-    wrap.removeAttribute('target');
-    wrap.removeAttribute('rel');
-    return;
+  itemsEl.innerHTML = html;
+  bindHeaderItemInteractions();
+}
+
+function applyHeaderPreset(header, preset) {
+  const logos = header.items.filter(function (item) { return item.type === 'logo'; });
+  const title = header.items.find(function (item) { return item.type === 'title'; });
+  const subtitle = header.items.find(function (item) { return item.type === 'subtitle'; });
+  const badge = header.items.find(function (item) { return item.type === 'badge'; });
+
+  if (preset === 'logo-right-title-center') {
+    if (logos[0]) { logos[0].x = 88; logos[0].y = 22; logos[0].w = 14; }
+    logos.slice(1).forEach(function (logo, idx) {
+      logo.x = 88;
+      logo.y = 48 + idx * 22;
+      logo.w = 12;
+    });
+    if (title) { title.x = 50; title.y = 48; title.align = 'center'; }
+    if (subtitle) { subtitle.x = 50; subtitle.y = 68; subtitle.align = 'center'; }
+    if (badge) { badge.x = 50; badge.y = 12; badge.align = 'center'; }
   }
 
-  img.src = home.titleLogo;
-  img.alt = 'לוגו יחידה';
-
-  if (home.titleLogoLink) {
-    wrap.href = home.titleLogoLink;
-    wrap.target = '_blank';
-    wrap.rel = 'noopener noreferrer';
-  } else {
-    wrap.removeAttribute('href');
-    wrap.removeAttribute('target');
-    wrap.removeAttribute('rel');
+  if (preset === 'logos-sides-title-center') {
+    if (logos[0]) { logos[0].x = 12; logos[0].y = 28; logos[0].w = 12; }
+    if (logos[1]) { logos[1].x = 88; logos[1].y = 28; logos[1].w = 12; }
+    logos.slice(2).forEach(function (logo, idx) {
+      logo.x = 12;
+      logo.y = 55 + idx * 18;
+      logo.w = 10;
+    });
+    if (title) { title.x = 50; title.y = 45; title.align = 'center'; }
+    if (subtitle) { subtitle.x = 50; subtitle.y = 62; subtitle.align = 'center'; }
+    if (badge) { badge.x = 50; badge.y = 14; badge.align = 'center'; }
   }
+
+  return header;
+}
+
+function saveHeaderItemPosition(itemId, x, y, w) {
+  const home = loadHome();
+  home.header = normalizeHeader(home.header, home.title);
+  const item = home.header.items.find(function (entry) { return entry.id === itemId; });
+  if (!item) return;
+  item.x = clampPercent(x, item.x);
+  item.y = clampPercent(y, item.y);
+  if (typeof w === 'number') item.w = clampLogoWidth(w);
+  syncTitleFromHeader(home);
+  saveHome(home);
+}
+
+function bindHeaderItemInteractions() {
+  const canvas = document.getElementById('homeHeaderCanvas');
+  const itemsEl = document.getElementById('homeHeaderItems');
+  if (!canvas || !itemsEl || itemsEl.dataset.dragBound === '1') {
+    // Rebinding after re-render: listeners on old nodes are gone with innerHTML.
+    // Always attach fresh listeners on current nodes below.
+  }
+
+  itemsEl.querySelectorAll('.home-header-item').forEach(function (el) {
+    el.addEventListener('pointerdown', function (e) {
+      if (!editMode) return;
+      if (e.button != null && e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const itemId = el.dataset.headerId;
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+
+      el.classList.add('is-dragging');
+      el.setPointerCapture(e.pointerId);
+
+      function onMove(ev) {
+        const x = ((ev.clientX - rect.left) / rect.width) * 100;
+        const y = ((ev.clientY - rect.top) / rect.height) * 100;
+        el.style.setProperty('--hx', clampPercent(x, 50) + '%');
+        el.style.setProperty('--hy', clampPercent(y, 50) + '%');
+      }
+
+      function onUp(ev) {
+        el.classList.remove('is-dragging');
+        try { el.releasePointerCapture(ev.pointerId); } catch (_) {}
+        el.removeEventListener('pointermove', onMove);
+        el.removeEventListener('pointerup', onUp);
+        el.removeEventListener('pointercancel', onUp);
+
+        const x = parseFloat(String(el.style.getPropertyValue('--hx')));
+        const y = parseFloat(String(el.style.getPropertyValue('--hy')));
+        saveHeaderItemPosition(itemId, x, y);
+      }
+
+      el.addEventListener('pointermove', onMove);
+      el.addEventListener('pointerup', onUp);
+      el.addEventListener('pointercancel', onUp);
+    });
+  });
 }
 
 let editingHomeSection = null;
 let homeEditImageData = '';
 let homeEditVideoFile = null;
 let homeEditVideoRemoved = false;
-let homeEditLogoData = '';
+let homeEditHeaderDraft = null;
 let homeEditSnapshot = null;
 let homeEditCommitted = false;
 let homeEditPreviewTimer = null;
@@ -2808,30 +3538,52 @@ const homeEditFields = document.getElementById('homeEditFields');
 const homeEditForm = document.getElementById('homeEditForm');
 const homeEditTitle = document.getElementById('homeEditTitle');
 
+function readHeaderDraftFromEditor() {
+  if (!homeEditHeaderDraft) return normalizeHeader(DEFAULT_HOME.header, DEFAULT_HOME.title);
+
+  const heightEl = document.getElementById('homeFieldHeaderHeight');
+  const opacityEl = document.getElementById('homeFieldBgOpacity');
+  if (heightEl) homeEditHeaderDraft.height = clampHeaderHeight(heightEl.value);
+  if (opacityEl) homeEditHeaderDraft.bgOpacity = clampBgOpacity(opacityEl.value);
+  homeEditHeaderDraft.bgImage = homeEditImageData || '';
+
+  homeEditHeaderDraft.items.forEach(function (item) {
+    if (item.type === 'logo') {
+      const captionEl = document.getElementById('homeHeaderCaption_' + item.id);
+      const linkEl = document.getElementById('homeHeaderLink_' + item.id);
+      const sizeEl = document.getElementById('homeHeaderSize_' + item.id);
+      const fontEl = document.getElementById('homeHeaderFont_' + item.id);
+      const colorEl = document.getElementById('homeHeaderColor_' + item.id);
+      if (captionEl) item.caption = captionEl.value.trim().slice(0, 40);
+      if (linkEl) item.link = linkEl.value.trim();
+      if (sizeEl) item.w = clampLogoWidth(sizeEl.value);
+      if (fontEl) item.fontSize = clampFontSize(fontEl.value, defaultHeaderFontSize('logo'));
+      if (colorEl) item.color = normalizeTextColor(colorEl.value, '#ffffff');
+    } else {
+      const textEl = document.getElementById('homeHeaderText_' + item.id);
+      const alignEl = document.querySelector('input[name="homeHeaderAlign_' + item.id + '"]:checked');
+      const fontEl = document.getElementById('homeHeaderFont_' + item.id);
+      const colorEl = document.getElementById('homeHeaderColor_' + item.id);
+      if (textEl) {
+        const maxLen = item.type === 'badge' ? 20 : 40;
+        item.text = textEl.value.trim().slice(0, maxLen);
+      }
+      if (alignEl) item.align = alignEl.value === 'left' || alignEl.value === 'right' ? alignEl.value : 'center';
+      if (fontEl) item.fontSize = clampFontSize(fontEl.value, defaultHeaderFontSize(item.type));
+      if (colorEl) item.color = normalizeTextColor(colorEl.value, '#ffffff');
+    }
+  });
+
+  homeEditHeaderDraft = normalizeHeader(homeEditHeaderDraft, getHeaderTitleText({ header: homeEditHeaderDraft, title: '' }));
+  return homeEditHeaderDraft;
+}
+
 function buildHomeDraftFromEditor() {
   const home = JSON.parse(JSON.stringify(homeEditSnapshot || loadHome()));
 
-  if (editingHomeSection === 'hero') {
-    const titleEl = document.getElementById('homeFieldTitle');
-    const opacityEl = document.getElementById('homeFieldBgOpacity');
-    if (titleEl) home.title = titleEl.value.trim().slice(0, 10);
-    if (opacityEl) home.titleBgOpacity = clampBgOpacity(opacityEl.value);
-    home.titleImage = homeEditImageData || '';
-  }
-
-  if (editingHomeSection === 'logo') {
-    const enabledEl = document.getElementById('homeFieldLogoEnabled');
-    const linkEl = document.getElementById('homeFieldLogoLink');
-    const alignChecked = document.querySelector('input[name="homeLogoAlign"]:checked');
-    home.titleLogoEnabled = !!(enabledEl && enabledEl.checked);
-    home.titleLogoAlign = alignChecked && alignChecked.value === 'left' ? 'left' : 'right';
-    if (home.titleLogoEnabled) {
-      home.titleLogo = homeEditLogoData || '';
-      home.titleLogoLink = linkEl ? linkEl.value.trim() : '';
-    } else {
-      home.titleLogo = '';
-      home.titleLogoLink = '';
-    }
+  if (editingHomeSection === 'header') {
+    home.header = readHeaderDraftFromEditor();
+    syncTitleFromHeader(home);
   }
 
   if (editingHomeSection === 'intro' || editingHomeSection === 'intro2') {
@@ -2839,12 +3591,26 @@ function buildHomeDraftFromEditor() {
     const subtitleEl = document.getElementById('homeFieldSubtitle');
     const introEl = document.getElementById('homeFieldIntro');
     const opacityEl = document.getElementById('homeFieldBgOpacity');
+    const textSizeEl = document.getElementById('homeFieldTextSize');
     if (kind === 'intro') {
       if (subtitleEl) home.subtitle = subtitleEl.value.trim().slice(0, 10);
     } else if (subtitleEl) {
       home.intro2Subtitle = subtitleEl.value.trim().slice(0, 10);
     }
     if (introEl) home[kind + 'Text'] = introEl.value.trim();
+    const subtitleSizeEl = document.getElementById('homeFieldSubtitleSize');
+    if (subtitleSizeEl) {
+      if (kind === 'intro') home.subtitleSize = clampFontSize(subtitleSizeEl.value, 20);
+      else home.intro2SubtitleSize = clampFontSize(subtitleSizeEl.value, 20);
+    }
+    const subtitleColorEl = document.getElementById('homeFieldSubtitleColor');
+    if (subtitleColorEl) {
+      if (kind === 'intro') home.subtitleColor = normalizeTextColor(subtitleColorEl.value, '#ffffff');
+      else home.intro2SubtitleColor = normalizeTextColor(subtitleColorEl.value, '#ffffff');
+    }
+    if (textSizeEl) home[kind + 'TextSize'] = clampFontSize(textSizeEl.value, 16);
+    const textColorEl = document.getElementById('homeFieldTextColor');
+    if (textColorEl) home[kind + 'TextColor'] = normalizeTextColor(textColorEl.value, '#ffffff');
     if (opacityEl) home[kind + 'BgOpacity'] = clampBgOpacity(opacityEl.value);
     home[kind + 'MediaType'] = getSelectedHomeMediaType();
     readHomeLayoutFields(home, kind);
@@ -2857,7 +3623,11 @@ function buildHomeDraftFromEditor() {
     const kind = editingHomeSection;
     const closingEl = document.getElementById('homeFieldClosing');
     const opacityEl = document.getElementById('homeFieldBgOpacity');
+    const textSizeEl = document.getElementById('homeFieldTextSize');
     if (closingEl) home[kind + 'Text'] = closingEl.value.trim();
+    if (textSizeEl) home[kind + 'TextSize'] = clampFontSize(textSizeEl.value, 17);
+    const closingColorEl = document.getElementById('homeFieldTextColor');
+    if (closingColorEl) home[kind + 'TextColor'] = normalizeTextColor(closingColorEl.value, '#ffffff');
     if (opacityEl) home[kind + 'BgOpacity'] = clampBgOpacity(opacityEl.value);
     home[kind + 'MediaType'] = getSelectedHomeMediaType();
     readHomeLayoutFields(home, kind);
@@ -2907,27 +3677,16 @@ function openHomeEditor(section) {
   homeEditImageData = '';
   homeEditVideoFile = null;
   homeEditVideoRemoved = false;
-  homeEditLogoData = '';
+  homeEditHeaderDraft = null;
 
   let fieldsHtml = '';
   let title = 'עריכת מקטע';
 
-  if (section === 'hero') {
+  if (section === 'header') {
     title = 'עריכת כותרת';
-    homeEditImageData = home.titleImage || '';
-    fieldsHtml =
-      '<div class="form-field form-field--full">' +
-        '<label for="homeFieldTitle">כותרת (עד 10 תווים, אופציונלי)</label>' +
-        '<input type="text" id="homeFieldTitle" value="' + escapeHtml((home.title || '').slice(0, 10)) + '" maxlength="10">' +
-      '</div>' +
-      homeBgOpacityHtml(home.titleBgOpacity) +
-      homeImageFieldHtml(home.titleImage, 'תמונת כותרת (אופציונלי)');
-  }
-
-  if (section === 'logo') {
-    title = 'עריכת לוגו';
-    homeEditLogoData = home.titleLogo || '';
-    fieldsHtml = homeLogoFieldsHtml(home);
+    homeEditHeaderDraft = normalizeHeader(home.header, home.title);
+    homeEditImageData = homeEditHeaderDraft.bgImage || '';
+    fieldsHtml = homeHeaderFieldsHtml(homeEditHeaderDraft);
   }
 
   if (section === 'intro' || section === 'intro2') {
@@ -2936,20 +3695,30 @@ function openHomeEditor(section) {
     const subtitleValue = section === 'intro'
       ? (home.subtitle || '')
       : (home.intro2Subtitle || '');
+    const subtitleSize = section === 'intro'
+      ? home.subtitleSize
+      : home.intro2SubtitleSize;
+    const subtitleColor = section === 'intro'
+      ? home.subtitleColor
+      : home.intro2SubtitleColor;
     fieldsHtml =
       '<div class="form-field form-field--full">' +
         '<label for="homeFieldSubtitle">כותרת משנה (עד 10 תווים, אופציונלי)</label>' +
         '<input type="text" id="homeFieldSubtitle" value="' + escapeHtml(subtitleValue.slice(0, 10)) + '" maxlength="10">' +
       '</div>' +
+      homeTextSizeHtml('homeFieldSubtitleSize', subtitleSize, 20, 'גודל גופן לכותרת משנה') +
+      homeTextColorHtml('homeFieldSubtitleColor', subtitleColor, 'צבע כותרת משנה') +
       '<div class="form-field form-field--full">' +
         '<label for="homeFieldIntro">טקסט פתיח (אופציונלי)</label>' +
         '<textarea id="homeFieldIntro" rows="4">' + escapeHtml(home[section + 'Text'] || '') + '</textarea>' +
       '</div>' +
-      homeBgOpacityHtml(home[section + 'BgOpacity']) +
+      homeTextSizeHtml('homeFieldTextSize', home[section + 'TextSize'], 16, 'גודל גופן לטקסט פתיח') +
+      homeTextColorHtml('homeFieldTextColor', home[section + 'TextColor'], 'צבע טקסט פתיח') +
       homeMediaFieldsHtml({
-        mediaType: home[section + 'MediaType'] || 'image',
+        mediaType: home[section + 'MediaType'] || 'bg',
         imageUrl: home[section + 'Image'] || '',
         videoName: home[section + 'Video'] || '',
+        bgOpacity: home[section + 'BgOpacity'],
       }) +
       homeSectionLayoutFieldsHtml(home, section);
   }
@@ -2962,11 +3731,13 @@ function openHomeEditor(section) {
         '<label for="homeFieldClosing">טקסט סגירה (אופציונלי)</label>' +
         '<textarea id="homeFieldClosing" rows="4">' + escapeHtml(home[section + 'Text'] || '') + '</textarea>' +
       '</div>' +
-      homeBgOpacityHtml(home[section + 'BgOpacity']) +
+      homeTextSizeHtml('homeFieldTextSize', home[section + 'TextSize'], 17, 'גודל גופן לטקסט סגירה') +
+      homeTextColorHtml('homeFieldTextColor', home[section + 'TextColor'], 'צבע טקסט סגירה') +
       homeMediaFieldsHtml({
-        mediaType: home[section + 'MediaType'] || 'image',
+        mediaType: home[section + 'MediaType'] || 'bg',
         imageUrl: home[section + 'Image'] || '',
         videoName: home[section + 'Video'] || '',
+        bgOpacity: home[section + 'BgOpacity'],
       }) +
       homeSectionLayoutFieldsHtml(home, section);
   }
@@ -2978,98 +3749,260 @@ function openHomeEditor(section) {
 
   bindHomeNoBgToggle();
   bindHomeMediaTypeToggle();
-  bindHomeLogoToggle();
   bindHomeLayoutFields();
   bindHomeBgOpacityField();
+  bindHomeTextSizeField('homeFieldSubtitleSize');
+  bindHomeTextSizeField('homeFieldTextSize');
+  bindHomeTextColorField('homeFieldSubtitleColor');
+  bindHomeTextColorField('homeFieldTextColor');
   bindHomeEditorMediaInputs();
-  bindHomeEditorLogoInputs();
+  bindHomeHeaderEditor();
   bindHomeEditorLivePreview();
 }
 
-function homeLogoFieldsHtml(home) {
-  const enabled = !!home.titleLogoEnabled;
-  const logo = home.titleLogo || '';
-  const link = home.titleLogoLink || '';
-  const align = home.titleLogoAlign === 'left' ? 'left' : 'right';
-
+function homeHeaderAlignHtml(itemId, align) {
   return (
-    '<div class="form-field form-field--full">' +
-      '<label class="checkbox-label" for="homeFieldLogoEnabled" style="margin-top:0;">' +
-        '<input type="checkbox" id="homeFieldLogoEnabled"' + (enabled ? ' checked' : '') + '>' +
-        '<span>לוגו</span>' +
+    '<div class="action-checks">' +
+      '<label class="action-check" for="homeHeaderAlignRight_' + itemId + '">' +
+        '<input type="radio" name="homeHeaderAlign_' + itemId + '" id="homeHeaderAlignRight_' + itemId + '" value="right"' +
+          (align === 'right' ? ' checked' : '') + '>' +
+        '<span>ימין</span>' +
       '</label>' +
-      '<p class="field-subhint">הוספת לוגו יחידה בשורה מעל הכותרת, עם קישור אופציונלי לאתר</p>' +
-    '</div>' +
-    '<div id="homeLogoFieldsWrap"' + (enabled ? '' : ' hidden') + '>' +
-      '<div class="form-field form-field--full">' +
-        '<label>תמונת לוגו</label>' +
-        '<label class="upload-box" for="homeFieldLogo">' +
-          '<input type="file" id="homeFieldLogo" accept="image/*" hidden>' +
-          '<span class="upload-icon">🏷️</span>' +
-          '<span class="upload-text">לחצו להעלאת לוגו (תומך בשקיפות PNG)</span>' +
-        '</label>' +
-        '<img class="home-edit-preview' + (logo ? ' is-visible' : '') + '" id="homeFieldLogoPreview" src="' + (logo || '') + '" alt="">' +
-        (logo ? '<button type="button" class="btn-cancel" id="homeClearLogo" style="margin-top:10px;">הסרת לוגו</button>' : '') +
-      '</div>' +
-      '<div class="form-field form-field--full">' +
-        '<span class="field-label">מיקום הלוגו</span>' +
-        '<div class="action-checks">' +
-          '<label class="action-check" for="homeLogoAlignRight">' +
-            '<input type="radio" name="homeLogoAlign" id="homeLogoAlignRight" value="right"' +
-              (align === 'right' ? ' checked' : '') + '>' +
-            '<span>ימין</span>' +
-          '</label>' +
-          '<label class="action-check" for="homeLogoAlignLeft">' +
-            '<input type="radio" name="homeLogoAlign" id="homeLogoAlignLeft" value="left"' +
-              (align === 'left' ? ' checked' : '') + '>' +
-            '<span>שמאל</span>' +
-          '</label>' +
-        '</div>' +
-      '</div>' +
-      '<div class="form-field form-field--full">' +
-        '<label for="homeFieldLogoLink">קישור לאתר (אופציונלי)</label>' +
-        '<input type="text" id="homeFieldLogoLink" placeholder="https://..." value="' + escapeHtml(link) + '">' +
-      '</div>' +
+      '<label class="action-check" for="homeHeaderAlignCenter_' + itemId + '">' +
+        '<input type="radio" name="homeHeaderAlign_' + itemId + '" id="homeHeaderAlignCenter_' + itemId + '" value="center"' +
+          (align === 'center' ? ' checked' : '') + '>' +
+        '<span>מרכז</span>' +
+      '</label>' +
+      '<label class="action-check" for="homeHeaderAlignLeft_' + itemId + '">' +
+        '<input type="radio" name="homeHeaderAlign_' + itemId + '" id="homeHeaderAlignLeft_' + itemId + '" value="left"' +
+          (align === 'left' ? ' checked' : '') + '>' +
+        '<span>שמאל</span>' +
+      '</label>' +
     '</div>'
   );
 }
 
-function bindHomeLogoToggle() {
-  const checkbox = document.getElementById('homeFieldLogoEnabled');
-  const wrap = document.getElementById('homeLogoFieldsWrap');
-  if (!checkbox || !wrap) return;
+function homeHeaderItemEditorHtml(item) {
+  const fontSize = clampFontSize(item.fontSize, defaultHeaderFontSize(item.type));
+  const color = normalizeTextColor(item.color, '#ffffff');
 
-  function sync() {
-    wrap.hidden = !checkbox.checked;
+  if (item.type === 'logo') {
+    return (
+      '<div class="home-header-editor-item" data-header-edit-id="' + escapeHtml(item.id) + '">' +
+        '<div class="home-header-editor-item-head">' +
+          '<strong>לוגו</strong>' +
+          '<button type="button" class="btn-cancel home-header-remove-item" data-remove-header-item="' + escapeHtml(item.id) + '">מחיקה</button>' +
+        '</div>' +
+        '<label class="upload-box" for="homeHeaderFile_' + escapeHtml(item.id) + '">' +
+          '<input type="file" id="homeHeaderFile_' + escapeHtml(item.id) + '" accept="image/*" hidden data-header-logo-file="' + escapeHtml(item.id) + '">' +
+          '<span class="upload-icon">🏷️</span>' +
+          '<span class="upload-text">העלאת לוגו (PNG עם שקיפות)</span>' +
+        '</label>' +
+        '<img class="home-edit-preview' + (item.src ? ' is-visible' : '') + '" id="homeHeaderPreview_' + escapeHtml(item.id) + '" src="' + (item.src || '') + '" alt="">' +
+        '<label for="homeHeaderCaption_' + escapeHtml(item.id) + '" style="margin-top:10px;display:block;">כיתוב מתחת ללוגו</label>' +
+        '<input type="text" id="homeHeaderCaption_' + escapeHtml(item.id) + '" maxlength="40" value="' + escapeHtml(item.caption || '') + '">' +
+        homeTextSizeHtml('homeHeaderFont_' + item.id, fontSize, 12, 'גודל גופן לכיתוב') +
+        homeTextColorHtml('homeHeaderColor_' + item.id, color, 'צבע כיתוב') +
+        '<label for="homeHeaderLink_' + escapeHtml(item.id) + '" style="margin-top:10px;display:block;">קישור (אופציונלי)</label>' +
+        '<input type="text" id="homeHeaderLink_' + escapeHtml(item.id) + '" placeholder="https://..." value="' + escapeHtml(item.link || '') + '">' +
+        '<label for="homeHeaderSize_' + escapeHtml(item.id) + '" style="margin-top:10px;display:block;">גודל לוגו: <strong id="homeHeaderSizeValue_' + escapeHtml(item.id) + '">' + item.w + '%</strong></label>' +
+        '<input type="range" id="homeHeaderSize_' + escapeHtml(item.id) + '" min="6" max="40" step="1" value="' + item.w + '" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">' +
+      '</div>'
+    );
   }
 
-  checkbox.addEventListener('change', sync);
-  sync();
+  const labels = { title: 'כותרת', subtitle: 'כותרת משנה', badge: 'תג סיווג' };
+  const maxLen = item.type === 'badge' ? 20 : 40;
+  const canDelete = item.type !== 'title';
+  const badgeHints = item.type === 'badge'
+    ? '<p class="field-subhint">יוצג כטקסט פשוט עם מקפים: - שמור - · - סודי - · - בלמ״ס -</p>'
+    : '';
+
+  return (
+    '<div class="home-header-editor-item" data-header-edit-id="' + escapeHtml(item.id) + '">' +
+      '<div class="home-header-editor-item-head">' +
+        '<strong>' + (labels[item.type] || 'טקסט') + '</strong>' +
+        (canDelete
+          ? '<button type="button" class="btn-cancel home-header-remove-item" data-remove-header-item="' + escapeHtml(item.id) + '">מחיקה</button>'
+          : '') +
+      '</div>' +
+      '<label for="homeHeaderText_' + escapeHtml(item.id) + '">טקסט (עד ' + maxLen + ' תווים)</label>' +
+      '<input type="text" id="homeHeaderText_' + escapeHtml(item.id) + '" maxlength="' + maxLen + '" value="' + escapeHtml(item.text || '') + '">' +
+      badgeHints +
+      homeTextSizeHtml('homeHeaderFont_' + item.id, fontSize, defaultHeaderFontSize(item.type), 'גודל גופן') +
+      homeTextColorHtml('homeHeaderColor_' + item.id, color, 'צבע טקסט') +
+      '<span class="field-label" style="margin-top:10px;display:block;">יישור</span>' +
+      homeHeaderAlignHtml(item.id, item.align || 'center') +
+    '</div>'
+  );
 }
 
-function bindHomeEditorLogoInputs() {
-  const logoInput = document.getElementById('homeFieldLogo');
-  if (logoInput) {
-    logoInput.addEventListener('change', async function (e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      homeEditLogoData = await readFileAsDataURL(file, 400, null, true);
-      const preview = document.getElementById('homeFieldLogoPreview');
-      preview.src = homeEditLogoData;
-      preview.classList.add('is-visible');
+function homeHeaderFieldsHtml(header) {
+  const itemsHtml = header.items.map(homeHeaderItemEditorHtml).join('');
+  const hasSubtitle = header.items.some(function (item) { return item.type === 'subtitle'; });
+  const hasBadge = header.items.some(function (item) { return item.type === 'badge'; });
+
+  return (
+    '<div class="form-field form-field--full">' +
+      '<label for="homeFieldHeaderHeight">גובה מסגרת: <strong id="homeFieldHeaderHeightValue">' + header.height + 'px</strong></label>' +
+      '<input type="range" id="homeFieldHeaderHeight" min="100" max="560" step="4" value="' + header.height + '" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">' +
+      '<p class="field-subhint">אפשר גם לגרור את הידית בתחתית המסגרת במצב עריכה</p>' +
+    '</div>' +
+    homeBgOpacityHtml(header.bgOpacity) +
+    homeImageFieldHtml(header.bgImage, 'תמונת רקע לכותרת (אופציונלי)') +
+    '<div class="form-field form-field--full">' +
+      '<span class="field-label">תבניות מיקום</span>' +
+      '<div class="home-header-choice-grid">' +
+        '<button type="button" class="home-header-choice-btn" id="homeHeaderPresetRight">לוגו ימין + כותרת מרכז</button>' +
+        '<button type="button" class="home-header-choice-btn" id="homeHeaderPresetSides">לוגואים משני הצדדים</button>' +
+      '</div>' +
+      '<p class="field-subhint">אחרי בחירת תבנית אפשר לגרור כל אלמנט במסגרת</p>' +
+    '</div>' +
+    '<div class="form-field form-field--full">' +
+      '<span class="field-label">אלמנטים</span>' +
+      '<div class="home-header-choice-grid home-header-choice-grid--add">' +
+        '<button type="button" class="home-header-choice-btn home-header-choice-btn--add" id="homeHeaderAddLogo">+ לוגו</button>' +
+        (hasSubtitle ? '' : '<button type="button" class="home-header-choice-btn home-header-choice-btn--add" id="homeHeaderAddSubtitle">+ כותרת משנה</button>') +
+        (hasBadge ? '' : '<button type="button" class="home-header-choice-btn home-header-choice-btn--add" id="homeHeaderAddBadge">+ תג סיווג</button>') +
+      '</div>' +
+      '<div id="homeHeaderItemsEditor">' + itemsHtml + '</div>' +
+    '</div>'
+  );
+}
+
+function refreshHomeHeaderEditorFields() {
+  if (!homeEditHeaderDraft || !homeEditFields) return;
+  readHeaderDraftFromEditor();
+  homeEditImageData = homeEditHeaderDraft.bgImage || '';
+  homeEditFields.innerHTML = homeHeaderFieldsHtml(homeEditHeaderDraft);
+  bindHomeBgOpacityField();
+  bindHomeEditorMediaInputs();
+  bindHomeHeaderEditor();
+  scheduleHomeEditorPreview();
+}
+
+function bindHomeHeaderEditor() {
+  if (editingHomeSection !== 'header' || !homeEditHeaderDraft) return;
+
+  const heightEl = document.getElementById('homeFieldHeaderHeight');
+  const heightValue = document.getElementById('homeFieldHeaderHeightValue');
+  if (heightEl && heightValue) {
+    heightEl.addEventListener('input', function () {
+      heightValue.textContent = clampHeaderHeight(heightEl.value) + 'px';
       scheduleHomeEditorPreview();
     });
   }
 
-  const clearLogo = document.getElementById('homeClearLogo');
-  if (clearLogo) {
-    clearLogo.addEventListener('click', function () {
-      homeEditLogoData = '';
-      const preview = document.getElementById('homeFieldLogoPreview');
-      preview.src = '';
-      preview.classList.remove('is-visible');
-      clearLogo.remove();
+  homeEditHeaderDraft.items.forEach(function (item) {
+    bindHomeTextSizeField('homeHeaderFont_' + item.id);
+    bindHomeTextColorField('homeHeaderColor_' + item.id);
+
+    if (item.type !== 'logo') return;
+    const sizeEl = document.getElementById('homeHeaderSize_' + item.id);
+    const sizeValue = document.getElementById('homeHeaderSizeValue_' + item.id);
+    if (sizeEl && sizeValue) {
+      sizeEl.addEventListener('input', function () {
+        sizeValue.textContent = clampLogoWidth(sizeEl.value) + '%';
+        scheduleHomeEditorPreview();
+      });
+    }
+  });
+
+  document.querySelectorAll('[data-header-logo-file]').forEach(function (input) {
+    input.addEventListener('change', async function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const itemId = input.dataset.headerLogoFile;
+      const dataUrl = await readFileAsDataURL(file, 400, null, true);
+      const item = homeEditHeaderDraft.items.find(function (entry) { return entry.id === itemId; });
+      if (!item) return;
+      item.src = dataUrl;
+      const preview = document.getElementById('homeHeaderPreview_' + itemId);
+      if (preview) {
+        preview.src = dataUrl;
+        preview.classList.add('is-visible');
+      }
       scheduleHomeEditorPreview();
+    });
+  });
+
+  document.querySelectorAll('[data-remove-header-item]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const itemId = btn.dataset.removeHeaderItem;
+      readHeaderDraftFromEditor();
+      homeEditHeaderDraft.items = homeEditHeaderDraft.items.filter(function (item) {
+        return item.id !== itemId || item.type === 'title';
+      });
+      homeEditHeaderDraft = normalizeHeader(homeEditHeaderDraft, '');
+      refreshHomeHeaderEditorFields();
+    });
+  });
+
+  const addLogo = document.getElementById('homeHeaderAddLogo');
+  if (addLogo) {
+    addLogo.addEventListener('click', function () {
+      readHeaderDraftFromEditor();
+      const logos = homeEditHeaderDraft.items.filter(function (item) { return item.type === 'logo'; });
+      homeEditHeaderDraft.items.push(normalizeHeaderItem({
+        type: 'logo',
+        src: '',
+        link: '',
+        caption: '',
+        x: logos.length ? 12 : 88,
+        y: 18 + logos.length * 20,
+        w: 14,
+      }));
+      refreshHomeHeaderEditorFields();
+    });
+  }
+
+  const addSubtitle = document.getElementById('homeHeaderAddSubtitle');
+  if (addSubtitle) {
+    addSubtitle.addEventListener('click', function () {
+      readHeaderDraftFromEditor();
+      if (homeEditHeaderDraft.items.some(function (item) { return item.type === 'subtitle'; })) return;
+      homeEditHeaderDraft.items.push(normalizeHeaderItem({
+        type: 'subtitle',
+        text: '',
+        x: 50,
+        y: 68,
+        align: 'center',
+      }));
+      refreshHomeHeaderEditorFields();
+    });
+  }
+
+  const addBadge = document.getElementById('homeHeaderAddBadge');
+  if (addBadge) {
+    addBadge.addEventListener('click', function () {
+      readHeaderDraftFromEditor();
+      if (homeEditHeaderDraft.items.some(function (item) { return item.type === 'badge'; })) return;
+      homeEditHeaderDraft.items.push(normalizeHeaderItem({
+        type: 'badge',
+        text: 'שמור',
+        x: 50,
+        y: 12,
+        align: 'center',
+      }));
+      refreshHomeHeaderEditorFields();
+    });
+  }
+
+  const presetRight = document.getElementById('homeHeaderPresetRight');
+  if (presetRight) {
+    presetRight.addEventListener('click', function () {
+      readHeaderDraftFromEditor();
+      applyHeaderPreset(homeEditHeaderDraft, 'logo-right-title-center');
+      refreshHomeHeaderEditorFields();
+    });
+  }
+
+  const presetSides = document.getElementById('homeHeaderPresetSides');
+  if (presetSides) {
+    presetSides.addEventListener('click', function () {
+      readHeaderDraftFromEditor();
+      applyHeaderPreset(homeEditHeaderDraft, 'logos-sides-title-center');
+      refreshHomeHeaderEditorFields();
     });
   }
 }
@@ -3142,7 +4075,7 @@ function closeHomeEditor() {
   homeEditImageData = '';
   homeEditVideoFile = null;
   homeEditVideoRemoved = false;
-  homeEditLogoData = '';
+  homeEditHeaderDraft = null;
 
   if (shouldRevert) {
     renderHome();
@@ -3158,23 +4091,9 @@ async function saveHomeEditor(e) {
 
   const home = loadHome();
 
-  if (editingHomeSection === 'hero') {
-    home.title = document.getElementById('homeFieldTitle').value.trim().slice(0, 10);
-    home.titleBgOpacity = clampBgOpacity(document.getElementById('homeFieldBgOpacity').value);
-    home.titleImage = homeEditImageData || '';
-  }
-
-  if (editingHomeSection === 'logo') {
-    home.titleLogoEnabled = document.getElementById('homeFieldLogoEnabled').checked;
-    const alignChecked = document.querySelector('input[name="homeLogoAlign"]:checked');
-    home.titleLogoAlign = alignChecked && alignChecked.value === 'left' ? 'left' : 'right';
-    if (home.titleLogoEnabled) {
-      home.titleLogo = homeEditLogoData || '';
-      home.titleLogoLink = document.getElementById('homeFieldLogoLink').value.trim();
-    } else {
-      home.titleLogo = '';
-      home.titleLogoLink = '';
-    }
+  if (editingHomeSection === 'header') {
+    home.header = readHeaderDraftFromEditor();
+    syncTitleFromHeader(home);
   }
 
   if (editingHomeSection === 'intro' || editingHomeSection === 'intro2') {
@@ -3185,8 +4104,23 @@ async function saveHomeEditor(e) {
       home.intro2Subtitle = document.getElementById('homeFieldSubtitle').value.trim().slice(0, 10);
     }
     home[kind + 'Text'] = document.getElementById('homeFieldIntro').value.trim();
-    home[kind + 'BgOpacity'] = clampBgOpacity(document.getElementById('homeFieldBgOpacity').value);
+    const introSubtitleSizeEl = document.getElementById('homeFieldSubtitleSize');
+    if (introSubtitleSizeEl) {
+      if (kind === 'intro') home.subtitleSize = clampFontSize(introSubtitleSizeEl.value, 20);
+      else home.intro2SubtitleSize = clampFontSize(introSubtitleSizeEl.value, 20);
+    }
+    const introSubtitleColorEl = document.getElementById('homeFieldSubtitleColor');
+    if (introSubtitleColorEl) {
+      if (kind === 'intro') home.subtitleColor = normalizeTextColor(introSubtitleColorEl.value, '#ffffff');
+      else home.intro2SubtitleColor = normalizeTextColor(introSubtitleColorEl.value, '#ffffff');
+    }
+    const introTextSizeEl = document.getElementById('homeFieldTextSize');
+    if (introTextSizeEl) home[kind + 'TextSize'] = clampFontSize(introTextSizeEl.value, 16);
+    const introTextColorEl = document.getElementById('homeFieldTextColor');
+    if (introTextColorEl) home[kind + 'TextColor'] = normalizeTextColor(introTextColorEl.value, '#ffffff');
     home[kind + 'MediaType'] = getSelectedHomeMediaType();
+    const introOpacityEl = document.getElementById('homeFieldBgOpacity');
+    if (introOpacityEl) home[kind + 'BgOpacity'] = clampBgOpacity(introOpacityEl.value);
     readHomeLayoutFields(home, kind);
     if (home[kind + 'MediaType'] === 'video') {
       try {
@@ -3202,7 +4136,7 @@ async function saveHomeEditor(e) {
         alert(err.message || 'שגיאה בשמירת הסרטון');
         return;
       }
-    } else {
+    } else if (home[kind + 'MediaType'] === 'image') {
       home[kind + 'Image'] = homeEditImageData || '';
     }
   }
@@ -3210,8 +4144,13 @@ async function saveHomeEditor(e) {
   if (editingHomeSection === 'closing' || editingHomeSection === 'closing2') {
     const kind = editingHomeSection;
     home[kind + 'Text'] = document.getElementById('homeFieldClosing').value.trim();
-    home[kind + 'BgOpacity'] = clampBgOpacity(document.getElementById('homeFieldBgOpacity').value);
+    const closingTextSizeEl = document.getElementById('homeFieldTextSize');
+    if (closingTextSizeEl) home[kind + 'TextSize'] = clampFontSize(closingTextSizeEl.value, 17);
+    const closingTextColorEl = document.getElementById('homeFieldTextColor');
+    if (closingTextColorEl) home[kind + 'TextColor'] = normalizeTextColor(closingTextColorEl.value, '#ffffff');
     home[kind + 'MediaType'] = getSelectedHomeMediaType();
+    const closingOpacityEl = document.getElementById('homeFieldBgOpacity');
+    if (closingOpacityEl) home[kind + 'BgOpacity'] = clampBgOpacity(closingOpacityEl.value);
     readHomeLayoutFields(home, kind);
     if (home[kind + 'MediaType'] === 'video') {
       try {
@@ -3227,7 +4166,7 @@ async function saveHomeEditor(e) {
         alert(err.message || 'שגיאה בשמירת הסרטון');
         return;
       }
-    } else {
+    } else if (home[kind + 'MediaType'] === 'image') {
       home[kind + 'Image'] = homeEditImageData || '';
     }
   }
@@ -3406,8 +4345,7 @@ async function initApp() {
 function preparePageEntrance() {
   const selectors = [
     '#siteToolbar',
-    '#homeLogoSection',
-    '#homeHero',
+    '#homeHeader',
     '#homeIntro',
     '#homeIntro2',
     '#cardsLayoutBar',
