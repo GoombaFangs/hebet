@@ -86,6 +86,19 @@ const DEFAULT_HOME = {
   closingVideoPosY: 50,
   closingVideoBgMode: 'transparent',
   closingVideoBgColor: '#2f5a28',
+  closingDevTeam: false,
+  closingDevTeamImage: '',
+  closingDevTeamLink: '',
+  closingDevTeamFontSize: 16,
+  closingDevTeamColor: '#ffffff',
+  closingDevTeamSize: 100,
+  closingDevTeamBgColor: '#4a7c3f',
+  closingDevTeamBorderColor: '#ffffff',
+  closingDevTeamBorderWidth: 2,
+  closingDevTeamGlow: false,
+  closingDevTeamSlant: false,
+  closingDevTeamX: 50,
+  closingDevTeamY: 78,
   hasClosing2: false,
   closing2Text: '',
   closing2TextSize: 17,
@@ -102,6 +115,19 @@ const DEFAULT_HOME = {
   closing2VideoPosY: 50,
   closing2VideoBgMode: 'transparent',
   closing2VideoBgColor: '#2f5a28',
+  closing2DevTeam: false,
+  closing2DevTeamImage: '',
+  closing2DevTeamLink: '',
+  closing2DevTeamFontSize: 16,
+  closing2DevTeamColor: '#ffffff',
+  closing2DevTeamSize: 100,
+  closing2DevTeamBgColor: '#4a7c3f',
+  closing2DevTeamBorderColor: '#ffffff',
+  closing2DevTeamBorderWidth: 2,
+  closing2DevTeamGlow: false,
+  closing2DevTeamSlant: false,
+  closing2DevTeamX: 50,
+  closing2DevTeamY: 78,
   siteBgColor: '#F3EEE4',
   siteBgImage: '',
   siteSecondaryColor: '#4a7c3f',
@@ -109,6 +135,14 @@ const DEFAULT_HOME = {
   siteFont: "'Segoe UI', Tahoma, Arial, sans-serif",
   cardsPerRow: 5,
   cardsGap: 16,
+  cardsLayoutMode: 'matrix',
+  categories: [],
+  cardsFreeHeight: 420,
+  cardsFreeSize: 18,
+  cardPositions: {},
+  cardsBgImage: '',
+  cardsBgFullBleed: false,
+  cardsSearchEnabled: false,
 };
 
 const GRADIENTS = [
@@ -154,9 +188,8 @@ let editMode = false;
 let draggedElement = null;
 let currentStep = 1;
 let editingCardId = null;
+let cardsSearchQuery = '';
 const TOTAL_STEPS = 3;
-
-const wizardData = createEmptyWizardData();
 
 function createEmptyWizardData() {
   return {
@@ -177,6 +210,50 @@ function createEmptyWizardData() {
     fontFamily: "'Segoe UI', Tahoma, Arial, sans-serif",
     useImageBg: true,
   };
+}
+
+const wizardData = createEmptyWizardData();
+
+const PROJECT_TYPE_PRESETS = ['מצגת', 'לומדה', 'סרט'];
+
+function isProjectTypeOtherSelected() {
+  const select = document.getElementById('projectType');
+  return !!(select && select.value === '__other__');
+}
+
+function syncProjectTypeCustomVisibility() {
+  const select = document.getElementById('projectType');
+  const customInput = document.getElementById('projectTypeCustom');
+  if (!select || !customInput) return;
+  const isOther = select.value === '__other__';
+  customInput.hidden = !isOther;
+  if (!isOther) customInput.value = '';
+}
+
+function getWizardProjectTypeValue() {
+  const select = document.getElementById('projectType');
+  if (!select) return '';
+  if (select.value === '__other__') {
+    const custom = document.getElementById('projectTypeCustom');
+    return custom ? custom.value.trim().slice(0, 10) : '';
+  }
+  return select.value;
+}
+
+function setWizardProjectTypeValue(type) {
+  const select = document.getElementById('projectType');
+  const customInput = document.getElementById('projectTypeCustom');
+  if (!select || !customInput) return;
+  const value = String(type || '').trim().slice(0, 10);
+  if (value && PROJECT_TYPE_PRESETS.indexOf(value) === -1) {
+    select.value = '__other__';
+    customInput.value = value;
+    customInput.hidden = false;
+  } else {
+    select.value = value;
+    customInput.value = '';
+    customInput.hidden = true;
+  }
 }
 
 function resetWizardData() {
@@ -763,8 +840,54 @@ function formatDate(dateStr) {
 function formatNotesHtml(notes) {
   const text = (notes || '').slice(0, 30);
   if (!text) return '';
-  if (text.length <= 15) return escapeHtml(text);
-  return escapeHtml(text.slice(0, 15)) + '<br>' + escapeHtml(text.slice(15));
+  if (text.length <= 15) return highlightSearchHtml(text);
+  return highlightSearchHtml(text.slice(0, 15)) + '<br>' + highlightSearchHtml(text.slice(15));
+}
+
+function getActiveCardsSearchQuery() {
+  if (!loadHome().cardsSearchEnabled) return '';
+  return String(cardsSearchQuery || '').trim();
+}
+
+function highlightSearchHtml(text) {
+  const raw = text == null ? '' : String(text);
+  const query = getActiveCardsSearchQuery();
+  if (!query) return escapeHtml(raw);
+
+  const lower = raw.toLowerCase();
+  const q = query.toLowerCase();
+  let result = '';
+  let i = 0;
+  while (i < raw.length) {
+    const idx = lower.indexOf(q, i);
+    if (idx === -1) {
+      result += escapeHtml(raw.slice(i));
+      break;
+    }
+    result += escapeHtml(raw.slice(i, idx));
+    result += '<mark class="card-search-mark">' + escapeHtml(raw.slice(idx, idx + query.length)) + '</mark>';
+    i = idx + query.length;
+  }
+  return result;
+}
+
+function cardMatchesSearch(card) {
+  const query = getActiveCardsSearchQuery();
+  if (!query) return true;
+  const hay = [
+    card.title,
+    card.unitName,
+    card.notes,
+    card.description,
+    card.projectType,
+    card.classification,
+    card.status,
+  ].join('\n').toLowerCase();
+  return hay.indexOf(query.toLowerCase()) !== -1;
+}
+
+function getCardSearchMissClass(card) {
+  return getActiveCardsSearchQuery() && !cardMatchesSearch(card) ? ' card--search-miss' : '';
 }
 
 function getColorBlend(primary, secondary) {
@@ -975,7 +1098,7 @@ function buildCardInner(card) {
   const titleRaw = (card.title || '').slice(0, 10);
   const unitRaw = (card.unitName || '').slice(0, 10);
   const unitLine = unitRaw
-    ? '<p class="card-unit" style="color:' + secondary + ';">' + escapeHtml(unitRaw) + '</p>'
+    ? '<p class="card-unit" style="color:' + secondary + ';">' + highlightSearchHtml(unitRaw) + '</p>'
     : '';
   const desc = card.notes || card.description || '';
 
@@ -984,10 +1107,10 @@ function buildCardInner(card) {
       getCardBgPhotoHtml(card) +
       logoHtml +
       '<div class="card-image-tags">' +
-        '<span class="card-overlay-tag" style="border-color:' + secondary + ';">' + escapeHtml(typeTag) + '</span>' +
-        '<span class="card-overlay-tag" style="border-color:' + secondary + ';">' + escapeHtml(classTag) + '</span>' +
+        '<span class="card-overlay-tag" style="border-color:' + secondary + ';">' + highlightSearchHtml(typeTag) + '</span>' +
+        '<span class="card-overlay-tag" style="border-color:' + secondary + ';">' + highlightSearchHtml(classTag) + '</span>' +
       '</div>' +
-      '<span class="card-title">' + escapeHtml(titleRaw) + '</span>' +
+      '<span class="card-title">' + highlightSearchHtml(titleRaw) + '</span>' +
     '</div>' +
     '<div class="card-body">' +
       unitLine +
@@ -999,33 +1122,367 @@ function buildCardInner(card) {
   );
 }
 
-function renderCards(cards) {
+/* ===== קטגוריות כרטיסים ===== */
+
+function createCategoryId() {
+  return 'cat-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+}
+
+function normalizeCategories(categories, cards) {
+  const cardIds = new Set((cards || []).map(function (c) { return c.id; }));
+  const seen = new Set();
+  return (Array.isArray(categories) ? categories : []).map(function (cat) {
+    const ids = (cat.cardIds || []).filter(function (id) {
+      if (!cardIds.has(id) || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+    return {
+      id: cat.id || createCategoryId(),
+      title: String(cat.title || 'קטגוריה').slice(0, 40),
+      cardIds: ids,
+      fontSize: clampFontSize(cat.fontSize, 22),
+      color: normalizeTextColor(cat.color, '#2a3a2f'),
+    };
+  });
+}
+
+function getCategoryTitleStyle(cat) {
+  const size = clampFontSize(cat && cat.fontSize, 22);
+  const color = colorToCss(normalizeTextColor(cat && cat.color, '#2a3a2f'));
+  return 'font-size:' + size + 'px;color:' + color + ';';
+}
+
+function getCardsByIds(cards, ids) {
+  const map = Object.fromEntries(cards.map(function (c) { return [c.id, c]; }));
+  return (ids || []).map(function (id) { return map[id]; }).filter(Boolean);
+}
+
+function getUncategorizedCards(cards, categories) {
+  const assigned = new Set();
+  (categories || []).forEach(function (cat) {
+    (cat.cardIds || []).forEach(function (id) { assigned.add(id); });
+  });
+  return cards.filter(function (c) { return !assigned.has(c.id); });
+}
+
+function getCardsLayoutMode(home) {
+  home = home || loadHome();
+  if (home.cardsLayoutMode === 'matrix' || home.cardsLayoutMode === 'categories' || home.cardsLayoutMode === 'freeform') {
+    return home.cardsLayoutMode;
+  }
+  if (home.categoriesEnabled) return 'categories';
+  return 'matrix';
+}
+
+function clampCardsFreeHeight(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 420;
+  return Math.min(1800, Math.max(240, Math.round(num)));
+}
+
+function clampCardFreeWidth(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 18;
+  return Math.min(40, Math.max(8, Math.round(num)));
+}
+
+function syncCategoriesToolbar(home) {
+  home = home || loadHome();
+  const mode = getCardsLayoutMode(home);
+  const modeSelect = document.getElementById('cardsLayoutMode');
+  const addBtn = document.getElementById('addCategoryBtn');
+  const perRowControl = document.getElementById('cardsPerRowControl');
+  const gapControl = document.getElementById('cardsGapControl');
+  const freeHeightControl = document.getElementById('cardsFreeHeightControl');
+  const freeSizeControl = document.getElementById('cardsFreeSizeControl');
+  const freeHeightInput = document.getElementById('cardsFreeHeight');
+  const freeSizeInput = document.getElementById('cardsFreeSize');
+  const freeHeightValue = document.getElementById('cardsFreeHeightValue');
+  const freeSizeValue = document.getElementById('cardsFreeSizeValue');
+
+  if (modeSelect) modeSelect.value = mode;
+  if (addBtn) addBtn.hidden = !editMode || mode !== 'categories';
+  if (perRowControl) perRowControl.hidden = mode === 'freeform';
+  if (gapControl) gapControl.hidden = mode === 'freeform';
+  if (freeHeightControl) freeHeightControl.hidden = mode !== 'freeform';
+  if (freeSizeControl) freeSizeControl.hidden = mode !== 'freeform';
+
+  const height = clampCardsFreeHeight(home.cardsFreeHeight);
+  const size = clampCardFreeWidth(home.cardsFreeSize);
+  if (freeHeightInput) freeHeightInput.value = String(height);
+  if (freeSizeInput) freeSizeInput.value = String(size);
+  if (freeHeightValue) freeHeightValue.textContent = height + 'px';
+  if (freeSizeValue) freeSizeValue.textContent = size + '%';
+
+  const searchCheck = document.getElementById('cardsSearchEnabled');
+  const searchBar = document.getElementById('cardsSearchBar');
+  const searchInput = document.getElementById('cardsSearchInput');
+  if (searchCheck) searchCheck.checked = !!home.cardsSearchEnabled;
+  if (searchBar) searchBar.hidden = !home.cardsSearchEnabled;
+  if (searchInput && document.activeElement !== searchInput) {
+    searchInput.value = cardsSearchQuery;
+  }
+}
+
+function removeCardFromCategories(cardId) {
+  const home = loadHome();
+  if (!Array.isArray(home.categories) || !home.categories.length) return;
+  let changed = false;
+  home.categories = home.categories.map(function (cat) {
+    const nextIds = (cat.cardIds || []).filter(function (id) { return id !== cardId; });
+    if (nextIds.length !== (cat.cardIds || []).length) changed = true;
+    return Object.assign({}, cat, { cardIds: nextIds });
+  });
+  if (changed) saveHome(home);
+}
+
+function placeCardIdAfterSource(home, sourceId, newId) {
+  if (!home || !Array.isArray(home.categories)) return false;
+  for (let i = 0; i < home.categories.length; i++) {
+    const ids = home.categories[i].cardIds || [];
+    const idx = ids.indexOf(sourceId);
+    if (idx === -1) continue;
+    ids.splice(idx + 1, 0, newId);
+    home.categories[i].cardIds = ids;
+    return true;
+  }
+  return false;
+}
+
+function buildCardElementHtml(card, index, options) {
+  options = options || {};
+  const popClass = pendingCardPopId === card.id ? ' card-pop-in' : '';
+  const missClass = getCardSearchMissClass(card);
   if (editMode) {
-    cardsGrid.innerHTML = cards.map(function (card, index) {
-      const popClass = pendingCardPopId === card.id ? ' card-pop-in' : '';
-      return (
-        '<div class="card card--editing' + popClass + '" draggable="true" data-id="' + card.id + '" style="animation-delay: ' + (index % 3) * 0.08 + 's; ' + getCardThemeStyle(card) + '">' +
-          '<button type="button" class="card-edit" data-id="' + card.id + '" aria-label="עריכת כרטיס" title="עריכה">✎</button>' +
-          '<button type="button" class="card-duplicate" data-id="' + card.id + '" aria-label="שיכפול כרטיס" title="שיכפול">⧉</button>' +
-          '<button type="button" class="card-delete" data-id="' + card.id + '" aria-label="מחיקת כרטיס">×</button>' +
-          buildCardInner(card) +
-        '</div>'
-      );
-    }).join('');
-    setupDragAndDrop();
-    setupDeleteButtons();
-    setupEditButtons();
-    setupDuplicateButtons();
+    return (
+      '<div class="card card--editing' + popClass + missClass + '" draggable="' + (options.draggable === false ? 'false' : 'true') + '" data-id="' + card.id + '" style="animation-delay: ' + (index % 3) * 0.08 + 's; ' + getCardThemeStyle(card) + '">' +
+        '<button type="button" class="card-edit" data-id="' + card.id + '" aria-label="עריכת כרטיס" title="עריכה">✎</button>' +
+        '<button type="button" class="card-duplicate" data-id="' + card.id + '" aria-label="שיכפול כרטיס" title="שיכפול">⧉</button>' +
+        '<button type="button" class="card-delete" data-id="' + card.id + '" aria-label="מחיקת כרטיס">×</button>' +
+        buildCardInner(card) +
+      '</div>'
+    );
+  }
+  return (
+    '<div class="card card--clickable' + popClass + missClass + '" data-id="' + card.id + '" role="button" tabindex="0" style="' + getCardThemeStyle(card) + '">' +
+      '<button type="button" class="card-edit card-edit--quiet" data-id="' + card.id + '" aria-label="עריכת כרטיס" title="עריכה">✎</button>' +
+      buildCardInner(card) +
+    '</div>'
+  );
+}
+
+function getCardPositionMap(home) {
+  return home.cardPositions && typeof home.cardPositions === 'object' ? home.cardPositions : {};
+}
+
+function ensureCardPositions(home, cards) {
+  const positions = Object.assign({}, getCardPositionMap(home));
+  const defaultW = clampCardFreeWidth(home.cardsFreeSize);
+  const missing = cards.filter(function (card) { return !positions[card.id]; });
+  if (missing.length) {
+    const cols = Math.min(4, Math.max(2, Math.ceil(Math.sqrt(cards.length || 1))));
+    cards.forEach(function (card, index) {
+      if (positions[card.id]) return;
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      positions[card.id] = {
+        x: clampPercent(((col + 0.5) / cols) * 100, 50),
+        y: clampPercent(Math.min(88, 16 + row * 26), 20),
+        w: defaultW,
+      };
+    });
+  }
+  home.cardPositions = positions;
+  return positions;
+}
+
+function normalizeCardPosition(pos, fallbackW) {
+  pos = pos || {};
+  return {
+    x: clampPercent(pos.x, 50),
+    y: clampPercent(pos.y, 50),
+    w: clampCardFreeWidth(pos.w != null ? pos.w : fallbackW),
+  };
+}
+
+function buildFreeformCardHtml(card, pos, index) {
+  const popClass = pendingCardPopId === card.id ? ' card-pop-in' : '';
+  const missClass = getCardSearchMissClass(card);
+  const style =
+    '--cx:' + pos.x + '%;--cy:' + pos.y + '%;--cw:' + pos.w + '%;' +
+    'animation-delay:' + (index % 3) * 0.08 + 's;';
+  const resizeHandle = editMode
+    ? '<span class="card-free-resize" data-id="' + card.id + '" title="שנה גודל כרטיס" aria-label="שנה גודל כרטיס"></span>'
+    : '';
+  const cardHtml = editMode
+    ? (
+      '<div class="card card--editing' + popClass + missClass + '" data-id="' + card.id + '" style="' + getCardThemeStyle(card) + '">' +
+        '<button type="button" class="card-edit" data-id="' + card.id + '" aria-label="עריכת כרטיס" title="עריכה">✎</button>' +
+        '<button type="button" class="card-duplicate" data-id="' + card.id + '" aria-label="שיכפול כרטיס" title="שיכפול">⧉</button>' +
+        '<button type="button" class="card-delete" data-id="' + card.id + '" aria-label="מחיקת כרטיס">×</button>' +
+        buildCardInner(card) +
+      '</div>'
+    )
+    : (
+      '<div class="card card--clickable' + popClass + missClass + '" data-id="' + card.id + '" role="button" tabindex="0" style="' + getCardThemeStyle(card) + '">' +
+        '<button type="button" class="card-edit card-edit--quiet" data-id="' + card.id + '" aria-label="עריכת כרטיס" title="עריכה">✎</button>' +
+        buildCardInner(card) +
+      '</div>'
+    );
+
+  return (
+    '<div class="card-free-wrap' + (editMode ? ' is-editable' : '') + (missClass ? ' is-search-miss' : '') + '" data-id="' + card.id + '" style="' + style + '">' +
+      cardHtml +
+      resizeHandle +
+    '</div>'
+  );
+}
+
+function renderFreeformCards(cards, home) {
+  const height = clampCardsFreeHeight(home.cardsFreeHeight);
+  const defaultW = clampCardFreeWidth(home.cardsFreeSize);
+  let positions = ensureCardPositions(home, cards);
+  let changed = false;
+  Object.keys(positions).forEach(function (id) {
+    if (!cards.some(function (c) { return c.id === id; })) {
+      delete positions[id];
+      changed = true;
+    }
+  });
+  cards.forEach(function (card) {
+    const next = normalizeCardPosition(positions[card.id], defaultW);
+    const prev = positions[card.id] || {};
+    if (prev.x !== next.x || prev.y !== next.y || prev.w !== next.w) changed = true;
+    positions[card.id] = next;
+  });
+  home.cardPositions = positions;
+  home.cardsFreeHeight = height;
+  home.cardsFreeSize = defaultW;
+  if (changed) saveHome(home);
+
+  const cardsHtml = cards.map(function (card, index) {
+    return buildFreeformCardHtml(card, positions[card.id], index);
+  }).join('');
+
+  cardsGrid.innerHTML =
+    '<div class="cards-freeform-canvas" id="cardsFreeformCanvas" style="--cards-free-height:' + height + 'px;">' +
+      cardsHtml +
+      (editMode
+        ? '<div class="home-resize-handle cards-free-resize-handle" id="cardsFreeResizeHandle" title="גררו לשינוי גובה המרחב">' +
+            '<span class="home-resize-grip"></span>' +
+          '</div>'
+        : '') +
+    '</div>';
+}
+
+function buildCategoryBlockHtml(cat, cards, options) {
+  options = options || {};
+  const isLoose = !!options.isLoose;
+  const catId = cat.id || '';
+  const titleStyle = getCategoryTitleStyle(cat);
+  const fontSize = clampFontSize(cat.fontSize, 22);
+  const color = normalizeTextColor(cat.color, '#2a3a2f');
+  const colorFieldId = 'catColor_' + catId;
+
+  if (!editMode && !cards.length) return '';
+
+  let headerHtml;
+  if (editMode && !isLoose) {
+    headerHtml =
+      '<header class="category-header">' +
+        '<input type="text" class="category-title-input" data-category-id="' + escapeHtml(catId) + '" value="' + escapeHtml(cat.title || 'קטגוריה') + '" maxlength="40" aria-label="שם קטגוריה" style="' + titleStyle + '">' +
+        '<div class="category-style-controls">' +
+          '<label class="category-size-control" title="גודל גופן">' +
+            '<span>גודל</span>' +
+            '<input type="range" class="category-font-size" min="10" max="56" step="1" value="' + fontSize + '" data-category-id="' + escapeHtml(catId) + '" aria-label="גודל גופן לקטגוריה">' +
+            '<strong class="category-font-size-value">' + fontSize + '</strong>' +
+          '</label>' +
+          '<div class="hsla-field category-color-field" id="' + colorFieldId + 'Picker" data-hsla-for="' + colorFieldId + '" data-category-id="' + escapeHtml(catId) + '">' +
+            '<button type="button" class="hsla-swatch" title="צבע גופן" aria-label="צבע גופן לקטגוריה"></button>' +
+            '<input type="hidden" id="' + colorFieldId + '" class="category-color-input" value="' + escapeHtml(color) + '">' +
+          '</div>' +
+        '</div>' +
+        '<button type="button" class="category-delete" data-category-id="' + escapeHtml(catId) + '" aria-label="מחיקת קטגוריה" title="מחק קטגוריה">×</button>' +
+      '</header>';
+  } else if (isLoose) {
+    headerHtml = '<header class="category-header category-header--loose" aria-hidden="true"></header>';
   } else {
-    cardsGrid.innerHTML = cards.map(function (card) {
-      const popClass = pendingCardPopId === card.id ? ' card-pop-in' : '';
-      return (
-        '<div class="card card--clickable' + popClass + '" data-id="' + card.id + '" role="button" tabindex="0" style="' + getCardThemeStyle(card) + '">' +
-          '<button type="button" class="card-edit card-edit--quiet" data-id="' + card.id + '" aria-label="עריכת כרטיס" title="עריכה">✎</button>' +
-          buildCardInner(card) +
-        '</div>'
+    headerHtml =
+      '<header class="category-header">' +
+        '<h3 class="category-title" style="' + titleStyle + '">' + escapeHtml(cat.title || 'קטגוריה') + '</h3>' +
+      '</header>';
+  }
+
+  const cardsHtml = cards.map(function (card, index) {
+    return buildCardElementHtml(card, index);
+  }).join('');
+  const emptyHtml = editMode && !cards.length
+    ? '<div class="category-empty">גררו כרטיסים לכאן</div>'
+    : '';
+
+  return (
+    '<section class="category-block' + (isLoose ? ' category-block--loose' : '') + '" data-category-id="' + escapeHtml(catId) + '">' +
+      headerHtml +
+      '<div class="category-cards" data-category-drop="' + escapeHtml(catId) + '">' +
+        cardsHtml +
+        emptyHtml +
+      '</div>' +
+    '</section>'
+  );
+}
+
+function renderCards(cards) {
+  const home = loadHome();
+  const mode = getCardsLayoutMode(home);
+  cardsGrid.classList.toggle('has-categories', mode === 'categories');
+  cardsGrid.classList.toggle('is-freeform', mode === 'freeform');
+  cardsGrid.classList.toggle('edit-mode', editMode);
+  syncCategoriesToolbar(home);
+
+  if (mode === 'freeform') {
+    renderFreeformCards(cards, home);
+  } else if (mode === 'categories') {
+    const categories = normalizeCategories(home.categories, cards);
+    let html = '';
+    categories.forEach(function (cat) {
+      html += buildCategoryBlockHtml(cat, getCardsByIds(cards, cat.cardIds), { isLoose: false });
+    });
+    const loose = getUncategorizedCards(cards, categories);
+    if (editMode || loose.length) {
+      html += buildCategoryBlockHtml(
+        { id: '', title: 'ללא קטגוריה' },
+        loose,
+        { isLoose: true }
       );
+    }
+    if (!html) {
+      cardsGrid.classList.remove('has-categories');
+      html = cards.map(function (card, index) {
+        return buildCardElementHtml(card, index);
+      }).join('');
+    }
+    cardsGrid.innerHTML = html;
+  } else {
+    cardsGrid.innerHTML = cards.map(function (card, index) {
+      return buildCardElementHtml(card, index);
     }).join('');
+  }
+
+  if (editMode) {
+    if (mode === 'freeform') {
+      setupFreeformCardInteractions();
+      setupDeleteButtons();
+      setupEditButtons();
+      setupDuplicateButtons();
+    } else {
+      setupDragAndDrop();
+      setupDeleteButtons();
+      setupEditButtons();
+      setupDuplicateButtons();
+      if (mode === 'categories') setupCategoryControls();
+    }
+  } else {
     setupCardClicks();
     setupEditButtons();
   }
@@ -1035,13 +1492,72 @@ function renderCards(cards) {
 /* ===== מצב עריכה / גרירה / מחיקה ===== */
 
 function saveOrderFromDom() {
-  const ids = [...cardsGrid.querySelectorAll('.card')].map(function (el) {
-    return el.dataset.id;
-  });
+  const home = loadHome();
   const cards = loadCards();
   const cardMap = Object.fromEntries(cards.map(function (c) { return [c.id, c]; }));
-  const reordered = ids.map(function (id) { return cardMap[id]; }).filter(Boolean);
-  saveCards(reordered);
+  const mode = getCardsLayoutMode(home);
+
+  if (mode !== 'categories') {
+    if (mode === 'freeform') return;
+    const ids = [...cardsGrid.querySelectorAll('.card')].map(function (el) {
+      return el.dataset.id;
+    });
+    saveCards(ids.map(function (id) { return cardMap[id]; }).filter(Boolean));
+    return;
+  }
+
+  const allIds = [];
+  const categories = [];
+
+  cardsGrid.querySelectorAll('.category-block').forEach(function (block) {
+    const catId = block.dataset.categoryId || '';
+    const ids = [...block.querySelectorAll('.card')].map(function (el) {
+      return el.dataset.id;
+    });
+    allIds.push.apply(allIds, ids);
+    if (!catId) return;
+    const titleInput = block.querySelector('.category-title-input');
+    const title = titleInput
+      ? String(titleInput.value || '').trim().slice(0, 40) || 'קטגוריה'
+      : 'קטגוריה';
+    const sizeEl = block.querySelector('.category-font-size');
+    const colorEl = block.querySelector('.category-color-input');
+    categories.push({
+      id: catId,
+      title: title,
+      cardIds: ids,
+      fontSize: clampFontSize(sizeEl ? sizeEl.value : 22, 22),
+      color: normalizeTextColor(colorEl ? colorEl.value : '#2a3a2f', '#2a3a2f'),
+    });
+  });
+
+  home.categories = categories;
+  saveHome(home);
+  saveCards(allIds.map(function (id) { return cardMap[id]; }).filter(Boolean));
+}
+
+function getCardDropContainer(el) {
+  if (!el) return cardsGrid;
+  const categoryCards = el.closest('.category-cards');
+  if (categoryCards) return categoryCards;
+  return cardsGrid.classList.contains('has-categories') ? null : cardsGrid;
+}
+
+function clearCategoryEmptyPlaceholders(container) {
+  if (!container) return;
+  container.querySelectorAll('.category-empty').forEach(function (el) {
+    el.remove();
+  });
+}
+
+function ensureCategoryEmptyPlaceholder(container) {
+  if (!container || !editMode) return;
+  if (container.querySelector('.card')) return;
+  if (container.querySelector('.category-empty')) return;
+  const empty = document.createElement('div');
+  empty.className = 'category-empty';
+  empty.textContent = 'גררו כרטיסים לכאן';
+  container.appendChild(empty);
 }
 
 function setupDragAndDrop() {
@@ -1057,13 +1573,22 @@ function setupDragAndDrop() {
 
     card.addEventListener('dragend', function () {
       card.classList.remove('dragging');
+      cardsGrid.querySelectorAll('.category-cards.is-drop-target').forEach(function (el) {
+        el.classList.remove('is-drop-target');
+      });
+      cardsGrid.querySelectorAll('.category-cards').forEach(ensureCategoryEmptyPlaceholder);
       draggedElement = null;
       saveOrderFromDom();
     });
 
     card.addEventListener('dragover', function (e) {
       e.preventDefault();
+      e.stopPropagation();
       if (!draggedElement || draggedElement === card) return;
+
+      const container = getCardDropContainer(card);
+      if (!container) return;
+      clearCategoryEmptyPlaceholders(container);
 
       const rect = card.getBoundingClientRect();
       const midX = rect.left + rect.width / 2;
@@ -1071,12 +1596,324 @@ function setupDragAndDrop() {
       const after = e.clientY > midY || (Math.abs(e.clientY - midY) < rect.height / 4 && e.clientX > midX);
 
       if (after) {
-        cardsGrid.insertBefore(draggedElement, card.nextSibling);
+        container.insertBefore(draggedElement, card.nextSibling);
       } else {
-        cardsGrid.insertBefore(draggedElement, card);
+        container.insertBefore(draggedElement, card);
       }
     });
   });
+
+  cardsGrid.querySelectorAll('.category-cards').forEach(function (container) {
+    container.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      if (!draggedElement) return;
+      container.classList.add('is-drop-target');
+      if (e.target.closest && e.target.closest('.card') && e.target.closest('.card') !== draggedElement) {
+        return;
+      }
+      clearCategoryEmptyPlaceholders(container);
+      const siblings = [...container.querySelectorAll('.card:not(.dragging)')];
+      if (!siblings.length) {
+        container.appendChild(draggedElement);
+        return;
+      }
+      let insertBefore = null;
+      for (let i = 0; i < siblings.length; i++) {
+        const rect = siblings[i].getBoundingClientRect();
+        const after = e.clientY > rect.top + rect.height / 2
+          || (Math.abs(e.clientY - (rect.top + rect.height / 2)) < rect.height / 4 && e.clientX > rect.left + rect.width / 2);
+        if (!after) {
+          insertBefore = siblings[i];
+          break;
+        }
+      }
+      if (insertBefore) container.insertBefore(draggedElement, insertBefore);
+      else container.appendChild(draggedElement);
+    });
+
+    container.addEventListener('dragleave', function (e) {
+      if (!container.contains(e.relatedTarget)) {
+        container.classList.remove('is-drop-target');
+      }
+    });
+
+    container.addEventListener('drop', function (e) {
+      e.preventDefault();
+      container.classList.remove('is-drop-target');
+    });
+  });
+}
+
+function setupCategoryControls() {
+  cardsGrid.querySelectorAll('.category-title-input').forEach(function (input) {
+    input.addEventListener('click', function (e) {
+      e.stopPropagation();
+    });
+    input.addEventListener('change', function () {
+      saveOrderFromDom();
+    });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        input.blur();
+      }
+    });
+  });
+
+  cardsGrid.querySelectorAll('.category-delete').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      deleteCategory(btn.dataset.categoryId);
+    });
+  });
+
+  cardsGrid.querySelectorAll('.category-font-size').forEach(function (range) {
+    const block = range.closest('.category-block');
+    const valueEl = block && block.querySelector('.category-font-size-value');
+    const titleInput = block && block.querySelector('.category-title-input');
+
+    function applySize(raw) {
+      const size = clampFontSize(raw, 22);
+      range.value = String(size);
+      if (valueEl) valueEl.textContent = String(size);
+      if (titleInput) titleInput.style.fontSize = size + 'px';
+      saveOrderFromDom();
+    }
+
+    range.addEventListener('input', function () {
+      applySize(range.value);
+    });
+    range.addEventListener('click', function (e) {
+      e.stopPropagation();
+    });
+  });
+
+  cardsGrid.querySelectorAll('.category-color-field').forEach(function (field) {
+    field.dataset.hslaReady = '';
+    setupHslaField(field, function (hex) {
+      const block = field.closest('.category-block');
+      const titleInput = block && block.querySelector('.category-title-input');
+      if (titleInput) titleInput.style.color = colorToCss(hex);
+      saveOrderFromDom();
+    });
+  });
+}
+
+function addCategory() {
+  const home = loadHome();
+  const cards = loadCards();
+  home.cardsLayoutMode = 'categories';
+  home.categoriesEnabled = true;
+  home.categories = normalizeCategories(home.categories, cards);
+  home.categories.push({
+    id: createCategoryId(),
+    title: 'קטגוריה חדשה',
+    cardIds: [],
+    fontSize: 22,
+    color: '#2a3a2f',
+  });
+  if (!saveHome(home)) {
+    alert('אין מספיק מקום לשמירה.');
+    return;
+  }
+  syncCategoriesToolbar(home);
+  renderCards(cards);
+}
+
+function deleteCategory(categoryId) {
+  if (!categoryId) return;
+  if (!confirm('למחוק את הקטגוריה? הכרטיסים יישארו בלי קטגוריה.')) return;
+  const home = loadHome();
+  const cards = loadCards();
+  home.categories = normalizeCategories(home.categories, cards).filter(function (cat) {
+    return cat.id !== categoryId;
+  });
+  saveHome(home);
+  renderCards(cards);
+}
+
+function saveCardFreePosition(cardId, x, y, w) {
+  const home = loadHome();
+  const positions = Object.assign({}, getCardPositionMap(home));
+  const prev = normalizeCardPosition(positions[cardId], home.cardsFreeSize);
+  positions[cardId] = {
+    x: clampPercent(x, prev.x),
+    y: clampPercent(y, prev.y),
+    w: typeof w === 'number' ? clampCardFreeWidth(w) : prev.w,
+  };
+  home.cardPositions = positions;
+  saveHome(home);
+}
+
+function removeCardPosition(cardId) {
+  const home = loadHome();
+  const positions = Object.assign({}, getCardPositionMap(home));
+  if (!positions[cardId]) return;
+  delete positions[cardId];
+  home.cardPositions = positions;
+  saveHome(home);
+}
+
+function placeFreeformCopyNearSource(home, sourceId, newId) {
+  const positions = Object.assign({}, getCardPositionMap(home));
+  const src = positions[sourceId];
+  if (!src) return false;
+  positions[newId] = {
+    x: clampPercent(Number(src.x) + 4, src.x),
+    y: clampPercent(Number(src.y) + 4, src.y),
+    w: clampCardFreeWidth(src.w != null ? src.w : home.cardsFreeSize),
+  };
+  home.cardPositions = positions;
+  return true;
+}
+
+function applyCardsFreeHeight(height) {
+  const canvas = document.getElementById('cardsFreeformCanvas');
+  if (canvas) canvas.style.setProperty('--cards-free-height', clampCardsFreeHeight(height) + 'px');
+  const valueEl = document.getElementById('cardsFreeHeightValue');
+  if (valueEl) valueEl.textContent = clampCardsFreeHeight(height) + 'px';
+}
+
+function applyCardsFreeSizeToDom(size) {
+  const w = clampCardFreeWidth(size);
+  cardsGrid.querySelectorAll('.card-free-wrap').forEach(function (wrap) {
+    wrap.style.setProperty('--cw', w + '%');
+  });
+  const valueEl = document.getElementById('cardsFreeSizeValue');
+  if (valueEl) valueEl.textContent = w + '%';
+}
+
+function setupFreeformCardInteractions() {
+  const canvas = document.getElementById('cardsFreeformCanvas');
+  if (!canvas) return;
+
+  cardsGrid.querySelectorAll('.card-free-wrap.is-editable').forEach(function (wrap) {
+    wrap.addEventListener('pointerdown', function (e) {
+      if (!editMode) return;
+      if (e.button != null && e.button !== 0) return;
+      if (e.target.closest('.card-edit, .card-duplicate, .card-delete, .card-free-resize, .btn-view, a, button')) {
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const cardId = wrap.dataset.id;
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+
+      wrap.classList.add('is-dragging');
+      wrap.setPointerCapture(e.pointerId);
+
+      function onMove(ev) {
+        const x = ((ev.clientX - rect.left) / rect.width) * 100;
+        const y = ((ev.clientY - rect.top) / rect.height) * 100;
+        wrap.style.setProperty('--cx', clampPercent(x, 50) + '%');
+        wrap.style.setProperty('--cy', clampPercent(y, 50) + '%');
+      }
+
+      function onUp(ev) {
+        wrap.classList.remove('is-dragging');
+        try { wrap.releasePointerCapture(ev.pointerId); } catch (_) {}
+        wrap.removeEventListener('pointermove', onMove);
+        wrap.removeEventListener('pointerup', onUp);
+        wrap.removeEventListener('pointercancel', onUp);
+
+        const x = parseFloat(String(wrap.style.getPropertyValue('--cx')));
+        const y = parseFloat(String(wrap.style.getPropertyValue('--cy')));
+        saveCardFreePosition(cardId, x, y);
+      }
+
+      wrap.addEventListener('pointermove', onMove);
+      wrap.addEventListener('pointerup', onUp);
+      wrap.addEventListener('pointercancel', onUp);
+    });
+  });
+
+  cardsGrid.querySelectorAll('.card-free-resize').forEach(function (handle) {
+    handle.addEventListener('pointerdown', function (e) {
+      if (!editMode) return;
+      if (e.button != null && e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const wrap = handle.closest('.card-free-wrap');
+      if (!wrap) return;
+      const cardId = wrap.dataset.id;
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width) return;
+
+      const startX = e.clientX;
+      const startW = parseFloat(String(wrap.style.getPropertyValue('--cw'))) || clampCardFreeWidth(loadHome().cardsFreeSize);
+      handle.classList.add('is-resizing');
+      wrap.classList.add('is-resizing');
+      handle.setPointerCapture(e.pointerId);
+
+      function onMove(ev) {
+        // RTL: dragging left (smaller clientX) grows width visually toward the left edge
+        const deltaPct = ((startX - ev.clientX) / rect.width) * 100;
+        const next = clampCardFreeWidth(startW + deltaPct);
+        wrap.style.setProperty('--cw', next + '%');
+      }
+
+      function onUp(ev) {
+        handle.classList.remove('is-resizing');
+        wrap.classList.remove('is-resizing');
+        try { handle.releasePointerCapture(ev.pointerId); } catch (_) {}
+        handle.removeEventListener('pointermove', onMove);
+        handle.removeEventListener('pointerup', onUp);
+        handle.removeEventListener('pointercancel', onUp);
+
+        const w = parseFloat(String(wrap.style.getPropertyValue('--cw')));
+        const x = parseFloat(String(wrap.style.getPropertyValue('--cx')));
+        const y = parseFloat(String(wrap.style.getPropertyValue('--cy')));
+        saveCardFreePosition(cardId, x, y, w);
+      }
+
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onUp);
+      handle.addEventListener('pointercancel', onUp);
+    });
+  });
+
+  const heightHandle = document.getElementById('cardsFreeResizeHandle');
+  if (heightHandle && heightHandle.dataset.bound !== '1') {
+    heightHandle.dataset.bound = '1';
+    heightHandle.addEventListener('pointerdown', function (e) {
+      if (!editMode) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const startY = e.clientY;
+      const startH = clampCardsFreeHeight(loadHome().cardsFreeHeight);
+      heightHandle.classList.add('is-dragging');
+      heightHandle.setPointerCapture(e.pointerId);
+
+      function onMove(ev) {
+        const next = clampCardsFreeHeight(startH + (ev.clientY - startY));
+        applyCardsFreeHeight(next);
+        const input = document.getElementById('cardsFreeHeight');
+        if (input) input.value = String(next);
+      }
+
+      function onUp(ev) {
+        heightHandle.classList.remove('is-dragging');
+        try { heightHandle.releasePointerCapture(ev.pointerId); } catch (_) {}
+        heightHandle.removeEventListener('pointermove', onMove);
+        heightHandle.removeEventListener('pointerup', onUp);
+        heightHandle.removeEventListener('pointercancel', onUp);
+
+        const canvasEl = document.getElementById('cardsFreeformCanvas');
+        const fromCss = canvasEl ? parseFloat(canvasEl.style.getPropertyValue('--cards-free-height')) : NaN;
+        const height = clampCardsFreeHeight(Number.isFinite(fromCss) ? fromCss : loadHome().cardsFreeHeight);
+        updateHomeField({ cardsFreeHeight: height });
+      }
+
+      heightHandle.addEventListener('pointermove', onMove);
+      heightHandle.addEventListener('pointerup', onUp);
+      heightHandle.addEventListener('pointercancel', onUp);
+    });
+  }
 }
 
 function setupDeleteButtons() {
@@ -1123,6 +1960,13 @@ function duplicateCard(id) {
   if (!saveCards(cards)) {
     alert('אין מספיק מקום לשמירת השיכפול. נסו למחוק כרטיס או להקטין תמונות.');
     return;
+  }
+
+  const home = loadHome();
+  if (getCardsLayoutMode(home) === 'categories' && placeCardIdAfterSource(home, id, copy.id)) {
+    saveHome(home);
+  } else if (getCardsLayoutMode(home) === 'freeform' && placeFreeformCopyNearSource(home, id, copy.id)) {
+    saveHome(home);
   }
 
   pendingCardPopId = copy.id;
@@ -1199,8 +2043,6 @@ function buildDetailHtml(card) {
     '<div class="detail-body">' +
       '<div class="detail-grid">' +
         row('שם היחידה', card.unitName || '—') +
-        row('תאריך', formatDate(card.date) || '—') +
-        row('סטטוס', card.status || '—') +
         row('סיווג', card.classification || '—') +
         row('סוג פרויקט', card.projectType || '—') +
         row('הערות', notes) +
@@ -1362,6 +2204,8 @@ async function deleteCard(id) {
 
   const cards = loadCards().filter(function (c) { return c.id !== id; });
   saveCards(cards);
+  removeCardFromCategories(id);
+  removeCardPosition(id);
   renderCards(cards);
 }
 
@@ -1372,10 +2216,14 @@ function toggleEditMode() {
   cardsGrid.classList.toggle('edit-mode', editMode);
   document.body.classList.toggle('page-edit-mode', editMode);
   document.getElementById('cardsLayoutBar').hidden = !editMode;
-  syncHomeSectionControls(loadHome());
+  const home = loadHome();
+  syncHomeSectionControls(home);
+  syncCategoriesToolbar(home);
   syncResizeHandlesVisibility();
-  renderHomeHeader(loadHome());
+  renderHomeHeader(home);
   renderCards(loadCards());
+  renderClosingDevTeam('closing', home);
+  if (home.hasClosing2) renderClosingDevTeam('closing2', home);
 }
 
 /* ===== תצוגה מקדימה חיה ===== */
@@ -1406,8 +2254,6 @@ function buildPreviewCard() {
   previewCard.actionLinks = previewLinks;
 
   const metaBits = [];
-  if (wizardData.status) metaBits.push(wizardData.status);
-  if (wizardData.date) metaBits.push(formatDate(wizardData.date));
   const metaHtml = metaBits.length
     ? '<p class="card-meta">' + escapeHtml(metaBits.join(' · ')) + '</p>'
     : '';
@@ -1462,12 +2308,13 @@ function updateStepUI() {
 function validateStep(step) {
   if (step === 1) {
     if (!wizardData.pageName.trim()) return 'שם הדף הוא שדה חובה';
-    if (!wizardData.date) return 'תאריך הוא שדה חובה';
-    if (!wizardData.status) return 'סטטוס הוא שדה חובה';
     if (!wizardData.classification) return 'סיווג הוא שדה חובה';
   }
 
   if (step === 2) {
+    if (isProjectTypeOtherSelected() && !getWizardProjectTypeValue()) {
+      return 'יש להזין סוג פרויקט מותאם (עד 10 תווים)';
+    }
     if (!wizardData.projectType) return 'סוג פרויקט הוא שדה חובה';
     if (!wizardData.enabledActions.length) return 'יש לבחור לפחות פעולת כפתור אחת';
 
@@ -1550,10 +2397,10 @@ function syncFormToData() {
   wizardData.pageName = document.getElementById('pageName').value.slice(0, 10);
   wizardData.unitName = document.getElementById('unitName').value.slice(0, 10);
   wizardData.notes = document.getElementById('notes').value.slice(0, 30);
-  wizardData.date = document.getElementById('cardDate').value;
-  wizardData.status = document.getElementById('status').value;
+  wizardData.date = '';
+  wizardData.status = '';
   wizardData.classification = document.getElementById('classification').value;
-  wizardData.projectType = document.getElementById('projectType').value;
+  wizardData.projectType = getWizardProjectTypeValue();
   wizardData.primaryColor = document.getElementById('primaryColor').value;
   wizardData.secondaryColor = document.getElementById('secondaryColor').value;
   wizardData.fontFamily = document.getElementById('cardFont').value;
@@ -1637,7 +2484,7 @@ function onActionCheckboxChange() {
 
 function bindLiveInputs() {
   const liveIds = [
-    'pageName', 'unitName', 'notes', 'cardDate', 'status',
+    'pageName', 'unitName', 'notes',
     'classification', 'projectType',
     'cardFont', 'useImageBg',
   ];
@@ -1645,14 +2492,25 @@ function bindLiveInputs() {
   liveIds.forEach(function (id) {
     const el = document.getElementById(id);
     el.addEventListener('input', function () {
+      if (id === 'projectType') syncProjectTypeCustomVisibility();
       syncFormToData();
       updateLivePreview();
     });
     el.addEventListener('change', function () {
+      if (id === 'projectType') syncProjectTypeCustomVisibility();
       syncFormToData();
       updateLivePreview();
     });
   });
+
+  const projectTypeCustom = document.getElementById('projectTypeCustom');
+  if (projectTypeCustom) {
+    projectTypeCustom.addEventListener('input', function () {
+      projectTypeCustom.value = projectTypeCustom.value.slice(0, 10);
+      syncFormToData();
+      updateLivePreview();
+    });
+  }
 
   setupHslaField(document.getElementById('primaryColorPicker'), function (hex) {
     wizardData.primaryColor = hex;
@@ -1750,10 +2608,8 @@ function applyWizardDataToForm() {
   document.getElementById('pageName').value = wizardData.pageName || '';
   document.getElementById('unitName').value = wizardData.unitName || '';
   document.getElementById('notes').value = wizardData.notes || '';
-  document.getElementById('cardDate').value = wizardData.date || '';
-  document.getElementById('status').value = wizardData.status || '';
   document.getElementById('classification').value = wizardData.classification || '';
-  document.getElementById('projectType').value = wizardData.projectType || '';
+  setWizardProjectTypeValue(wizardData.projectType || '');
   document.getElementById('primaryColor').value = wizardData.primaryColor || '#e87722';
   document.getElementById('secondaryColor').value = wizardData.secondaryColor || '#4a7c3f';
   setHslaFieldValue('primaryColor', wizardData.primaryColor || '#e87722');
@@ -1789,8 +2645,8 @@ function buildCardFromWizard(id) {
     unitName: wizardData.unitName.trim().slice(0, 10),
     description: wizardData.notes.trim() || 'כרטיס חדש',
     notes: wizardData.notes.trim().slice(0, 30),
-    date: wizardData.date,
-    status: wizardData.status,
+    date: '',
+    status: '',
     classification: wizardData.classification,
     projectType: wizardData.projectType,
     enabledActions: wizardData.enabledActions.slice(),
@@ -1838,8 +2694,8 @@ function openWizard() {
   wizardForm.reset();
   currentStep = 1;
 
-  const today = new Date().toISOString().slice(0, 10);
-  wizardData.date = today;
+  wizardData.date = '';
+  wizardData.status = '';
   wizardData.useImageBg = true;
   wizardData.enabledActions = ['צפייה'];
   wizardData.actionLinks = { 'צפייה': '', 'הורדה': '', 'הדפסה': '' };
@@ -1870,8 +2726,8 @@ function openWizardForEdit(cardId) {
   wizardData.pageName = card.title || '';
   wizardData.unitName = card.unitName || '';
   wizardData.notes = card.notes || card.description || '';
-  wizardData.date = card.date || new Date().toISOString().slice(0, 10);
-  wizardData.status = card.status || '';
+  wizardData.date = '';
+  wizardData.status = '';
   wizardData.classification = card.classification || '';
   wizardData.projectType = card.projectType || '';
   wizardData.mainImage = card.mainImage || '';
@@ -2232,6 +3088,18 @@ function loadHome() {
       home.header = buildHomeHeader(parsed);
       syncTitleFromHeader(home);
       stripLegacyHeaderFields(home);
+      if (!Object.prototype.hasOwnProperty.call(parsed, 'cardsLayoutMode') && parsed.categoriesEnabled) {
+        home.cardsLayoutMode = 'categories';
+      } else {
+        home.cardsLayoutMode = getCardsLayoutMode(home);
+      }
+      home.categoriesEnabled = home.cardsLayoutMode === 'categories';
+      home.categories = Array.isArray(home.categories) ? home.categories : [];
+      home.cardsFreeHeight = clampCardsFreeHeight(home.cardsFreeHeight);
+      home.cardsFreeSize = clampCardFreeWidth(home.cardsFreeSize);
+      home.cardPositions = home.cardPositions && typeof home.cardPositions === 'object'
+        ? home.cardPositions
+        : {};
     } catch {
       home = Object.assign({}, DEFAULT_HOME);
       home.header = normalizeHeader(DEFAULT_HOME.header, DEFAULT_HOME.title);
@@ -2294,6 +3162,9 @@ function saveHome(home) {
 const MEDIA_SECTION_KEYS = [
   'Text', 'TextSize', 'TextColor', 'Image', 'Video', 'MediaType', 'BgOpacity', 'SizeAuto', 'Height',
   'VideoFit', 'VideoZoom', 'VideoPosX', 'VideoPosY', 'VideoBgMode', 'VideoBgColor',
+  'DevTeam', 'DevTeamImage', 'DevTeamLink', 'DevTeamFontSize', 'DevTeamColor', 'DevTeamSize',
+  'DevTeamBgColor', 'DevTeamBorderColor', 'DevTeamBorderWidth', 'DevTeamGlow', 'DevTeamSlant',
+  'DevTeamX', 'DevTeamY',
 ];
 
 function copyMediaSectionFields(home, fromKind, toKind) {
@@ -2317,6 +3188,16 @@ function clearMediaSectionFields(home, kind) {
       suffix === 'VideoPosX' || suffix === 'VideoPosY' ? 50 :
       suffix === 'VideoBgMode' ? 'transparent' :
       suffix === 'VideoBgColor' ? '#2f5a28' :
+      suffix === 'DevTeam' ? false :
+      suffix === 'DevTeamFontSize' ? 16 :
+      suffix === 'DevTeamColor' ? '#ffffff' :
+      suffix === 'DevTeamSize' ? 100 :
+      suffix === 'DevTeamBgColor' ? '#4a7c3f' :
+      suffix === 'DevTeamBorderColor' ? '#ffffff' :
+      suffix === 'DevTeamBorderWidth' ? 2 :
+      suffix === 'DevTeamGlow' || suffix === 'DevTeamSlant' ? false :
+      suffix === 'DevTeamX' ? 50 :
+      suffix === 'DevTeamY' ? 78 :
       ''
     );
   });
@@ -3064,6 +3945,320 @@ function applyTextColor(el, color, fallback) {
   el.style.color = colorToCss(normalizeTextColor(color, fallback || '#ffffff'));
 }
 
+function clampDevTeamSize(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 100;
+  return Math.min(180, Math.max(70, Math.round(num)));
+}
+
+function clampDevTeamBorderWidth(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 2;
+  return Math.min(8, Math.max(0, Math.round(num)));
+}
+
+function renderClosingDevTeam(kind, home) {
+  const btnId = kind === 'closing2' ? 'homeClosing2DevTeam' : 'homeClosingDevTeam';
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+
+  const enabled = !!home[kind + 'DevTeam'];
+  const image = home[kind + 'DevTeamImage'] || '';
+  const link = String(home[kind + 'DevTeamLink'] || '').trim();
+  const fontSize = clampFontSize(home[kind + 'DevTeamFontSize'], 16);
+  const color = normalizeTextColor(home[kind + 'DevTeamColor'], '#ffffff');
+  const size = clampDevTeamSize(home[kind + 'DevTeamSize']);
+  const bgColor = normalizeTextColor(home[kind + 'DevTeamBgColor'], '#4a7c3f');
+  const borderColor = normalizeTextColor(home[kind + 'DevTeamBorderColor'], '#ffffff');
+  const borderWidth = clampDevTeamBorderWidth(home[kind + 'DevTeamBorderWidth']);
+  const glow = !!home[kind + 'DevTeamGlow'];
+  const slant = !!home[kind + 'DevTeamSlant'];
+  const x = clampPercent(home[kind + 'DevTeamX'], 50);
+  const y = clampPercent(home[kind + 'DevTeamY'], 78);
+  const label = btn.querySelector('.home-dev-team-label');
+
+  btn.hidden = !enabled;
+  btn.classList.toggle('has-image', !!image);
+  btn.classList.toggle('has-glow', glow);
+  btn.classList.toggle('is-slant', slant);
+  btn.style.setProperty('--dev-team-scale', String(size / 100));
+  btn.style.setProperty('--dev-team-font', fontSize + 'px');
+  btn.style.setProperty('--dev-team-color', colorToCss(color));
+  btn.style.setProperty('--dev-team-bg', colorToCss(bgColor));
+  btn.style.setProperty('--dev-team-border-color', colorToCss(borderColor));
+  btn.style.setProperty('--dev-team-border-width', borderWidth + 'px');
+  btn.style.setProperty('--dx', x + '%');
+  btn.style.setProperty('--dy', y + '%');
+  btn.style.setProperty(
+    '--dev-team-bg-image',
+    image ? 'url(' + JSON.stringify(image) + ')' : 'none'
+  );
+  btn.dataset.devTeamKind = kind;
+
+  if (label) label.textContent = 'צוות פיתוח';
+
+  if (!enabled) {
+    btn.removeAttribute('href');
+    btn.classList.add('is-disabled');
+    return;
+  }
+
+  if (editMode) {
+    btn.removeAttribute('href');
+    btn.classList.add('is-disabled');
+  } else if (link) {
+    btn.href = link;
+    btn.setAttribute('target', '_blank');
+    btn.setAttribute('rel', 'noopener noreferrer');
+    btn.classList.remove('is-disabled');
+  } else {
+    btn.removeAttribute('href');
+    btn.classList.add('is-disabled');
+  }
+
+  ensureDevTeamDragBound(btn, kind);
+}
+
+function saveDevTeamPosition(kind, x, y) {
+  const home = loadHome();
+  home[kind + 'DevTeamX'] = clampPercent(x, home[kind + 'DevTeamX'] != null ? home[kind + 'DevTeamX'] : 50);
+  home[kind + 'DevTeamY'] = clampPercent(y, home[kind + 'DevTeamY'] != null ? home[kind + 'DevTeamY'] : 78);
+  saveHome(home);
+}
+
+function ensureDevTeamDragBound(btn, kind) {
+  if (!btn || btn.dataset.dragBound === '1') return;
+  btn.dataset.dragBound = '1';
+
+  btn.addEventListener('click', function (e) {
+    if (editMode) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+
+  btn.addEventListener('pointerdown', function (e) {
+    if (!editMode || btn.hidden) return;
+    if (e.button != null && e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const section = getSectionRootEl(kind);
+    if (!section) return;
+    const rect = section.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+
+    btn.classList.add('is-dragging');
+    btn.setPointerCapture(e.pointerId);
+
+    function onMove(ev) {
+      const x = ((ev.clientX - rect.left) / rect.width) * 100;
+      const y = ((ev.clientY - rect.top) / rect.height) * 100;
+      btn.style.setProperty('--dx', clampPercent(x, 50) + '%');
+      btn.style.setProperty('--dy', clampPercent(y, 78) + '%');
+    }
+
+    function onUp(ev) {
+      btn.classList.remove('is-dragging');
+      try { btn.releasePointerCapture(ev.pointerId); } catch (_) {}
+      btn.removeEventListener('pointermove', onMove);
+      btn.removeEventListener('pointerup', onUp);
+      btn.removeEventListener('pointercancel', onUp);
+
+      const x = parseFloat(String(btn.style.getPropertyValue('--dx')));
+      const y = parseFloat(String(btn.style.getPropertyValue('--dy')));
+      saveDevTeamPosition(kind, x, y);
+    }
+
+    btn.addEventListener('pointermove', onMove);
+    btn.addEventListener('pointerup', onUp);
+    btn.addEventListener('pointercancel', onUp);
+  });
+}
+
+function homeClosingDevTeamFieldsHtml(home, kind) {
+  const enabled = !!home[kind + 'DevTeam'];
+  const imageUrl = home[kind + 'DevTeamImage'] || '';
+  const link = home[kind + 'DevTeamLink'] || '';
+  const fontSize = clampFontSize(home[kind + 'DevTeamFontSize'], 16);
+  const color = normalizeTextColor(home[kind + 'DevTeamColor'], '#ffffff');
+  const size = clampDevTeamSize(home[kind + 'DevTeamSize']);
+  const bgColor = normalizeTextColor(home[kind + 'DevTeamBgColor'], '#4a7c3f');
+  const borderColor = normalizeTextColor(home[kind + 'DevTeamBorderColor'], '#ffffff');
+  const borderWidth = clampDevTeamBorderWidth(home[kind + 'DevTeamBorderWidth']);
+  const glow = !!home[kind + 'DevTeamGlow'];
+  const slant = !!home[kind + 'DevTeamSlant'];
+  return (
+    '<div class="form-field form-field--full">' +
+      '<label class="action-check" for="homeFieldDevTeam">' +
+        '<input type="checkbox" id="homeFieldDevTeam"' + (enabled ? ' checked' : '') + '>' +
+        '<span>צוות פיתוח</span>' +
+      '</label>' +
+      '<div class="home-dev-team-fields" id="homeFieldDevTeamFields"' + (enabled ? '' : ' hidden') + '>' +
+        homeTextSizeHtml('homeFieldDevTeamFontSize', fontSize, 16, 'גודל גופן') +
+        homeTextColorHtml('homeFieldDevTeamColor', color, 'צבע גופן') +
+        homeTextColorHtml('homeFieldDevTeamBgColor', bgColor, 'צבע רקע (כשאין תמונה)') +
+        homeTextColorHtml('homeFieldDevTeamBorderColor', borderColor, 'צבע מסגרת') +
+        '<div class="form-field form-field--full">' +
+          '<label for="homeFieldDevTeamBorderWidth">עובי מסגרת</label>' +
+          '<div class="size-control-row">' +
+            '<input type="range" id="homeFieldDevTeamBorderWidth" min="0" max="8" step="1" value="' + borderWidth + '"' +
+              ' class="size-control-range" aria-label="עובי מסגרת">' +
+            '<input type="number" id="homeFieldDevTeamBorderWidthNum" min="0" max="8" step="1" value="' + borderWidth + '"' +
+              ' class="size-control-num" inputmode="numeric">' +
+            '<span class="size-control-unit">px</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="form-field form-field--full">' +
+          '<label for="homeFieldDevTeamSize">גודל כפתור</label>' +
+          '<div class="size-control-row">' +
+            '<input type="range" id="homeFieldDevTeamSize" min="70" max="180" step="5" value="' + size + '"' +
+              ' class="size-control-range" aria-label="גודל כפתור">' +
+            '<input type="number" id="homeFieldDevTeamSizeNum" min="70" max="180" step="5" value="' + size + '"' +
+              ' class="size-control-num" inputmode="numeric">' +
+            '<span class="size-control-unit">%</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="home-dev-team-options">' +
+          '<label class="action-check" for="homeFieldDevTeamGlow">' +
+            '<input type="checkbox" id="homeFieldDevTeamGlow"' + (glow ? ' checked' : '') + '>' +
+            '<span>זוהר (glow)</span>' +
+          '</label>' +
+          '<label class="action-check" for="homeFieldDevTeamSlant">' +
+            '<input type="checkbox" id="homeFieldDevTeamSlant"' + (slant ? ' checked' : '') + '>' +
+            '<span>צורת אלכסון</span>' +
+          '</label>' +
+        '</div>' +
+        '<div class="form-field form-field--full">' +
+          '<span class="field-label">תמונת רקע לכפתור (אופציונלי)</span>' +
+          '<label class="upload-box" for="homeFieldDevTeamImage">' +
+            '<input type="file" id="homeFieldDevTeamImage" accept="image/*" hidden>' +
+            '<span>העלאת תמונת רקע</span>' +
+          '</label>' +
+          (imageUrl
+            ? '<button type="button" class="site-theme-clear" id="homeClearDevTeamImage" style="margin-top:8px;">הסרת תמונה</button>'
+            : '') +
+          '<img class="home-edit-preview' + (imageUrl ? ' is-visible' : '') + '" id="homeFieldDevTeamImagePreview" src="' + (imageUrl || '') + '" alt="">' +
+        '</div>' +
+        '<div class="form-field form-field--full">' +
+          '<label for="homeFieldDevTeamLink">קישור (נפתח בטאב חדש)</label>' +
+          '<input type="url" id="homeFieldDevTeamLink" dir="ltr" placeholder="https://..." value="' + escapeHtml(link) + '">' +
+        '</div>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function readClosingDevTeamFields(home, kind) {
+  const check = document.getElementById('homeFieldDevTeam');
+  const linkEl = document.getElementById('homeFieldDevTeamLink');
+  const fontEl = document.getElementById('homeFieldDevTeamFontSize');
+  const colorEl = document.getElementById('homeFieldDevTeamColor');
+  const sizeEl = document.getElementById('homeFieldDevTeamSize');
+  const bgEl = document.getElementById('homeFieldDevTeamBgColor');
+  const borderColorEl = document.getElementById('homeFieldDevTeamBorderColor');
+  const borderWidthEl = document.getElementById('homeFieldDevTeamBorderWidth');
+  const glowEl = document.getElementById('homeFieldDevTeamGlow');
+  const slantEl = document.getElementById('homeFieldDevTeamSlant');
+  home[kind + 'DevTeam'] = !!(check && check.checked);
+  home[kind + 'DevTeamImage'] = homeEditDevTeamImageData || '';
+  home[kind + 'DevTeamLink'] = linkEl ? linkEl.value.trim() : '';
+  home[kind + 'DevTeamFontSize'] = clampFontSize(fontEl ? fontEl.value : 16, 16);
+  home[kind + 'DevTeamColor'] = normalizeTextColor(colorEl ? colorEl.value : '#ffffff', '#ffffff');
+  home[kind + 'DevTeamSize'] = clampDevTeamSize(sizeEl ? sizeEl.value : 100);
+  home[kind + 'DevTeamBgColor'] = normalizeTextColor(bgEl ? bgEl.value : '#4a7c3f', '#4a7c3f');
+  home[kind + 'DevTeamBorderColor'] = normalizeTextColor(borderColorEl ? borderColorEl.value : '#ffffff', '#ffffff');
+  home[kind + 'DevTeamBorderWidth'] = clampDevTeamBorderWidth(borderWidthEl ? borderWidthEl.value : 2);
+  home[kind + 'DevTeamGlow'] = !!(glowEl && glowEl.checked);
+  home[kind + 'DevTeamSlant'] = !!(slantEl && slantEl.checked);
+}
+
+function bindClosingDevTeamFields() {
+  const check = document.getElementById('homeFieldDevTeam');
+  const fields = document.getElementById('homeFieldDevTeamFields');
+  if (!check || !fields) return;
+
+  check.addEventListener('change', function () {
+    fields.hidden = !check.checked;
+    scheduleHomeEditorPreview();
+  });
+
+  bindHomeTextSizeField('homeFieldDevTeamFontSize');
+  bindHomeTextColorField('homeFieldDevTeamColor');
+  bindHomeTextColorField('homeFieldDevTeamBgColor');
+  bindHomeTextColorField('homeFieldDevTeamBorderColor');
+
+  function bindSyncedRange(rangeId, numId, clampFn) {
+    const range = document.getElementById(rangeId);
+    const num = document.getElementById(numId);
+    if (!range || !num) return;
+    function apply(raw, from) {
+      const value = clampFn(raw);
+      if (from !== 'range') range.value = String(value);
+      if (from !== 'num') num.value = String(value);
+      scheduleHomeEditorPreview();
+    }
+    range.addEventListener('input', function () { apply(range.value, 'range'); });
+    num.addEventListener('input', function () { apply(num.value, 'num'); });
+    num.addEventListener('change', function () { apply(num.value, 'num'); });
+  }
+
+  bindSyncedRange('homeFieldDevTeamSize', 'homeFieldDevTeamSizeNum', clampDevTeamSize);
+  bindSyncedRange('homeFieldDevTeamBorderWidth', 'homeFieldDevTeamBorderWidthNum', clampDevTeamBorderWidth);
+
+  ['homeFieldDevTeamGlow', 'homeFieldDevTeamSlant'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', scheduleHomeEditorPreview);
+  });
+
+  const imageInput = document.getElementById('homeFieldDevTeamImage');
+  if (imageInput) {
+    imageInput.addEventListener('change', async function (e) {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      homeEditDevTeamImageData = await readFileAsDataURL(file, 900, null, true);
+      const preview = document.getElementById('homeFieldDevTeamImagePreview');
+      if (preview) {
+        preview.src = homeEditDevTeamImageData;
+        preview.classList.add('is-visible');
+      }
+      if (!document.getElementById('homeClearDevTeamImage')) {
+        const clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'site-theme-clear';
+        clearBtn.id = 'homeClearDevTeamImage';
+        clearBtn.style.marginTop = '8px';
+        clearBtn.textContent = 'הסרת תמונה';
+        imageInput.closest('.form-field').insertBefore(clearBtn, preview);
+        clearBtn.addEventListener('click', clearDevTeamImage);
+      }
+      scheduleHomeEditorPreview();
+      e.target.value = '';
+    });
+  }
+
+  const clearBtn = document.getElementById('homeClearDevTeamImage');
+  if (clearBtn) clearBtn.addEventListener('click', clearDevTeamImage);
+
+  const linkEl = document.getElementById('homeFieldDevTeamLink');
+  if (linkEl) {
+    linkEl.addEventListener('input', scheduleHomeEditorPreview);
+    linkEl.addEventListener('change', scheduleHomeEditorPreview);
+  }
+}
+
+function clearDevTeamImage() {
+  homeEditDevTeamImageData = '';
+  const preview = document.getElementById('homeFieldDevTeamImagePreview');
+  if (preview) {
+    preview.src = '';
+    preview.classList.remove('is-visible');
+  }
+  const clearBtn = document.getElementById('homeClearDevTeamImage');
+  if (clearBtn) clearBtn.remove();
+  scheduleHomeEditorPreview();
+}
+
 function setSectionBgOpacity(sectionEl, opacity) {
   if (!sectionEl) return;
   const value = clampBgOpacity(opacity);
@@ -3228,9 +4423,24 @@ function applySiteTheme(home) {
   cardsGrid.style.setProperty('--cards-per-row', String(perRow));
   cardsGrid.style.setProperty('--cards-gap', gap + 'px');
 
+  const cardsBgImage = home.cardsBgImage || '';
+  const cardsBgFullBleed = !!home.cardsBgFullBleed;
+  const cardsBgUrl = cardsBgImage ? 'url(' + JSON.stringify(cardsBgImage) + ')' : 'none';
+  cardsGrid.style.setProperty('--cards-bg-image', cardsBgUrl);
+  cardsGrid.classList.toggle('has-cards-bg', !!cardsBgImage);
+  const cardsSection = document.getElementById('cardsSection');
+  if (cardsSection) {
+    cardsSection.style.setProperty('--cards-bg-image', cardsBgUrl);
+    cardsSection.classList.toggle('has-cards-bg', !!cardsBgImage);
+    cardsSection.classList.toggle('is-bg-full-bleed', !!cardsBgImage && cardsBgFullBleed);
+  }
+
   const colorCardsInput = document.getElementById('colorCards');
   const fontSelect = document.getElementById('siteFont');
   const clearBtn = document.getElementById('siteBgClear');
+  const cardsBgClear = document.getElementById('cardsBgClear');
+  const cardsBgFullBleedInput = document.getElementById('cardsBgFullBleed');
+  const cardsBgFullBleedControl = document.getElementById('cardsBgFullBleedControl');
   const perRowInput = document.getElementById('cardsPerRow');
   const gapInput = document.getElementById('cardsGap');
   const perRowValue = document.getElementById('cardsPerRowValue');
@@ -3240,10 +4450,14 @@ function applySiteTheme(home) {
   if (colorCardsInput) colorCardsInput.checked = !!home.colorCards;
   if (fontSelect) setFontSelectValue(fontSelect, font);
   if (clearBtn) clearBtn.hidden = !bgImage;
+  if (cardsBgClear) cardsBgClear.hidden = !cardsBgImage;
+  if (cardsBgFullBleedControl) cardsBgFullBleedControl.hidden = !cardsBgImage;
+  if (cardsBgFullBleedInput) cardsBgFullBleedInput.checked = cardsBgFullBleed;
   if (perRowInput) perRowInput.value = String(perRow);
   if (gapInput) gapInput.value = String(gap);
   if (perRowValue) perRowValue.textContent = String(perRow);
   if (gapValue) gapValue.textContent = gap + 'px';
+  syncCategoriesToolbar(home);
 }
 
 function updateHomeField(patch) {
@@ -3289,6 +4503,9 @@ async function renderHome(homeOverride, previewOptions) {
     applyTextFontSize(document.getElementById('homeClosing2Text'), home.closing2TextSize, 17);
     applyTextColor(document.getElementById('homeClosing2Text'), home.closing2TextColor, '#ffffff');
   }
+
+  renderClosingDevTeam('closing', home);
+  if (home.hasClosing2) renderClosingDevTeam('closing2', home);
 
   const mediaJobs = [];
   const kinds = ['intro', 'closing'];
@@ -3526,6 +4743,7 @@ function bindHeaderItemInteractions() {
 
 let editingHomeSection = null;
 let homeEditImageData = '';
+let homeEditDevTeamImageData = '';
 let homeEditVideoFile = null;
 let homeEditVideoRemoved = false;
 let homeEditHeaderDraft = null;
@@ -3631,6 +4849,7 @@ function buildHomeDraftFromEditor() {
     if (opacityEl) home[kind + 'BgOpacity'] = clampBgOpacity(opacityEl.value);
     home[kind + 'MediaType'] = getSelectedHomeMediaType();
     readHomeLayoutFields(home, kind);
+    readClosingDevTeamFields(home, kind);
     if (home[kind + 'MediaType'] === 'image') {
       home[kind + 'Image'] = homeEditImageData || '';
     }
@@ -3654,11 +4873,35 @@ function getHomeEditorPreviewOptions() {
   return options;
 }
 
+function getHomeSectionFocusEl(section) {
+  if (section === 'header') return document.getElementById('homeHeaderCanvas');
+  if (section === 'intro') return document.getElementById('homeIntroMain');
+  if (section === 'intro2') return document.getElementById('homeIntro2Main');
+  if (section === 'closing') return document.getElementById('homeClosing');
+  if (section === 'closing2') return document.getElementById('homeClosing2');
+  return document.querySelector('[data-home-section="' + section + '"]');
+}
+
+function clearHomeSectionEditingFocus() {
+  document.querySelectorAll('.is-section-editing').forEach(function (el) {
+    el.classList.remove('is-section-editing');
+  });
+}
+
+function syncHomeSectionEditingFocus() {
+  clearHomeSectionEditingFocus();
+  if (!editingHomeSection) return;
+  const el = getHomeSectionFocusEl(editingHomeSection);
+  if (el) el.classList.add('is-section-editing');
+}
+
 function scheduleHomeEditorPreview() {
   if (!editingHomeSection || !homeEditSnapshot) return;
   clearTimeout(homeEditPreviewTimer);
   homeEditPreviewTimer = setTimeout(function () {
-    renderHome(buildHomeDraftFromEditor(), getHomeEditorPreviewOptions());
+    renderHome(buildHomeDraftFromEditor(), getHomeEditorPreviewOptions()).then(function () {
+      syncHomeSectionEditingFocus();
+    });
   }, 50);
 }
 
@@ -3675,6 +4918,7 @@ function openHomeEditor(section) {
   homeEditSnapshot = JSON.parse(JSON.stringify(home));
   homeEditCommitted = false;
   homeEditImageData = '';
+  homeEditDevTeamImageData = '';
   homeEditVideoFile = null;
   homeEditVideoRemoved = false;
   homeEditHeaderDraft = null;
@@ -3726,6 +4970,7 @@ function openHomeEditor(section) {
   if (section === 'closing' || section === 'closing2') {
     title = section === 'closing' ? 'עריכת סגירה' : 'עריכת סגירה 2';
     homeEditImageData = home[section + 'Image'] || '';
+    homeEditDevTeamImageData = home[section + 'DevTeamImage'] || '';
     fieldsHtml =
       '<div class="form-field form-field--full">' +
         '<label for="homeFieldClosing">טקסט סגירה (אופציונלי)</label>' +
@@ -3733,6 +4978,7 @@ function openHomeEditor(section) {
       '</div>' +
       homeTextSizeHtml('homeFieldTextSize', home[section + 'TextSize'], 17, 'גודל גופן לטקסט סגירה') +
       homeTextColorHtml('homeFieldTextColor', home[section + 'TextColor'], 'צבע טקסט סגירה') +
+      homeClosingDevTeamFieldsHtml(home, section) +
       homeMediaFieldsHtml({
         mediaType: home[section + 'MediaType'] || 'bg',
         imageUrl: home[section + 'Image'] || '',
@@ -3756,8 +5002,10 @@ function openHomeEditor(section) {
   bindHomeTextColorField('homeFieldSubtitleColor');
   bindHomeTextColorField('homeFieldTextColor');
   bindHomeEditorMediaInputs();
+  bindClosingDevTeamFields();
   bindHomeHeaderEditor();
   bindHomeEditorLivePreview();
+  syncHomeSectionEditingFocus();
 }
 
 function homeHeaderAlignHtml(itemId, align) {
@@ -4072,7 +5320,9 @@ function closeHomeEditor() {
   homeEditOverlay.hidden = true;
   homeEditOverlay.classList.remove('home-edit-live');
   editingHomeSection = null;
+  clearHomeSectionEditingFocus();
   homeEditImageData = '';
+  homeEditDevTeamImageData = '';
   homeEditVideoFile = null;
   homeEditVideoRemoved = false;
   homeEditHeaderDraft = null;
@@ -4152,6 +5402,7 @@ async function saveHomeEditor(e) {
     const closingOpacityEl = document.getElementById('homeFieldBgOpacity');
     if (closingOpacityEl) home[kind + 'BgOpacity'] = clampBgOpacity(closingOpacityEl.value);
     readHomeLayoutFields(home, kind);
+    readClosingDevTeamFields(home, kind);
     if (home[kind + 'MediaType'] === 'video') {
       try {
         if (homeEditVideoRemoved) {
@@ -4219,6 +5470,57 @@ document.getElementById('siteBgClear').addEventListener('click', function () {
   updateHomeField({ siteBgImage: '' });
 });
 
+document.getElementById('cardsBgImage').addEventListener('change', async function (e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const dataUrl = await readFileAsDataURL(file, 1600, 16 / 9);
+  updateHomeField({ cardsBgImage: dataUrl });
+  e.target.value = '';
+});
+
+document.getElementById('cardsBgClear').addEventListener('click', function () {
+  updateHomeField({ cardsBgImage: '' });
+});
+
+document.getElementById('cardsBgFullBleed').addEventListener('change', function (e) {
+  if (!updateHomeField({ cardsBgFullBleed: !!e.target.checked })) {
+    e.target.checked = !e.target.checked;
+  }
+});
+
+document.getElementById('cardsSearchEnabled').addEventListener('change', function (e) {
+  const enabled = !!e.target.checked;
+  if (!updateHomeField({ cardsSearchEnabled: enabled })) {
+    e.target.checked = !enabled;
+    return;
+  }
+  if (!enabled) {
+    cardsSearchQuery = '';
+    const input = document.getElementById('cardsSearchInput');
+    if (input) input.value = '';
+  }
+  syncCategoriesToolbar(loadHome());
+  renderCards(loadCards());
+  if (enabled) {
+    const input = document.getElementById('cardsSearchInput');
+    if (input) input.focus();
+  }
+});
+
+document.getElementById('cardsSearchInput').addEventListener('input', function (e) {
+  cardsSearchQuery = e.target.value;
+  const start = e.target.selectionStart;
+  const end = e.target.selectionEnd;
+  renderCards(loadCards());
+  const input = document.getElementById('cardsSearchInput');
+  if (input) {
+    input.focus();
+    try {
+      input.setSelectionRange(start, end);
+    } catch (_) {}
+  }
+});
+
 document.getElementById('cardsPerRow').addEventListener('input', function (e) {
   const value = Number(e.target.value);
   document.getElementById('cardsPerRowValue').textContent = String(value);
@@ -4229,6 +5531,56 @@ document.getElementById('cardsGap').addEventListener('input', function (e) {
   const value = Number(e.target.value);
   document.getElementById('cardsGapValue').textContent = value + 'px';
   updateHomeField({ cardsGap: value });
+});
+
+document.getElementById('cardsLayoutMode').addEventListener('change', function (e) {
+  const mode = e.target.value;
+  if (mode !== 'matrix' && mode !== 'categories' && mode !== 'freeform') return;
+  const home = loadHome();
+  home.cardsLayoutMode = mode;
+  home.categoriesEnabled = mode === 'categories';
+  if (mode === 'categories') {
+    home.categories = normalizeCategories(home.categories, loadCards());
+  }
+  if (mode === 'freeform') {
+    home.cardsFreeHeight = clampCardsFreeHeight(home.cardsFreeHeight);
+    home.cardsFreeSize = clampCardFreeWidth(home.cardsFreeSize);
+    ensureCardPositions(home, loadCards());
+  }
+  if (!saveHome(home)) {
+    e.target.value = getCardsLayoutMode(loadHome());
+    alert('אין מספיק מקום לשמירה.');
+    return;
+  }
+  syncCategoriesToolbar(home);
+  renderCards(loadCards());
+});
+
+document.getElementById('cardsFreeHeight').addEventListener('input', function (e) {
+  const value = clampCardsFreeHeight(e.target.value);
+  applyCardsFreeHeight(value);
+  updateHomeField({ cardsFreeHeight: value });
+});
+
+document.getElementById('cardsFreeSize').addEventListener('input', function (e) {
+  const value = clampCardFreeWidth(e.target.value);
+  applyCardsFreeSizeToDom(value);
+  const home = loadHome();
+  const positions = Object.assign({}, getCardPositionMap(home));
+  Object.keys(positions).forEach(function (id) {
+    positions[id] = normalizeCardPosition(Object.assign({}, positions[id], { w: value }), value);
+  });
+  home.cardsFreeSize = value;
+  home.cardPositions = positions;
+  if (!saveHome(home)) {
+    alert('אין מספיק מקום לשמירה.');
+    return;
+  }
+  syncCategoriesToolbar(home);
+});
+
+document.getElementById('addCategoryBtn').addEventListener('click', function () {
+  addCategory();
 });
 
 document.querySelectorAll('[data-edit-home]').forEach(function (btn) {

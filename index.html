@@ -100,19 +100,57 @@
   </section>
 
   <!-- כרטיסיות -->
-  <div class="cards-layout-bar" id="cardsLayoutBar" hidden>
-    <label class="cards-layout-control" for="cardsPerRow">
-      <span>כרטיסים בשורה</span>
-      <input type="range" id="cardsPerRow" min="2" max="6" step="1" value="5">
-      <strong id="cardsPerRowValue">5</strong>
-    </label>
-    <label class="cards-layout-control" for="cardsGap">
-      <span>מרווח בין כרטיסים</span>
-      <input type="range" id="cardsGap" min="4" max="48" step="2" value="16">
-      <strong id="cardsGapValue">16px</strong>
-    </label>
-  </div>
-  <main class="cards-grid" id="cardsGrid"></main>
+  <section class="cards-section" id="cardsSection">
+    <div class="cards-section-bg" id="cardsSectionBg" aria-hidden="true"></div>
+    <div class="cards-layout-bar" id="cardsLayoutBar" hidden>
+      <label class="cards-layout-control cards-layout-mode" for="cardsLayoutMode">
+        <span>פריסה</span>
+        <select id="cardsLayoutMode">
+          <option value="matrix">מטריצה</option>
+          <option value="categories">מטריצה עם קטגוריות</option>
+          <option value="freeform">אברים חופשים</option>
+        </select>
+      </label>
+      <button type="button" class="cards-layout-btn" id="addCategoryBtn" hidden>+ קטגוריה</button>
+      <label class="cards-layout-control" id="cardsPerRowControl" for="cardsPerRow">
+        <span>כרטיסים בשורה</span>
+        <input type="range" id="cardsPerRow" min="2" max="6" step="1" value="5">
+        <strong id="cardsPerRowValue">5</strong>
+      </label>
+      <label class="cards-layout-control" id="cardsGapControl" for="cardsGap">
+        <span>מרווח בין כרטיסים</span>
+        <input type="range" id="cardsGap" min="4" max="48" step="2" value="16">
+        <strong id="cardsGapValue">16px</strong>
+      </label>
+      <label class="cards-layout-control" id="cardsFreeHeightControl" for="cardsFreeHeight" hidden>
+        <span>גובה מרחב</span>
+        <input type="range" id="cardsFreeHeight" min="240" max="1800" step="10" value="420">
+        <strong id="cardsFreeHeightValue">420px</strong>
+      </label>
+      <label class="cards-layout-control" id="cardsFreeSizeControl" for="cardsFreeSize" hidden>
+        <span>גודל כרטיסים</span>
+        <input type="range" id="cardsFreeSize" min="8" max="40" step="1" value="18">
+        <strong id="cardsFreeSizeValue">18%</strong>
+      </label>
+      <label class="cards-layout-btn cards-layout-upload" for="cardsBgImage">
+        <span>תמונת רקע</span>
+        <input type="file" id="cardsBgImage" accept="image/*" hidden>
+      </label>
+      <button type="button" class="cards-layout-btn cards-layout-clear" id="cardsBgClear" hidden title="הסרת תמונת רקע">הסרת תמונה</button>
+      <label class="cards-layout-check" id="cardsBgFullBleedControl" for="cardsBgFullBleed" hidden>
+        <input type="checkbox" id="cardsBgFullBleed">
+        <span>מקצה לקצה</span>
+      </label>
+      <label class="cards-layout-check" for="cardsSearchEnabled">
+        <input type="checkbox" id="cardsSearchEnabled">
+        <span>חיפוש</span>
+      </label>
+    </div>
+    <div class="cards-search-bar" id="cardsSearchBar" hidden>
+      <input type="search" id="cardsSearchInput" placeholder="הקלידו טקסט לחיפוש בכרטיסים..." autocomplete="off" dir="rtl" aria-label="חיפוש בכרטיסים">
+    </div>
+    <main class="cards-grid" id="cardsGrid"></main>
+  </section>
 
   <!-- סגירה -->
   <section class="home-section home-closing" id="homeClosing" data-home-section="closing">
@@ -120,6 +158,9 @@
     <div class="home-section-content">
       <p class="home-closing-text" id="homeClosingText">תודה שביקרתם. נשתמע בפעם הבאה.</p>
     </div>
+    <a class="home-dev-team-btn" id="homeClosingDevTeam" hidden target="_blank" rel="noopener noreferrer" aria-label="צוות פיתוח">
+      <span class="home-dev-team-label">צוות פיתוח</span>
+    </a>
     <div class="home-resize-handle" data-resize="closing" hidden title="גררו לשינוי גובה">
       <span class="home-resize-grip"></span>
     </div>
@@ -135,6 +176,9 @@
     <div class="home-section-content">
       <p class="home-closing-text" id="homeClosing2Text"></p>
     </div>
+    <a class="home-dev-team-btn" id="homeClosing2DevTeam" hidden target="_blank" rel="noopener noreferrer" aria-label="צוות פיתוח">
+      <span class="home-dev-team-label">צוות פיתוח</span>
+    </a>
     <div class="home-resize-handle" data-resize="closing2" hidden title="גררו לשינוי גובה">
       <span class="home-resize-grip"></span>
     </div>
@@ -227,20 +271,6 @@
               <textarea id="notes" name="notes" rows="2" maxlength="30" placeholder="הערות נוספות (אופציונלי)"></textarea>
             </div>
 
-            <div class="form-field">
-              <label for="cardDate">תאריך <span class="req">*</span></label>
-              <input type="date" id="cardDate" name="cardDate" required>
-            </div>
-
-            <div class="form-field">
-              <label for="status">סטטוס <span class="req">*</span></label>
-              <select id="status" name="status" required>
-                <option value="">בחרו סטטוס</option>
-                <option value="בעבודה">בעבודה</option>
-                <option value="מוכן">מוכן</option>
-              </select>
-            </div>
-
             <div class="form-field form-field--full">
               <label for="classification">סיווג <span class="req">*</span></label>
               <select id="classification" name="classification" required>
@@ -259,14 +289,18 @@
           <p class="wizard-hint">בחרו את סוג התוכן והעלו חומרים ויזואליים</p>
 
           <div class="form-grid">
-            <div class="form-field">
+            <div class="form-field form-field--full">
               <label for="projectType">סוג פרויקט <span class="req">*</span></label>
-              <select id="projectType" name="projectType" required>
-                <option value="">בחרו סוג</option>
-                <option value="מצגת">מצגת</option>
-                <option value="לומדה">לומדה</option>
-                <option value="סרט">סרט</option>
-              </select>
+              <div class="project-type-row">
+                <select id="projectType" name="projectType" required>
+                  <option value="">בחרו סוג</option>
+                  <option value="מצגת">מצגת</option>
+                  <option value="לומדה">לומדה</option>
+                  <option value="סרט">סרט</option>
+                  <option value="__other__">אחר</option>
+                </select>
+                <input type="text" id="projectTypeCustom" maxlength="10" placeholder="הקלידו סוג..." hidden aria-label="סוג פרויקט מותאם">
+              </div>
             </div>
 
             <div class="form-field form-field--full">
