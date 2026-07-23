@@ -20,10 +20,6 @@
         <button type="button" class="hsla-swatch" id="siteColorSwatch" title="בחירת צבע" aria-label="בחירת צבע"></button>
         <input type="hidden" id="siteSecondaryColor" value="#4a7c3f">
       </div>
-      <label class="site-theme-control site-theme-check" for="colorCards">
-        <input type="checkbox" id="colorCards">
-        <span>לצבוע כרטיסים</span>
-      </label>
       <label class="site-theme-control site-theme-upload" for="siteBgImage">
         <span>תמונת רקע</span>
         <input type="file" id="siteBgImage" accept="image/*" hidden>
@@ -99,9 +95,20 @@
     </div>
   </section>
 
-  <!-- כרטיסיות -->
-  <section class="cards-section" id="cardsSection">
+  <!-- כרטיסי תוכן -->
+  <section class="cards-section home-section" id="cardsSection" data-home-section="cards">
     <div class="cards-section-bg" id="cardsSectionBg" aria-hidden="true"></div>
+    <div class="cards-search-bar" id="cardsSearchBar" hidden>
+      <input type="search" id="cardsSearchInput" placeholder="הקלידו טקסט לחיפוש בכרטיסים..." autocomplete="off" dir="rtl" aria-label="חיפוש בכרטיסים">
+    </div>
+    <main class="cards-grid" id="cardsGrid"></main>
+    <div class="home-section-actions">
+      <button type="button" class="home-section-edit" data-edit-home="cards" hidden title="עריכת כרטיסי תוכן">✎</button>
+    </div>
+  </section>
+
+  <!-- בקרות פריסת כרטיסים — נשמרות מחוץ לעמוד, נפתחות בחלונית העריכה -->
+  <div id="cardsLayoutBarHost" hidden>
     <div class="cards-layout-bar" id="cardsLayoutBar" hidden>
       <label class="cards-layout-control cards-layout-mode" for="cardsLayoutMode">
         <span>פריסה</span>
@@ -137,20 +144,12 @@
         <input type="file" id="cardsBgImage" accept="image/*" hidden>
       </label>
       <button type="button" class="cards-layout-btn cards-layout-clear" id="cardsBgClear" hidden title="הסרת תמונת רקע">הסרת תמונה</button>
-      <label class="cards-layout-check" id="cardsBgFullBleedControl" for="cardsBgFullBleed" hidden>
-        <input type="checkbox" id="cardsBgFullBleed">
-        <span>מקצה לקצה</span>
-      </label>
       <label class="cards-layout-check" for="cardsSearchEnabled">
         <input type="checkbox" id="cardsSearchEnabled">
         <span>חיפוש</span>
       </label>
     </div>
-    <div class="cards-search-bar" id="cardsSearchBar" hidden>
-      <input type="search" id="cardsSearchInput" placeholder="הקלידו טקסט לחיפוש בכרטיסים..." autocomplete="off" dir="rtl" aria-label="חיפוש בכרטיסים">
-    </div>
-    <main class="cards-grid" id="cardsGrid"></main>
-  </section>
+  </div>
 
   <!-- סגירה -->
   <section class="home-section home-closing" id="homeClosing" data-home-section="closing">
@@ -197,6 +196,8 @@
       </div>
       <form id="homeEditForm">
         <div id="homeEditFields"></div>
+        <!-- בקרות כרטיסים מחוץ ל-homeEditFields כדי שלא יימחקו ב-innerHTML -->
+        <div id="cardsEditorMount" class="cards-editor-mount" hidden></div>
         <div class="wizard-nav" style="margin-top: 20px;">
           <button type="button" class="wizard-nav-btn wizard-nav-btn--back" id="homeEditCancelBtn">ביטול</button>
           <span></span>

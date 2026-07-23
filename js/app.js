@@ -141,7 +141,7 @@ const DEFAULT_HOME = {
   cardsFreeSize: 18,
   cardPositions: {},
   cardsBgImage: '',
-  cardsBgFullBleed: false,
+  cardsBgFullBleed: true,
   cardsSearchEnabled: false,
 };
 
@@ -2215,7 +2215,11 @@ function toggleEditMode() {
   btnEdit.classList.toggle('active', editMode);
   cardsGrid.classList.toggle('edit-mode', editMode);
   document.body.classList.toggle('page-edit-mode', editMode);
-  document.getElementById('cardsLayoutBar').hidden = !editMode;
+  if (!editMode && editingHomeSection === 'cards') {
+    homeEditCommitted = true;
+    closeHomeEditor();
+  }
+  unmountCardsLayoutBarFromEditor();
   const home = loadHome();
   syncHomeSectionControls(home);
   syncCategoriesToolbar(home);
@@ -3372,6 +3376,80 @@ function clearSectionMedia(el) {
 
 const VIDEO_DB_NAME = 'hebet-media';
 const VIDEO_STORE = 'videos';
+const CARDS_BG_IDB_KEY = 'cards-bg';
+const CARDS_BG_MARKER = 'idb:cards-bg';
+let cardsBgImageCache = '';
+let cardsBgObjectUrl = '';
+
+function revokeCardsBgObjectUrl() {
+  if (cardsBgObjectUrl) {
+    URL.revokeObjectURL(cardsBgObjectUrl);
+    cardsBgObjectUrl = '';
+  }
+}
+
+function getResolvedCardsBgImage(home) {
+  const raw = home && home.cardsBgImage ? String(home.cardsBgImage) : '';
+  if (!raw) return '';
+  if (raw === CARDS_BG_MARKER) return cardsBgImageCache || '';
+  if (raw.indexOf('data:') === 0 || raw.indexOf('blob:') === 0) return raw;
+  return cardsBgImageCache || '';
+}
+
+async function persistCardsBgImage(dataUrl) {
+  if (!dataUrl) {
+    revokeCardsBgObjectUrl();
+    cardsBgImageCache = '';
+    try { await deleteHomeVideo(CARDS_BG_IDB_KEY); } catch (_) {}
+    return '';
+  }
+  cardsBgImageCache = dataUrl;
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  await putHomeVideo(
+    CARDS_BG_IDB_KEY,
+    new File([blob], 'cards-bg.jpg', { type: blob.type || 'image/jpeg' })
+  );
+  return CARDS_BG_MARKER;
+}
+
+async function hydrateCardsBgImage(home) {
+  home = home || loadHome();
+  const raw = home.cardsBgImage ? String(home.cardsBgImage) : '';
+  if (!raw) {
+    revokeCardsBgObjectUrl();
+    cardsBgImageCache = '';
+    return home;
+  }
+  if (raw.indexOf('data:') === 0) {
+    try {
+      home.cardsBgImage = await persistCardsBgImage(raw);
+      saveHome(home);
+    } catch (err) {
+      console.warn('cards bg migrate failed', err);
+      cardsBgImageCache = raw;
+    }
+    return home;
+  }
+  if (raw === CARDS_BG_MARKER) {
+    try {
+      const rec = await getHomeVideo(CARDS_BG_IDB_KEY);
+      revokeCardsBgObjectUrl();
+      if (rec && rec.blob) {
+        cardsBgObjectUrl = URL.createObjectURL(rec.blob);
+        cardsBgImageCache = cardsBgObjectUrl;
+      } else {
+        cardsBgImageCache = '';
+        home.cardsBgImage = '';
+        saveHome(home);
+      }
+    } catch (err) {
+      console.warn('cards bg load failed', err);
+      cardsBgImageCache = '';
+    }
+  }
+  return home;
+}
 
 function openFontsDb() {
   return new Promise(function (resolve, reject) {
@@ -4418,13 +4496,12 @@ function applySiteTheme(home) {
   );
   document.body.style.setProperty('--site-secondary', colorToCss(secondary));
   document.body.style.setProperty('--site-font', font);
-  document.body.classList.toggle('cards-colored', !!home.colorCards);
+  document.body.classList.remove('cards-colored');
 
   cardsGrid.style.setProperty('--cards-per-row', String(perRow));
   cardsGrid.style.setProperty('--cards-gap', gap + 'px');
 
-  const cardsBgImage = home.cardsBgImage || '';
-  const cardsBgFullBleed = !!home.cardsBgFullBleed;
+  const cardsBgImage = getResolvedCardsBgImage(home);
   const cardsBgUrl = cardsBgImage ? 'url(' + JSON.stringify(cardsBgImage) + ')' : 'none';
   cardsGrid.style.setProperty('--cards-bg-image', cardsBgUrl);
   cardsGrid.classList.toggle('has-cards-bg', !!cardsBgImage);
@@ -4432,27 +4509,21 @@ function applySiteTheme(home) {
   if (cardsSection) {
     cardsSection.style.setProperty('--cards-bg-image', cardsBgUrl);
     cardsSection.classList.toggle('has-cards-bg', !!cardsBgImage);
-    cardsSection.classList.toggle('is-bg-full-bleed', !!cardsBgImage && cardsBgFullBleed);
+    cardsSection.classList.toggle('is-bg-full-bleed', !!cardsBgImage);
   }
 
-  const colorCardsInput = document.getElementById('colorCards');
   const fontSelect = document.getElementById('siteFont');
   const clearBtn = document.getElementById('siteBgClear');
   const cardsBgClear = document.getElementById('cardsBgClear');
-  const cardsBgFullBleedInput = document.getElementById('cardsBgFullBleed');
-  const cardsBgFullBleedControl = document.getElementById('cardsBgFullBleedControl');
   const perRowInput = document.getElementById('cardsPerRow');
   const gapInput = document.getElementById('cardsGap');
   const perRowValue = document.getElementById('cardsPerRowValue');
   const gapValue = document.getElementById('cardsGapValue');
 
   setHslaFieldValue('siteSecondaryColor', secondary);
-  if (colorCardsInput) colorCardsInput.checked = !!home.colorCards;
   if (fontSelect) setFontSelectValue(fontSelect, font);
   if (clearBtn) clearBtn.hidden = !bgImage;
-  if (cardsBgClear) cardsBgClear.hidden = !cardsBgImage;
-  if (cardsBgFullBleedControl) cardsBgFullBleedControl.hidden = !cardsBgImage;
-  if (cardsBgFullBleedInput) cardsBgFullBleedInput.checked = cardsBgFullBleed;
+  if (cardsBgClear) cardsBgClear.hidden = !home.cardsBgImage;
   if (perRowInput) perRowInput.value = String(perRow);
   if (gapInput) gapInput.value = String(gap);
   if (perRowValue) perRowValue.textContent = String(perRow);
@@ -4879,7 +4950,38 @@ function getHomeSectionFocusEl(section) {
   if (section === 'intro2') return document.getElementById('homeIntro2Main');
   if (section === 'closing') return document.getElementById('homeClosing');
   if (section === 'closing2') return document.getElementById('homeClosing2');
+  if (section === 'cards') return document.getElementById('cardsSection');
   return document.querySelector('[data-home-section="' + section + '"]');
+}
+
+function mountCardsLayoutBarIntoEditor() {
+  const bar = document.getElementById('cardsLayoutBar');
+  const mount = document.getElementById('cardsEditorMount');
+  const host = document.getElementById('cardsLayoutBarHost');
+  if (!bar || !mount) return false;
+  if (bar.parentElement !== mount) mount.appendChild(bar);
+  bar.hidden = false;
+  bar.classList.add('is-in-editor');
+  mount.hidden = false;
+  if (host) host.hidden = true;
+  syncCategoriesToolbar(loadHome());
+  applySiteTheme(loadHome());
+  return true;
+}
+
+function unmountCardsLayoutBarFromEditor() {
+  const bar = document.getElementById('cardsLayoutBar');
+  const host = document.getElementById('cardsLayoutBarHost');
+  const mount = document.getElementById('cardsEditorMount');
+  if (bar) {
+    bar.classList.remove('is-in-editor');
+    bar.hidden = true;
+    if (host) {
+      if (bar.parentElement !== host) host.appendChild(bar);
+      host.hidden = true;
+    }
+  }
+  if (mount) mount.hidden = true;
 }
 
 function clearHomeSectionEditingFocus() {
@@ -4897,8 +4999,12 @@ function syncHomeSectionEditingFocus() {
 
 function scheduleHomeEditorPreview() {
   if (!editingHomeSection || !homeEditSnapshot) return;
+  /* כרטיסי תוכן נשמרים ישירות — בלי preview שמוחק/מרנדר מחדש */
+  if (editingHomeSection === 'cards') return;
   clearTimeout(homeEditPreviewTimer);
+  const sectionAtSchedule = editingHomeSection;
   homeEditPreviewTimer = setTimeout(function () {
+    if (editingHomeSection !== sectionAtSchedule || editingHomeSection === 'cards') return;
     renderHome(buildHomeDraftFromEditor(), getHomeEditorPreviewOptions()).then(function () {
       syncHomeSectionEditingFocus();
     });
@@ -4908,11 +5014,20 @@ function scheduleHomeEditorPreview() {
 function bindHomeEditorLivePreview() {
   if (!homeEditFields || homeEditFields.dataset.livePreviewBound === '1') return;
   homeEditFields.dataset.livePreviewBound = '1';
-  homeEditFields.addEventListener('input', scheduleHomeEditorPreview);
-  homeEditFields.addEventListener('change', scheduleHomeEditorPreview);
+  homeEditFields.addEventListener('input', function () {
+    if (editingHomeSection === 'cards') return;
+    scheduleHomeEditorPreview();
+  });
+  homeEditFields.addEventListener('change', function () {
+    if (editingHomeSection === 'cards') return;
+    scheduleHomeEditorPreview();
+  });
 }
 
 function openHomeEditor(section) {
+  clearTimeout(homeEditPreviewTimer);
+  unmountCardsLayoutBarFromEditor();
+
   const home = loadHome();
   editingHomeSection = section;
   homeEditSnapshot = JSON.parse(JSON.stringify(home));
@@ -4988,10 +5103,24 @@ function openHomeEditor(section) {
       homeSectionLayoutFieldsHtml(home, section);
   }
 
+  if (section === 'cards') {
+    title = 'עריכת כרטיסי תוכן';
+    fieldsHtml =
+      '<p class="field-subhint">הגדרות פריסה, רקע וחיפוש לאזור הכרטיסים. השינויים נשמרים מיד.</p>';
+  }
+
   homeEditTitle.textContent = title;
   homeEditFields.innerHTML = fieldsHtml;
   homeEditOverlay.hidden = false;
   homeEditOverlay.classList.add('home-edit-live');
+
+  if (section === 'cards') {
+    if (!mountCardsLayoutBarIntoEditor()) {
+      alert('לא ניתן לפתוח את עורך הכרטיסים. רעננו את העמוד ונסו שוב.');
+      closeHomeEditor();
+      return;
+    }
+  }
 
   bindHomeNoBgToggle();
   bindHomeMediaTypeToggle();
@@ -5316,7 +5445,8 @@ function bindHomeEditorMediaInputs() {
 
 function closeHomeEditor() {
   clearTimeout(homeEditPreviewTimer);
-  const shouldRevert = !homeEditCommitted && !!homeEditSnapshot;
+  const shouldRevert = !homeEditCommitted && !!homeEditSnapshot && editingHomeSection !== 'cards';
+  unmountCardsLayoutBarFromEditor();
   homeEditOverlay.hidden = true;
   homeEditOverlay.classList.remove('home-edit-live');
   editingHomeSection = null;
@@ -5338,6 +5468,12 @@ function closeHomeEditor() {
 async function saveHomeEditor(e) {
   e.preventDefault();
   if (!editingHomeSection) return;
+
+  if (editingHomeSection === 'cards') {
+    homeEditCommitted = true;
+    closeHomeEditor();
+    return;
+  }
 
   const home = loadHome();
 
@@ -5438,10 +5574,6 @@ btnNew.addEventListener('click', openWizard);
 btnEdit.addEventListener('click', toggleEditMode);
 btnCancel.addEventListener('click', closeWizard);
 
-document.getElementById('colorCards').addEventListener('change', function (e) {
-  updateHomeField({ colorCards: e.target.checked });
-});
-
 document.getElementById('siteFont').addEventListener('change', function (e) {
   updateHomeField({ siteFont: e.target.value });
 });
@@ -5473,19 +5605,25 @@ document.getElementById('siteBgClear').addEventListener('click', function () {
 document.getElementById('cardsBgImage').addEventListener('change', async function (e) {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
-  const dataUrl = await readFileAsDataURL(file, 1600, 16 / 9);
-  updateHomeField({ cardsBgImage: dataUrl });
+  try {
+    const dataUrl = await readFileAsDataURL(file, 1400, 16 / 9);
+    const marker = await persistCardsBgImage(dataUrl);
+    if (!updateHomeField({ cardsBgImage: marker })) {
+      await persistCardsBgImage('');
+      alert('אין מספיק מקום לשמירה. נסו תמונה קטנה יותר.');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('לא הצלחנו לשמור את תמונת הרקע. נסו קובץ אחר.');
+  }
   e.target.value = '';
 });
 
-document.getElementById('cardsBgClear').addEventListener('click', function () {
+document.getElementById('cardsBgClear').addEventListener('click', async function () {
+  try {
+    await persistCardsBgImage('');
+  } catch (_) {}
   updateHomeField({ cardsBgImage: '' });
-});
-
-document.getElementById('cardsBgFullBleed').addEventListener('change', function (e) {
-  if (!updateHomeField({ cardsBgFullBleed: !!e.target.checked })) {
-    e.target.checked = !e.target.checked;
-  }
 });
 
 document.getElementById('cardsSearchEnabled').addEventListener('change', function (e) {
@@ -5689,6 +5827,11 @@ async function initApp() {
     console.warn('Custom fonts unavailable', err);
   }
   populateFontSelects();
+  try {
+    await hydrateCardsBgImage(loadHome());
+  } catch (err) {
+    console.warn('Cards background unavailable', err);
+  }
   await renderHome();
   renderCards(loadCards());
   playPageEntrance();
@@ -5700,7 +5843,6 @@ function preparePageEntrance() {
     '#homeHeader',
     '#homeIntro',
     '#homeIntro2',
-    '#cardsLayoutBar',
     '#cardsGrid .card',
     '#homeClosing',
     '#homeClosing2',

@@ -345,11 +345,36 @@ body.page-edit-mode .home-intro-main .home-section-content {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
   text-decoration: none;
   cursor: pointer;
-  transition: filter 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s ease,
+    filter 0.35s ease,
+    border-color 0.3s ease;
   overflow: hidden;
   isolation: isolate;
   touch-action: none;
   user-select: none;
+}
+
+.home-dev-team-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -80%;
+  width: 55%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 40%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0.15) 60%,
+    transparent 100%
+  );
+  transform: skewX(-18deg);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .home-dev-team-btn[hidden] {
@@ -370,20 +395,42 @@ body.page-edit-mode .home-dev-team-btn.is-dragging {
   cursor: grabbing;
   outline-color: rgba(255, 248, 200, 0.95);
   z-index: 8;
+  transition: none;
 }
 
-.home-dev-team-btn:hover:not(.is-disabled):not(.is-slant):not(.is-dragging) {
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
-  transform: translate(-50%, -50%) scale(1.04);
+/* Hover רק מחוץ למצב עריכה — גם עם תמונה וגם בלי קישור */
+body:not(.page-edit-mode) .home-dev-team-btn:hover:not(.is-slant) {
+  transform: translate(-50%, calc(-50% - 8px)) scale(1.08);
+  box-shadow:
+    0 16px 32px rgba(0, 0, 0, 0.32),
+    0 6px 14px rgba(0, 0, 0, 0.18),
+    0 0 0 2px rgba(255, 255, 255, 0.35);
+  filter: brightness(1.1) saturate(1.08);
+}
+
+body:not(.page-edit-mode) .home-dev-team-btn:hover::after {
+  opacity: 1;
+  animation: dev-team-shine 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+body:not(.page-edit-mode) .home-dev-team-btn:active:not(.is-slant) {
+  transform: translate(-50%, calc(-50% - 3px)) scale(1.03);
+  transition-duration: 0.12s;
 }
 
 .home-dev-team-btn.has-image::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.28);
+  background: rgba(0, 0, 0, 0.32);
   z-index: 0;
   pointer-events: none;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+body:not(.page-edit-mode) .home-dev-team-btn.has-image:hover::before {
+  background: rgba(0, 0, 0, 0.12);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
 }
 
 .home-dev-team-btn.has-glow {
@@ -394,14 +441,30 @@ body.page-edit-mode .home-dev-team-btn.is-dragging {
     0 6px 18px rgba(0, 0, 0, 0.22);
 }
 
+body:not(.page-edit-mode) .home-dev-team-btn.has-glow:hover {
+  box-shadow:
+    0 0 0 2px rgba(255, 252, 220, 1),
+    0 0 28px 8px rgba(255, 236, 120, 0.8),
+    0 0 48px 16px rgba(255, 220, 80, 0.45),
+    0 16px 32px rgba(0, 0, 0, 0.3);
+}
+
 .home-dev-team-btn.is-slant {
   transform: translate(-50%, -50%) skewX(-14deg);
   border-radius: 4px;
 }
 
-.home-dev-team-btn.is-slant:hover:not(.is-disabled):not(.is-dragging) {
-  transform: translate(-50%, -50%) skewX(-14deg) scale(1.04);
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+body:not(.page-edit-mode) .home-dev-team-btn.is-slant:hover {
+  transform: translate(-50%, calc(-50% - 8px)) skewX(-14deg) scale(1.08);
+  box-shadow:
+    0 16px 32px rgba(0, 0, 0, 0.32),
+    0 6px 14px rgba(0, 0, 0, 0.18),
+    0 0 0 2px rgba(255, 255, 255, 0.35);
+  filter: brightness(1.1) saturate(1.08);
+}
+
+body:not(.page-edit-mode) .home-dev-team-btn.is-slant:active {
+  transform: translate(-50%, calc(-50% - 3px)) skewX(-14deg) scale(1.03);
 }
 
 .home-dev-team-btn.is-slant .home-dev-team-label {
@@ -410,7 +473,7 @@ body.page-edit-mode .home-dev-team-btn.is-dragging {
 
 .home-dev-team-label {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   display: block;
   font-size: var(--dev-team-font);
   font-weight: 800;
@@ -419,6 +482,50 @@ body.page-edit-mode .home-dev-team-btn.is-dragging {
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
   white-space: nowrap;
   text-align: center;
+  letter-spacing: 0.01em;
+  transition: letter-spacing 0.35s ease, text-shadow 0.35s ease, transform 0.35s ease;
+}
+
+body:not(.page-edit-mode) .home-dev-team-btn:hover .home-dev-team-label {
+  letter-spacing: 0.08em;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+}
+
+body:not(.page-edit-mode) .home-dev-team-btn.is-slant:hover .home-dev-team-label {
+  transform: skewX(14deg) scale(1.02);
+}
+
+@keyframes dev-team-shine {
+  from {
+    left: -80%;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  to {
+    left: 130%;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-dev-team-btn,
+  .home-dev-team-label,
+  .home-dev-team-btn.has-image::before {
+    transition: none;
+  }
+
+  body:not(.page-edit-mode) .home-dev-team-btn:hover::after {
+    animation: none;
+    opacity: 0;
+  }
+
+  body:not(.page-edit-mode) .home-dev-team-btn:hover:not(.is-slant),
+  body:not(.page-edit-mode) .home-dev-team-btn.is-slant:hover {
+    transform: translate(-50%, -50%);
+    filter: brightness(1.12);
+  }
 }
 
 .home-dev-team-fields {
@@ -508,7 +615,8 @@ body.page-edit-mode .home-closing {
 
 .home-header-canvas.is-section-editing,
 .home-intro-main.is-section-editing,
-.home-closing.is-section-editing {
+.home-closing.is-section-editing,
+.cards-section.is-section-editing {
   position: relative;
 }
 
@@ -1005,6 +1113,22 @@ body.page-edit-mode .home-header > .home-section-edit:not([hidden]) {
   isolation: isolate;
 }
 
+body.page-edit-mode .cards-section {
+  outline: 2px dashed rgba(74, 124, 63, 0.35);
+  outline-offset: 2px;
+}
+
+.cards-section > .home-section-actions {
+  position: absolute;
+  top: -8px;
+  left: 16px;
+  z-index: 5;
+}
+
+body.page-edit-mode .cards-section > .home-section-actions {
+  display: flex;
+}
+
 .cards-section-bg {
   display: none;
   position: absolute;
@@ -1017,8 +1141,34 @@ body.page-edit-mode .home-header > .home-section-edit:not([hidden]) {
   background-repeat: no-repeat;
 }
 
+/* רקע כרטיסים — מקצה לקצה של המסך */
+.cards-section.home-section.has-cards-bg.is-bg-full-bleed {
+  max-width: none;
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 0;
+  padding-right: 0;
+  overflow: visible;
+}
+
 .cards-section.has-cards-bg.is-bg-full-bleed .cards-section-bg {
   display: block;
+  inset: 0;
+  width: 100%;
+  transform: none;
+}
+
+.cards-section.has-cards-bg.is-bg-full-bleed .cards-search-bar,
+.cards-section.has-cards-bg.is-bg-full-bleed .cards-grid {
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cards-section.has-cards-bg.is-bg-full-bleed .cards-search-bar {
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 .cards-section > .cards-layout-bar,
@@ -1042,8 +1192,42 @@ body.page-edit-mode .home-header > .home-section-edit:not([hidden]) {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-body.page-edit-mode .cards-layout-bar {
+body.page-edit-mode .cards-layout-bar:not(.is-in-editor) {
+  display: none;
+}
+
+.cards-layout-bar.is-in-editor {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  max-width: none;
+  margin: 0;
+  padding: 4px 0 8px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.cards-layout-bar.is-in-editor .cards-layout-control,
+.cards-layout-bar.is-in-editor .cards-layout-btn,
+.cards-layout-bar.is-in-editor .cards-layout-check {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.cards-layout-bar.is-in-editor .cards-layout-control input[type="range"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.cards-editor-mount {
+  width: 100%;
+}
+
+.cards-editor-mount[hidden] {
+  display: none !important;
 }
 
 .cards-layout-upload {
