@@ -766,6 +766,7 @@ body:not(.page-edit-mode) .home-dev-team-btn.is-slant:hover .home-dev-team-label
 }
 
 .edit-seg-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -782,6 +783,10 @@ body:not(.page-edit-mode) .home-dev-team-btn.is-slant:hover .home-dev-team-label
 
 .edit-seg-btn input {
   position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   opacity: 0;
   pointer-events: none;
 }
@@ -2208,6 +2213,212 @@ body.page-edit-mode .category-cards.is-drop-target {
   overflow: hidden;
 }
 
+.card-image--none {
+  background: #f3f5f2 !important;
+  border-bottom: 1px solid #e2e8e0;
+}
+
+.card-image--none .card-title {
+  color: #222;
+  text-shadow: none;
+}
+
+.card-image--none .card-overlay-tag {
+  background: rgba(255, 255, 255, 0.92);
+  color: #333;
+}
+
+/* כרטיס שטוח — מצב "ללא" רקע (פאנל אחיד במקום גיבור+גוף) */
+.card.card--flat {
+  background: var(--card-flat-bg, #f4f4f2);
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  min-height: 220px;
+}
+
+.card.card--flat.card--edge-outline {
+  border: var(--card-outline-width, 4px) solid var(--card-outline, #e87722);
+}
+
+.card.card--flat.card--edge-glow {
+  border: none;
+  box-shadow:
+    0 0 calc(var(--card-outline-width, 4px) * 0.6) var(--card-outline, #e87722),
+    0 0 calc(var(--card-outline-width, 4px) * 1.6) var(--card-outline, #e87722),
+    0 0 calc(var(--card-outline-width, 4px) * 2.8) color-mix(in srgb, var(--card-outline, #e87722) 55%, transparent),
+    0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.card.card--flat.card--edge-none {
+  border: none;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card.card--flat.card--square-image {
+  background: transparent;
+  box-shadow: none;
+}
+
+.card.card--flat.card--square-image.card--edge-none {
+  box-shadow: none;
+}
+
+.card.card--flat.card--square-image.card--edge-outline {
+  background: transparent;
+}
+
+.card.card--flat.card--square-image.card--edge-glow {
+  background: transparent;
+  box-shadow:
+    0 0 calc(var(--card-outline-width, 4px) * 0.6) var(--card-outline, #e87722),
+    0 0 calc(var(--card-outline-width, 4px) * 1.6) var(--card-outline, #e87722),
+    0 0 calc(var(--card-outline-width, 4px) * 2.8) color-mix(in srgb, var(--card-outline, #e87722) 55%, transparent);
+}
+
+body.cards-colored .card.card--flat.card--square-image {
+  background: transparent;
+}
+
+.card-flat-photo-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.card-flat-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--card-flat-img-x, 50%) var(--card-flat-img-y, 50%);
+  transform: scale(var(--card-flat-img-zoom, 1));
+  transform-origin: var(--card-flat-img-x, 50%) var(--card-flat-img-y, 50%);
+}
+
+.card.card--square-image .card-flat-body,
+.card.card--square-image .card-footer {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
+.card.card--square-image .card-footer {
+  border-top: none;
+}
+
+.detail-hero--square-image {
+  background: transparent !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.detail-hero--square-image .card-flat-photo-wrap {
+  border-radius: 0;
+}
+
+body.cards-colored .card.card--flat {
+  background: var(--card-flat-bg, #f4f4f2);
+}
+
+body.cards-colored .card.card--flat .card-notes,
+body.cards-colored .card.card--flat .card-body p,
+body.cards-colored .card.card--flat .card-meta {
+  color: #444;
+  text-shadow: none;
+}
+
+body.cards-colored .card.card--flat .card-unit {
+  color: var(--card-secondary, #4a7c3f) !important;
+  text-shadow: none;
+}
+
+body.cards-colored .card.card--flat .card-footer {
+  border-top-color: transparent;
+}
+
+.card.card--flat .card-flat-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 16px 10px;
+  text-align: center;
+  position: relative;
+  min-height: 0;
+}
+
+.card.card--flat .card-flat-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2px;
+}
+
+.card.card--flat .card-logo {
+  position: static;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto;
+  object-fit: contain;
+}
+
+.card.card--flat .card-title {
+  color: #1a1a1a;
+  text-shadow: none;
+  font-size: 1.15rem;
+  padding: 0 8px;
+}
+
+.card.card--flat .card-unit {
+  margin: 0;
+}
+
+.card.card--flat .card-notes {
+  margin: 0;
+  max-width: 92%;
+  color: #333;
+}
+
+.card.card--flat .card-image-tags {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.card.card--flat .card-overlay-tag {
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  text-shadow: none;
+  border-color: var(--card-secondary, #4a7c3f);
+}
+
+.card.card--flat .card-footer {
+  border-top: none;
+  background: transparent;
+  padding: 6px 14px 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.card.card--flat .card-footer .card-action-btn,
+.card.card--flat .card-actions .btn-primary {
+  border-radius: 999px;
+  min-width: 88px;
+  flex: 0 1 auto;
+}
+
+.card--editing.card--flat .card-image-tags,
+.card--clickable.card--flat:hover .card-image-tags {
+  top: 40px;
+}
+
 .card-bg-photo {
   position: absolute;
   inset: 0;
@@ -2371,6 +2582,137 @@ body.cards-colored .card-footer {
   padding: 6px 10px;
 }
 
+.card-actions--icons {
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  padding: 2px 0;
+}
+
+.card-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--card-icon-size, 22px);
+  height: var(--card-icon-size, 22px);
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--card-action, #e87722);
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: transform 0.15s ease, opacity 0.15s ease, color 0.15s ease;
+}
+
+.card-action-icon:hover {
+  transform: scale(1.12);
+  opacity: 0.9;
+}
+
+.card-action-icon:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+.card-action-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.card.card--flat .card-actions--icons .card-action-icon,
+.card.card--flat .card-footer .card-action-icon {
+  border-radius: 0;
+  min-width: var(--card-icon-size, 22px);
+  background: transparent;
+}
+
+.card-icons-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.card-action-icon.is-free {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.card-action-icon.is-free:hover {
+  transform: translate(-50%, -50%) scale(1.12);
+}
+
+.card-action-icon.is-free.is-dragging {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(1.15);
+  z-index: 6;
+}
+
+.card--preview .card-action-icon.is-free {
+  cursor: grab;
+}
+
+.card-logo-free.is-free {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: none;
+  line-height: 0;
+}
+
+.card-logo-free.is-free .card-logo--free {
+  position: static;
+  top: auto;
+  left: auto;
+  width: 48px;
+  height: 48px;
+  display: block;
+  pointer-events: none;
+}
+
+.card-logo-free.is-free:hover {
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+.card-logo-free.is-free.is-dragging {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(1.12);
+  z-index: 7;
+}
+
+.card--preview .card-logo-free.is-free {
+  cursor: grab;
+  pointer-events: auto;
+}
+
+.card--preview .card-icons-layer,
+.card--preview .card-action-icon.is-free,
+.card--preview .card-logo-free.is-free {
+  pointer-events: auto;
+}
+
+.btn-primary {
+  background-color: var(--card-action, var(--card-primary, #e87722));
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 6px 18px;
+  border-radius: 20px;
+  white-space: nowrap;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
 .action-checks {
   display: flex;
   flex-wrap: wrap;
@@ -2419,19 +2761,6 @@ body.cards-colored .card-footer {
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
-}
-
-.btn-primary {
-  background-color: var(--card-primary, #e87722);
-  color: #fff;
-  font-size: 0.85rem;
-  font-weight: 600;
-  padding: 6px 18px;
-  border-radius: 20px;
-  white-space: nowrap;
-  border: none;
-  font-family: inherit;
-  cursor: pointer;
 }
 
 .btn-view:hover {
@@ -2606,6 +2935,15 @@ body.cards-colored .card-footer {
   display: none;
 }
 
+.detail-hero--none {
+  background: #f3f5f2 !important;
+}
+
+.detail-hero--none .detail-title {
+  color: #222;
+  text-shadow: none;
+}
+
 .detail-hero .card-bg-photo {
   z-index: 0;
 }
@@ -2753,7 +3091,7 @@ body.cards-colored .card-footer {
   font-family: inherit;
   font-size: 0.95rem;
   cursor: pointer;
-  background: var(--card-primary, #e87722);
+  background: var(--card-action, var(--card-primary, #e87722));
   transition: filter 0.15s ease, transform 0.15s ease;
 }
 
@@ -2816,25 +3154,84 @@ body.cards-colored .card-footer {
 
 .wizard {
   background: #fff;
-  border-radius: 16px;
-  padding: 24px 28px 20px;
+  border-radius: 18px;
+  padding: 20px 28px 16px;
   width: 100%;
-  max-width: 720px;
-  max-height: 95vh;
-  overflow-y: auto;
+  max-width: min(920px, calc(100vw - 32px));
+  max-height: min(94vh, 980px);
+  height: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.wizard-sticky-top {
+  flex: 0 0 auto;
+  z-index: 6;
+  background: #fff;
+  padding-bottom: 10px;
+  margin-bottom: 0;
+  border-bottom: 1px solid #ececec;
+  max-height: min(44vh, 380px);
+  overflow: hidden;
+}
+
+/* גלילה בתוכן; ניווט קבוע בתחתית האשף */
+#wizardForm {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding-inline-end: 4px;
+  display: flex;
+  flex-direction: column;
+  overflow-anchor: none;
+}
+
+#wizardForm .wizard-panel[hidden] {
+  display: none !important;
+}
+
+#wizardForm .wizard-panel:not([hidden]) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+}
+
+#wizardForm .wizard-error {
+  flex: 0 0 auto;
+  margin-top: 8px;
+}
+
+#wizardForm .wizard-nav {
+  flex: 0 0 auto;
+  margin-top: 10px;
+  margin-bottom: 0;
+  padding-top: 10px;
+  padding-bottom: 2px;
+  border-top: 1px solid #ececec;
+  background: #fff;
+}
+
+#iconOptionsWrap[hidden] {
+  display: none !important;
 }
 
 .wizard-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .wizard-header h2 {
-  font-size: 1.3rem;
+  font-size: 1.35rem;
   color: #222;
+  margin: 0;
 }
 
 .wizard-close {
@@ -2847,6 +3244,7 @@ body.cards-colored .card-footer {
   line-height: 1;
   cursor: pointer;
   color: #555;
+  flex: 0 0 auto;
 }
 
 .wizard-close:hover {
@@ -2868,12 +3266,12 @@ body.cards-colored .card-footer {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  min-width: 80px;
+  min-width: 96px;
 }
 
 .step-circle {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: 2px solid #ccc;
   background: #fff;
@@ -2882,7 +3280,7 @@ body.cards-colored .card-footer {
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 1rem;
   transition: all 0.2s ease;
 }
 
@@ -2917,20 +3315,35 @@ body.cards-colored .card-footer {
   flex: 1;
   height: 2px;
   background: #ddd;
-  margin: 0 8px 22px;
-  max-width: 80px;
+  margin: 0 10px 24px;
+  max-width: 100px;
 }
 
 /* תצוגה מקדימה */
 .wizard-preview-wrap {
   display: flex;
   justify-content: center;
-  margin-bottom: 24px;
+  margin-bottom: 0;
+}
+
+.wizard-sticky-top .wizard-steps {
+  margin-bottom: 12px;
+}
+
+.wizard-sticky-top .wizard-header {
+  margin-bottom: 12px;
 }
 
 .wizard-preview {
   width: 100%;
-  max-width: 260px;
+  max-width: 240px;
+  min-height: 180px;
+  margin-inline: auto;
+}
+
+.wizard-preview .card--preview {
+  max-height: 240px;
+  overflow: hidden;
 }
 
 .card--preview {
@@ -2940,26 +3353,26 @@ body.cards-colored .card-footer {
 
 /* פאנלים */
 .wizard-panel h3 {
-  font-size: 1.15rem;
-  margin-bottom: 4px;
+  font-size: 1.25rem;
+  margin-bottom: 6px;
   color: #222;
 }
 
 .wizard-hint {
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   color: #666;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
   line-height: 1.5;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px 16px;
+  gap: 16px 20px;
 }
 
 .form-grid--design {
-  max-width: 520px;
+  max-width: 640px;
 }
 
 .field-subhint {
@@ -3415,9 +3828,14 @@ body.cards-colored .card-footer {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 22px;
-  padding-top: 16px;
+  margin-top: 12px;
+  padding-top: 10px;
   border-top: 1px solid #eee;
+}
+
+.wizard-nav-spacer {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .wizard-nav-hint {
@@ -3430,9 +3848,9 @@ body.cards-colored .card-footer {
 .wizard-nav-btn {
   border: none;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 600;
-  padding: 12px 22px;
+  padding: 10px 20px;
   border-radius: 28px;
   cursor: pointer;
   transition: background-color 0.15s ease, transform 0.15s ease;
@@ -3544,6 +3962,18 @@ body.cards-colored .card-footer {
   }
 }
 
+/* ציפה איטית ועדינה מאוד של חלון האשף */
+@keyframes wizardFloat {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  }
+  50% {
+    transform: translate3d(0, -3px, 0);
+    box-shadow: 0 14px 44px rgba(0, 0, 0, 0.23);
+  }
+}
+
 @keyframes softPop {
   from {
     opacity: 0;
@@ -3633,7 +4063,13 @@ body.motion-ready .anim-enter {
   animation: overlayFadeIn 0.25s ease both;
 }
 
-.modal-overlay:not([hidden]) .wizard,
+.modal-overlay:not([hidden]) .wizard {
+  animation:
+    modalPopIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both,
+    wizardFloat 18s ease-in-out 0.4s infinite;
+  will-change: transform;
+}
+
 .modal-overlay:not([hidden]) .home-edit-modal {
   animation: modalPopIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -3680,5 +4116,10 @@ body.page-edit-mode .home-section {
       0 0 0 3px rgba(255, 248, 200, 0.95),
       0 0 28px 8px rgba(255, 230, 90, 0.75),
       0 0 56px 16px rgba(255, 220, 80, 0.4);
+  }
+
+  .modal-overlay:not([hidden]) .wizard {
+    animation: none;
+    will-change: auto;
   }
 }

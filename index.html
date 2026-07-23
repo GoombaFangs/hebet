@@ -227,30 +227,32 @@
   <div class="modal-overlay" id="modalOverlay" hidden>
     <div class="wizard" role="dialog" aria-labelledby="wizardTitle">
 
-      <div class="wizard-header">
-        <h2 id="wizardTitle">יצירת כרטיס חדש</h2>
-        <button type="button" class="wizard-close" id="btnCancel" aria-label="סגירה">×</button>
-      </div>
+      <div class="wizard-sticky-top">
+        <div class="wizard-header">
+          <h2 id="wizardTitle">יצירת כרטיס חדש</h2>
+          <button type="button" class="wizard-close" id="btnCancel" aria-label="סגירה">×</button>
+        </div>
 
-      <nav class="wizard-steps" aria-label="שלבי יצירה">
-        <div class="wizard-step" data-step="1">
-          <span class="step-circle">1</span>
-          <span class="step-label">תיאור כללי</span>
-        </div>
-        <div class="wizard-step-line"></div>
-        <div class="wizard-step" data-step="2">
-          <span class="step-circle">2</span>
-          <span class="step-label">סוג הפרויקט</span>
-        </div>
-        <div class="wizard-step-line"></div>
-        <div class="wizard-step" data-step="3">
-          <span class="step-circle">3</span>
-          <span class="step-label">עיצוב</span>
-        </div>
-      </nav>
+        <nav class="wizard-steps" aria-label="שלבי יצירה">
+          <div class="wizard-step" data-step="1">
+            <span class="step-circle">1</span>
+            <span class="step-label">תיאור כללי</span>
+          </div>
+          <div class="wizard-step-line"></div>
+          <div class="wizard-step" data-step="2">
+            <span class="step-circle">2</span>
+            <span class="step-label">סוג הפרויקט</span>
+          </div>
+          <div class="wizard-step-line"></div>
+          <div class="wizard-step" data-step="3">
+            <span class="step-circle">3</span>
+            <span class="step-label">עיצוב</span>
+          </div>
+        </nav>
 
-      <div class="wizard-preview-wrap">
-        <div class="wizard-preview" id="livePreview"></div>
+        <div class="wizard-preview-wrap">
+          <div class="wizard-preview" id="livePreview"></div>
+        </div>
       </div>
 
       <form id="wizardForm" novalidate>
@@ -290,7 +292,7 @@
 
         <section class="wizard-panel" data-panel="2" hidden>
           <h3>סוג הפרויקט</h3>
-          <p class="wizard-hint">בחרו את סוג התוכן והעלו חומרים ויזואליים</p>
+          <p class="wizard-hint">בחרו את סוג התוכן ואת פעולות הכפתור</p>
 
           <div class="form-grid">
             <div class="form-field form-field--full">
@@ -327,15 +329,121 @@
             </div>
 
             <div class="form-field form-field--full" id="actionLinkFields"></div>
+          </div>
+        </section>
 
+        <section class="wizard-panel" data-panel="3" hidden>
+          <h3>עיצוב</h3>
+          <p class="wizard-hint">העלו תמונות ובחרו צבעים</p>
+
+          <div class="form-grid form-grid--design">
             <div class="form-field form-field--full">
-              <label>תמונה מייצגת <span class="req">*</span></label>
+              <span class="field-label">סוג עיצוב</span>
+              <div class="edit-seg" id="cardBgModeGroup" role="radiogroup" aria-label="סוג עיצוב">
+                <label class="edit-seg-btn" for="cardBgModeColors" title="כרטיס רגיל: חלק עליון צבעוני וגוף לבן">
+                  <input type="radio" name="cardBgMode" id="cardBgModeColors" value="colors" checked>
+                  <span>קלאסי · צבעים</span>
+                </label>
+                <label class="edit-seg-btn" for="cardBgModeImage" title="כרטיס רגיל: תמונה בחלק העליון וגוף לבן">
+                  <input type="radio" name="cardBgMode" id="cardBgModeImage" value="image">
+                  <span>קלאסי · תמונה</span>
+                </label>
+                <label class="edit-seg-btn" for="cardBgModeNone" title="משטח אחד בצבע אחיד">
+                  <input type="radio" name="cardBgMode" id="cardBgModeNone" value="none">
+                  <span>שטוח · צבע</span>
+                </label>
+                <label class="edit-seg-btn" for="cardBgModeSquareImage" title="משטח אחד מתמונה — מומלץ PNG עם שקיפות">
+                  <input type="radio" name="cardBgMode" id="cardBgModeSquareImage" value="squareImage">
+                  <span>שטוח · ארט</span>
+                </label>
+              </div>
+              <p class="field-subhint">קלאסי = חלק עליון + גוף · שטוח = משטח אחד · ארט = תמונה עם שקיפות</p>
+            </div>
+
+            <div class="form-field" id="flatBgColorFieldWrap" hidden>
+              <label>צבע הרקע</label>
+              <div class="hsla-field" id="flatBgColorPicker" data-hsla-for="flatBgColor">
+                <button type="button" class="hsla-swatch" title="בחירת צבע הרקע" aria-label="בחירת צבע הרקע"></button>
+                <span class="color-hex" id="flatBgColorHex">#f4f4f2</span>
+                <input type="hidden" id="flatBgColor" name="flatBgColor" value="#f4f4f2">
+              </div>
+              <p class="field-subhint">הצבע של כל המשטח השטוח</p>
+            </div>
+
+            <div class="form-field form-field--full" id="flatEdgeFieldWrap" hidden>
+              <span class="field-label">שוליים</span>
+              <div class="edit-seg" id="flatEdgeGroup" role="radiogroup" aria-label="סוג שוליים">
+                <label class="edit-seg-btn" for="flatEdgeOutline" title="קו מסביב לכרטיס">
+                  <input type="radio" name="flatEdge" id="flatEdgeOutline" value="outline" checked>
+                  <span>מסגרת</span>
+                </label>
+                <label class="edit-seg-btn" for="flatEdgeGlow" title="זוהר רך סביב הכרטיס">
+                  <input type="radio" name="flatEdge" id="flatEdgeGlow" value="glow">
+                  <span>זוהר</span>
+                </label>
+                <label class="edit-seg-btn" for="flatEdgeNone" title="בלי מסגרת ובלי זוהר">
+                  <input type="radio" name="flatEdge" id="flatEdgeNone" value="none">
+                  <span>בלי</span>
+                </label>
+              </div>
+              <p class="field-subhint">מסגרת = קו חד · זוהר = הילה רכה · בלי = ללא אפקט</p>
+            </div>
+
+            <div class="form-field" id="outlineColorFieldWrap" hidden>
+              <label id="outlineColorLabel">צבע מסגרת</label>
+              <div class="hsla-field" id="outlineColorPicker" data-hsla-for="outlineColor">
+                <button type="button" class="hsla-swatch" title="בחירת צבע" aria-label="בחירת צבע מסגרת או זוהר"></button>
+                <span class="color-hex" id="outlineColorHex">#e87722</span>
+                <input type="hidden" id="outlineColor" name="outlineColor" value="#e87722">
+              </div>
+              <p class="field-subhint" id="outlineColorHint">צבע המסגרת סביב הכרטיס</p>
+            </div>
+
+            <div class="form-field form-field--full" id="outlineWidthFieldWrap" hidden>
+              <label for="outlineWidth" id="outlineWidthLabel">עובי מסגרת <span class="field-value" id="outlineWidthValue">4px</span></label>
+              <input type="range" id="outlineWidth" name="outlineWidth" min="1" max="20" step="1" value="4" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">
+              <p class="field-subhint" id="outlineWidthHint">כמה עבה תהיה המסגרת</p>
+            </div>
+
+            <div class="form-field" id="primaryColorFieldWrap">
+              <label>צבע ראשי</label>
+              <div class="hsla-field" id="primaryColorPicker" data-hsla-for="primaryColor">
+                <button type="button" class="hsla-swatch" title="בחירת צבע ראשי" aria-label="בחירת צבע ראשי"></button>
+                <span class="color-hex" id="primaryColorHex">#e87722</span>
+                <input type="hidden" id="primaryColor" name="primaryColor" value="#e87722">
+              </div>
+              <p class="field-subhint">הצבע העליון בשילוב של כרטיס קלאסי</p>
+            </div>
+
+            <div class="form-field" id="secondaryColorFieldWrap">
+              <label>צבע משני</label>
+              <div class="hsla-field" id="secondaryColorPicker" data-hsla-for="secondaryColor">
+                <button type="button" class="hsla-swatch" title="בחירת צבע משני" aria-label="בחירת צבע משני"></button>
+                <span class="color-hex" id="secondaryColorHex">#4a7c3f</span>
+                <input type="hidden" id="secondaryColor" name="secondaryColor" value="#4a7c3f">
+              </div>
+              <p class="field-subhint">הצבע הנוסף בשילוב של כרטיס קלאסי</p>
+            </div>
+
+            <div class="form-field form-field--full" id="mainImageFieldWrap" hidden>
+              <label id="mainImageFieldLabel">תמונה לחלק העליון <span class="req">*</span></label>
               <label class="upload-box" for="mainImage">
                 <input type="file" id="mainImage" name="mainImage" accept="image/*" hidden>
                 <span class="upload-icon">🖼️</span>
                 <span class="upload-text" id="mainImageText">לחצו להעלאת תמונה</span>
                 <img class="upload-preview" id="mainImagePreview" alt="" hidden>
               </label>
+              <p class="field-subhint" id="mainImageFieldHint">מומלץ PNG עם שקיפות לאלמנטים מהארט</p>
+            </div>
+
+            <div class="form-field form-field--full" id="flatImagePosWrap" hidden>
+              <label for="flatImageZoom">זום ארט <span class="field-value" id="flatImageZoomValue">100%</span></label>
+              <input type="range" id="flatImageZoom" name="flatImageZoom" min="50" max="200" step="5" value="100" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">
+              <label for="flatImagePosX" style="margin-top:10px;display:block;">מיקום אופקי <span class="field-value" id="flatImagePosXValue">50%</span></label>
+              <input type="range" id="flatImagePosX" name="flatImagePosX" min="0" max="100" step="1" value="50" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">
+              <label for="flatImagePosY" style="margin-top:10px;display:block;">מיקום אנכי <span class="field-value" id="flatImagePosYValue">50%</span></label>
+              <input type="range" id="flatImagePosY" name="flatImagePosY" min="0" max="100" step="1" value="50" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">
+              <p class="field-subhint">התאמת גודל ומיקום של תמונת הארט בתוך הכרטיס</p>
             </div>
 
             <div class="form-field">
@@ -356,63 +464,47 @@
                 <span class="upload-text" id="logoImageText">העלאה (אופציונלי)</span>
                 <img class="upload-preview upload-preview--logo" id="logoImagePreview" alt="" hidden>
               </label>
-            </div>
-          </div>
-        </section>
-
-        <section class="wizard-panel" data-panel="3" hidden>
-          <h3>עיצוב</h3>
-          <p class="wizard-hint">בחרו צבעים, גופן, והאם להציג את התמונה המייצגת ברקע</p>
-
-          <div class="form-grid form-grid--design">
-            <div class="form-field">
-              <label>צבע ראשי</label>
-              <div class="hsla-field" id="primaryColorPicker" data-hsla-for="primaryColor">
-                <button type="button" class="hsla-swatch" title="בחירת צבע ראשי" aria-label="בחירת צבע ראשי"></button>
-                <span class="color-hex" id="primaryColorHex">#e87722</span>
-                <input type="hidden" id="primaryColor" name="primaryColor" value="#e87722">
-              </div>
-              <p class="field-subhint">כפתורי פעולה + חלק משילוב הרקע</p>
-            </div>
-
-            <div class="form-field">
-              <label>צבע משני</label>
-              <div class="hsla-field" id="secondaryColorPicker" data-hsla-for="secondaryColor">
-                <button type="button" class="hsla-swatch" title="בחירת צבע משני" aria-label="בחירת צבע משני"></button>
-                <span class="color-hex" id="secondaryColorHex">#4a7c3f</span>
-                <input type="hidden" id="secondaryColor" name="secondaryColor" value="#4a7c3f">
-              </div>
-              <p class="field-subhint">מסגרות תגיות, שם יחידה, תוויות בכרטיס פתוח + שילוב רקע</p>
-            </div>
-
-            <div class="form-field">
-              <label for="cardFont">גופן</label>
-              <select id="cardFont" name="cardFont">
-                <option value="'Segoe UI', Tahoma, Arial, sans-serif">Segoe UI</option>
-                <option value="Arial, Helvetica, sans-serif">Arial</option>
-                <option value="Tahoma, Geneva, sans-serif">Tahoma</option>
-                <option value="Gisha, Arial, sans-serif">Gisha</option>
-                <option value="David, 'Times New Roman', serif">David</option>
-                <option value="Miriam, Arial, sans-serif">Miriam</option>
-                <option value="Narkisim, Arial, sans-serif">Narkisim</option>
-                <option value="'Times New Roman', Times, serif">Times New Roman</option>
-                <option value="Georgia, serif">Georgia</option>
-                <option value="'Courier New', Courier, monospace">Courier New</option>
-              </select>
-              <label class="upload-box upload-box--font" for="cardFontUpload" style="margin-top:10px;">
-                <input type="file" id="cardFontUpload" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2,application/font-woff,application/font-sfnt" hidden>
-                <span class="upload-icon">🔤</span>
-                <span class="upload-text">העלאת גופן מהמחשב</span>
+              <label class="action-check" for="logoFree" style="margin-top:10px;">
+                <input type="checkbox" id="logoFree" name="logoFree">
+                <span>לוגו חופשי</span>
               </label>
-              <p class="field-subhint">TTF / OTF / WOFF / WOFF2</p>
+              <p class="field-subhint">סמנו כדי לגרור ולמקם את הלוגו בחופשיות בתוך מסגרת הכרטיס (בתצוגה המקדימה)</p>
+            </div>
+
+            <div class="form-field form-field--full">
+              <span class="field-label">סגנון כפתורי פעולה</span>
+              <div class="edit-seg" id="actionStyleGroup" role="radiogroup" aria-label="סגנון כפתורי פעולה">
+                <label class="edit-seg-btn" for="actionStyleText" title="כפתורים עם טקסט">
+                  <input type="radio" name="actionStyle" id="actionStyleText" value="text" checked>
+                  <span>טקסט</span>
+                </label>
+                <label class="edit-seg-btn" for="actionStyleIcons" title="אייקונים בלי רקע">
+                  <input type="radio" name="actionStyle" id="actionStyleIcons" value="icons">
+                  <span>אייקונים</span>
+                </label>
+              </div>
+              <p class="field-subhint">טקסט = צפייה / הורדה / הדפסה · אייקונים = play / הורדה / הדפסה בלי רקע</p>
+            </div>
+
+            <div class="form-field form-field--full" id="iconOptionsWrap" hidden>
+              <label for="iconSize">גודל אייקונים <span class="field-value" id="iconSizeValue">22px</span></label>
+              <input type="range" id="iconSize" name="iconSize" min="14" max="48" step="1" value="22" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">
+
+              <label class="action-check" for="iconsFree" style="margin-top:12px;">
+                <input type="checkbox" id="iconsFree" name="iconsFree">
+                <span>אייקונים חופשיים</span>
+              </label>
+              <p class="field-subhint">סמנו כדי לגרור ולמקם אייקונים בחופשיות בתוך מסגרת הכרטיס (בתצוגה המקדימה)</p>
             </div>
 
             <div class="form-field">
-              <label class="checkbox-label" for="useImageBg">
-                <input type="checkbox" id="useImageBg" name="useImageBg" checked>
-                <span>תמונה</span>
-              </label>
-              <p class="field-subhint">מסומן = התמונה המייצגת ברקע · לא מסומן = רקע מצבעים בלבד</p>
+              <label>צבע כפתורי פעולה</label>
+              <div class="hsla-field" id="actionColorPicker" data-hsla-for="actionColor">
+                <button type="button" class="hsla-swatch" title="בחירת צבע כפתורים" aria-label="בחירת צבע כפתורי פעולה"></button>
+                <span class="color-hex" id="actionColorHex">#e87722</span>
+                <input type="hidden" id="actionColor" name="actionColor" value="#e87722">
+              </div>
+              <p class="field-subhint">צבע רקע לכפתורי טקסט · צבע אייקונים במצב אייקונים</p>
             </div>
           </div>
         </section>
@@ -420,9 +512,9 @@
         <p class="wizard-error" id="wizardError" hidden></p>
 
         <div class="wizard-nav">
-          <button type="button" class="wizard-nav-btn wizard-nav-btn--back" id="btnPrev" hidden>→ הקודם</button>
-          <p class="wizard-nav-hint" id="navHint">בואו נתחיל</p>
-          <button type="button" class="wizard-nav-btn wizard-nav-btn--next" id="btnNext">הבא ←</button>
+          <button type="button" class="wizard-nav-btn wizard-nav-btn--back" id="btnPrev" hidden>הקודם</button>
+          <span class="wizard-nav-spacer" aria-hidden="true"></span>
+          <button type="button" class="wizard-nav-btn wizard-nav-btn--next" id="btnNext">הבא</button>
           <button type="button" class="wizard-nav-btn wizard-nav-btn--finish" id="btnFinish" hidden>✓ שמירה</button>
         </div>
       </form>
