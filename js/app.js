@@ -950,20 +950,6 @@ function getCardActions(card) {
   return [{ action: legacyAction, link: legacyLink }];
 }
 
-function isPdfLink(link) {
-  return /\.pdf(\?|#|$)/i.test(link || '');
-}
-
-function isYouTubeLink(link) {
-  return /(youtube\.com|youtu\.be)/i.test(link || '');
-}
-
-function suggestActionForLink(link) {
-  if (isPdfLink(link)) return 'הדפסה';
-  if (isYouTubeLink(link)) return 'צפייה';
-  return 'צפייה';
-}
-
 function getFileNameFromUrl(link) {
   try {
     const path = new URL(link).pathname;
@@ -1202,7 +1188,7 @@ function syncCategoriesToolbar(home) {
   const freeSizeValue = document.getElementById('cardsFreeSizeValue');
 
   if (modeSelect) modeSelect.value = mode;
-  if (addBtn) addBtn.hidden = !editMode || mode !== 'categories';
+  if (addBtn) addBtn.hidden = true;
   if (perRowControl) perRowControl.hidden = mode === 'freeform';
   if (gapControl) gapControl.hidden = mode === 'freeform';
   if (freeHeightControl) freeHeightControl.hidden = mode !== 'freeform';
@@ -1403,10 +1389,22 @@ function buildCategoryBlockHtml(cat, cards, options) {
             '<input type="hidden" id="' + colorFieldId + '" class="category-color-input" value="' + escapeHtml(color) + '">' +
           '</div>' +
         '</div>' +
-        '<button type="button" class="category-delete" data-category-id="' + escapeHtml(catId) + '" aria-label="מחיקת קטגוריה" title="מחק קטגוריה">×</button>' +
+        '<div class="category-header-actions">' +
+          '<button type="button" class="category-add" data-category-id="' + escapeHtml(catId) + '" aria-label="הוספת קטגוריה מתחת" title="הוספת קטגוריה מתחת">+</button>' +
+          '<button type="button" class="category-delete" data-category-id="' + escapeHtml(catId) + '" aria-label="מחיקת קטגוריה" title="מחק קטגוריה">×</button>' +
+        '</div>' +
       '</header>';
   } else if (isLoose) {
-    headerHtml = '<header class="category-header category-header--loose" aria-hidden="true"></header>';
+    headerHtml = editMode
+      ? (
+        '<header class="category-header category-header--loose">' +
+          '<span class="category-loose-label">ללא קטגוריה</span>' +
+          '<div class="category-header-actions">' +
+            '<button type="button" class="category-add" data-category-id="" aria-label="הוספת קטגוריה" title="הוספת קטגוריה">+</button>' +
+          '</div>' +
+        '</header>'
+      )
+      : '<header class="category-header category-header--loose" aria-hidden="true"></header>';
   } else {
     headerHtml =
       '<header class="category-header">' +
@@ -1667,6 +1665,13 @@ function setupCategoryControls() {
     });
   });
 
+  cardsGrid.querySelectorAll('.category-add').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      addCategoryAfter(btn.dataset.categoryId || '');
+    });
+  });
+
   cardsGrid.querySelectorAll('.category-font-size').forEach(function (range) {
     const block = range.closest('.category-block');
     const valueEl = block && block.querySelector('.category-font-size-value');
@@ -1700,18 +1705,29 @@ function setupCategoryControls() {
 }
 
 function addCategory() {
+  addCategoryAfter('');
+}
+
+function addCategoryAfter(afterCategoryId) {
   const home = loadHome();
   const cards = loadCards();
   home.cardsLayoutMode = 'categories';
   home.categoriesEnabled = true;
   home.categories = normalizeCategories(home.categories, cards);
-  home.categories.push({
+  const newCat = {
     id: createCategoryId(),
     title: 'קטגוריה חדשה',
     cardIds: [],
     fontSize: 22,
     color: '#2a3a2f',
-  });
+  };
+  if (afterCategoryId) {
+    const idx = home.categories.findIndex(function (cat) { return cat.id === afterCategoryId; });
+    if (idx >= 0) home.categories.splice(idx + 1, 0, newCat);
+    else home.categories.push(newCat);
+  } else {
+    home.categories.push(newCat);
+  }
   if (!saveHome(home)) {
     alert('אין מספיק מקום לשמירה.');
     return;
@@ -2455,13 +2471,6 @@ function renderActionLinkFields() {
     });
     input.addEventListener('change', function () {
       wizardData.actionLinks[action] = input.value;
-      // הצעה אוטומטית לפי סוג הקישור — רק אם פעולה אחת מסומנת
-      if (wizardData.enabledActions.length === 1) {
-        const suggested = suggestActionForLink(input.value);
-        if (suggested !== action) {
-          // לא מחליפים אוטומטית את הצ'קבוקסים כשיש כבר בחירה מרובה
-        }
-      }
       updateLivePreview();
     });
   });
@@ -2852,21 +2861,41 @@ function clampFontSize(value, fallback) {
   return Math.min(56, Math.max(10, Math.round(num)));
 }
 
-function homeTextSizeHtml(id, value, fallback, labelText) {
-  const size = clampFontSize(value, fallback || 16);
-  const label = labelText || 'גודל גופן';
+/** אייקון קטן לשדות עריכה — התווית המלאה ב-title/aria */
+function editIco(kind) {
+  return '<span class="edit-ico" data-ico="' + kind + '" aria-hidden="true"></span>';
+}
+
+function homeSizeControlHtml(id, value, options) {
+  options = options || {};
+  const min = options.min != null ? options.min : 10;
+  const max = options.max != null ? options.max : 56;
+  const step = options.step != null ? options.step : 1;
+  const unit = options.unit || 'px';
+  const label = options.label || 'גודל';
+  const ico = options.ico || 'size';
+  const num = Math.min(max, Math.max(min, Number(value) || min));
   return (
-    '<div class="form-field form-field--full">' +
-      '<label for="' + id + 'Num">' + label + '</label>' +
-      '<div class="size-control-row">' +
-        '<input type="range" id="' + id + '" min="10" max="56" step="1" value="' + size + '"' +
-          ' class="size-control-range" aria-label="' + label + '">' +
-        '<input type="number" id="' + id + 'Num" min="10" max="56" step="1" value="' + size + '"' +
-          ' class="size-control-num" inputmode="numeric">' +
-        '<span class="size-control-unit">px</span>' +
-      '</div>' +
+    '<div class="edit-size" title="' + escapeHtml(label) + '">' +
+      editIco(ico) +
+      '<input type="range" id="' + id + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + num + '"' +
+        ' class="size-control-range" aria-label="' + escapeHtml(label) + '">' +
+      '<input type="number" id="' + id + 'Num" min="' + min + '" max="' + max + '" step="' + step + '" value="' + num + '"' +
+        ' class="size-control-num" inputmode="numeric" aria-label="' + escapeHtml(label) + '">' +
+      '<span class="size-control-unit">' + escapeHtml(unit) + '</span>' +
     '</div>'
   );
+}
+
+function homeTextSizeHtml(id, value, fallback, labelText) {
+  return homeSizeControlHtml(id, clampFontSize(value, fallback || 16), {
+    min: 10,
+    max: 56,
+    step: 1,
+    unit: 'px',
+    label: labelText || 'גודל גופן',
+    ico: 'text-size',
+  });
 }
 
 function normalizeTextColor(value, fallback) {
@@ -2878,17 +2907,40 @@ function normalizeTextColor(value, fallback) {
   }
 }
 
-function homeTextColorHtml(id, value, labelText) {
-  const color = normalizeTextColor(value, '#ffffff');
-  const label = labelText || 'צבע טקסט';
+function homeColorChipHtml(id, value, options) {
+  options = options || {};
+  const color = normalizeTextColor(value, options.fallback || '#ffffff');
+  const label = options.label || 'צבע';
+  const ico = options.ico || 'fill';
   return (
-    '<div class="form-field form-field--full">' +
-      '<span class="field-label">' + label + '</span>' +
-      '<div class="hsla-field" id="' + id + 'Picker" data-hsla-for="' + id + '">' +
-        '<button type="button" class="hsla-swatch" title="' + label + '" aria-label="' + label + '"></button>' +
-        '<span class="color-hex">' + escapeHtml(color) + '</span>' +
+    '<div class="edit-color-chip" title="' + escapeHtml(label) + '">' +
+      editIco(ico) +
+      '<div class="hsla-field hsla-field--chip" id="' + id + 'Picker" data-hsla-for="' + id + '">' +
+        '<button type="button" class="hsla-swatch" title="' + escapeHtml(label) + '" aria-label="' + escapeHtml(label) + '"></button>' +
         '<input type="hidden" id="' + id + '" value="' + escapeHtml(color) + '">' +
       '</div>' +
+      '<span class="edit-color-chip-label">' + escapeHtml(options.shortLabel || label) + '</span>' +
+    '</div>'
+  );
+}
+
+function homeColorRowHtml(chipsHtml) {
+  return '<div class="edit-color-row">' + chipsHtml + '</div>';
+}
+
+function homeTextColorHtml(id, value, labelText) {
+  return homeColorChipHtml(id, value, {
+    label: labelText || 'צבע טקסט',
+    shortLabel: 'טקסט',
+    ico: 'text',
+  });
+}
+
+function homeStyleRowHtml(sizeHtml, colorChipsHtml) {
+  return (
+    '<div class="edit-style-row">' +
+      (sizeHtml || '') +
+      (colorChipsHtml ? homeColorRowHtml(colorChipsHtml) : '') +
     '</div>'
   );
 }
@@ -2958,7 +3010,9 @@ function normalizeHeaderItem(item) {
 
   const maxLen = type === 'badge' ? 20 : 40;
   return Object.assign(base, {
-    text: item.text == null ? '' : String(item.text).slice(0, maxLen),
+    text: type === 'badge'
+      ? normalizeHeaderBadgeText(item.text)
+      : (item.text == null ? '' : String(item.text).slice(0, maxLen)),
     align: item.align === 'left' || item.align === 'right' ? item.align : 'center',
     fontSize: clampFontSize(item.fontSize, defaultHeaderFontSize(type)),
     color: normalizeTextColor(item.color, '#ffffff'),
@@ -3069,9 +3123,21 @@ function getHeaderTitleText(home) {
 }
 
 function formatClassificationBadge(text) {
-  const raw = String(text || '').trim().replace(/^[\s\-–—]+|[\s\-–—]+$/g, '').trim();
-  const label = raw || 'תג';
+  const label = normalizeHeaderBadgeText(text);
   return '- ' + label + ' -';
+}
+
+const HEADER_BADGE_OPTIONS = ['בלמ״ס', 'שמור', 'סודי', 'סודי ביותר'];
+
+function normalizeHeaderBadgeText(value) {
+  const raw = String(value || '').trim().replace(/^[\s\-–—]+|[\s\-–—]+$/g, '').trim();
+  if (HEADER_BADGE_OPTIONS.indexOf(raw) !== -1) return raw;
+  /* תאימות לכתיב ישן של גרשיים */
+  const compact = raw.replace(/["״׳']/g, '');
+  const match = HEADER_BADGE_OPTIONS.find(function (opt) {
+    return opt.replace(/["״׳']/g, '') === compact;
+  });
+  return match || 'שמור';
 }
 
 function loadHome() {
@@ -3378,8 +3444,56 @@ const VIDEO_DB_NAME = 'hebet-media';
 const VIDEO_STORE = 'videos';
 const CARDS_BG_IDB_KEY = 'cards-bg';
 const CARDS_BG_MARKER = 'idb:cards-bg';
+const videoMemoryStore = Object.create(null);
+let videoDbProbe = null; /* null=unknown, true/false */
 let cardsBgImageCache = '';
 let cardsBgObjectUrl = '';
+
+function isFileProtocol() {
+  return typeof location !== 'undefined' && location.protocol === 'file:';
+}
+
+function friendlyMediaDbError(err) {
+  const raw = String((err && (err.message || err.name)) || err || '');
+  if (/backing store|IndexedDB|IDBDatabase|UnknownError|Internal error/i.test(raw) || isFileProtocol()) {
+    return (
+      'לא ניתן לשמור מדיה בדפדפן כרגע.\n\n' +
+      (isFileProtocol()
+        ? 'הדף נפתח מקובץ מקומי (file://). IndexedDB לעיתים נחסם במצב הזה.\n' +
+          'פתחו את האתר דרך שרת מקומי (למשל Live Server ב-VS Code / Cursor) ואז שמרו שוב.'
+        : 'נסו לרענן את הדף, לסגור חלונות פרטיים, או לנקות נתוני אתר לדף הזה.')
+    );
+  }
+  return raw || 'שגיאה בשמירת מדיה';
+}
+
+function isBrowserPlayableVideo(file) {
+  if (!file) return false;
+  const type = String(file.type || '').toLowerCase();
+  const name = String(file.name || '').toLowerCase();
+  if (/^video\/(mp4|webm|ogg)/.test(type)) return true;
+  if (/\.(mp4|webm|ogg|m4v)$/.test(name)) return true;
+  return false;
+}
+
+function rememberVideoInMemory(key, fileOrRecord) {
+  if (!key) return;
+  if (fileOrRecord && fileOrRecord.blob) {
+    videoMemoryStore[key] = {
+      blob: fileOrRecord.blob,
+      name: fileOrRecord.name || 'video',
+      type: fileOrRecord.type || 'video/mp4',
+    };
+    return;
+  }
+  if (fileOrRecord) {
+    videoMemoryStore[key] = {
+      blob: fileOrRecord,
+      name: fileOrRecord.name || 'video',
+      type: fileOrRecord.type || 'video/mp4',
+    };
+  }
+}
 
 function revokeCardsBgObjectUrl() {
   if (cardsBgObjectUrl) {
@@ -3638,20 +3752,51 @@ async function handleFontUpload(file, target) {
 }
 
 function openVideoDb() {
+  if (videoDbProbe === false) {
+    return Promise.reject(new Error('IndexedDB unavailable'));
+  }
   return new Promise(function (resolve, reject) {
-    const request = indexedDB.open(VIDEO_DB_NAME, 1);
-    request.onupgradeneeded = function () {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(VIDEO_STORE)) {
-        db.createObjectStore(VIDEO_STORE);
-      }
-    };
-    request.onsuccess = function () { resolve(request.result); };
-    request.onerror = function () { reject(request.error || new Error('IndexedDB failed')); };
+    if (!window.indexedDB) {
+      videoDbProbe = false;
+      reject(new Error('IndexedDB לא נתמך בדפדפן זה'));
+      return;
+    }
+    let settled = false;
+    try {
+      const request = indexedDB.open(VIDEO_DB_NAME, 1);
+      request.onupgradeneeded = function () {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(VIDEO_STORE)) {
+          db.createObjectStore(VIDEO_STORE);
+        }
+      };
+      request.onsuccess = function () {
+        if (settled) return;
+        settled = true;
+        videoDbProbe = true;
+        resolve(request.result);
+      };
+      request.onerror = function () {
+        if (settled) return;
+        settled = true;
+        videoDbProbe = false;
+        reject(request.error || new Error('IndexedDB failed'));
+      };
+      request.onblocked = function () {
+        if (settled) return;
+        settled = true;
+        videoDbProbe = false;
+        reject(new Error('IndexedDB חסום'));
+      };
+    } catch (err) {
+      videoDbProbe = false;
+      reject(err);
+    }
   });
 }
 
 function putHomeVideo(key, file) {
+  rememberVideoInMemory(key, file);
   return openVideoDb().then(function (db) {
     return new Promise(function (resolve, reject) {
       const tx = db.transaction(VIDEO_STORE, 'readwrite');
@@ -3660,24 +3805,40 @@ function putHomeVideo(key, file) {
         name: file.name || 'video',
         type: file.type || 'video/mp4',
       }, key);
-      tx.oncomplete = function () { resolve(); };
+      tx.oncomplete = function () { resolve({ ephemeral: false }); };
       tx.onerror = function () { reject(tx.error || new Error('שגיאה בשמירת סרטון')); };
+      tx.onabort = function () { reject(tx.error || new Error('שמירת סרטון בוטלה')); };
     });
+  }).catch(function (err) {
+    /* גיבוי לזיכרון — הסרטון יוצג בסשן גם אם IndexedDB נכשל */
+    console.warn('Video IDB put failed, using memory store', err);
+    return { ephemeral: true, error: err };
   });
 }
 
 function getHomeVideo(key) {
+  if (videoMemoryStore[key] && videoMemoryStore[key].blob) {
+    return Promise.resolve(videoMemoryStore[key]);
+  }
   return openVideoDb().then(function (db) {
     return new Promise(function (resolve, reject) {
       const tx = db.transaction(VIDEO_STORE, 'readonly');
       const req = tx.objectStore(VIDEO_STORE).get(key);
-      req.onsuccess = function () { resolve(req.result || null); };
+      req.onsuccess = function () {
+        const result = req.result || null;
+        if (result) rememberVideoInMemory(key, result);
+        resolve(result);
+      };
       req.onerror = function () { reject(req.error || new Error('שגיאה בטעינת סרטון')); };
     });
+  }).catch(function (err) {
+    console.warn('Video IDB get failed', err);
+    return videoMemoryStore[key] || null;
   });
 }
 
 function deleteHomeVideo(key) {
+  delete videoMemoryStore[key];
   return openVideoDb().then(function (db) {
     return new Promise(function (resolve, reject) {
       const tx = db.transaction(VIDEO_STORE, 'readwrite');
@@ -3685,6 +3846,8 @@ function deleteHomeVideo(key) {
       tx.oncomplete = function () { resolve(); };
       tx.onerror = function () { reject(tx.error || new Error('שגיאה במחיקת סרטון')); };
     });
+  }).catch(function () {
+    /* כבר נמחק מהזיכרון */
   });
 }
 
@@ -3766,6 +3929,26 @@ async function setSectionMedia(el, options) {
       video.play().catch(function () {});
     } catch (err) {
       console.error('שגיאת ניגון סרטון:', err);
+      if (options.videoFile) {
+        /* נסה שוב מ־blob ישיר אם IDB נכשל */
+        try {
+          const videoSrc = URL.createObjectURL(options.videoFile);
+          const video = document.createElement('video');
+          video.className = 'home-section-video';
+          video.src = videoSrc;
+          video.autoplay = true;
+          video.muted = true;
+          video.loop = true;
+          video.playsInline = true;
+          video.controls = true;
+          el.appendChild(video);
+          el.classList.add('has-media');
+          if (sectionEl) sectionEl.classList.add('home-section--video-only');
+          video.play().catch(function () {});
+        } catch (err2) {
+          console.error(err2);
+        }
+      }
     }
     return;
   }
@@ -3774,12 +3957,10 @@ async function setSectionMedia(el, options) {
 
   if (options.image) {
     el.style.backgroundImage = 'url(' + JSON.stringify(options.image) + ')';
+    el.style.backgroundColor = 'transparent';
     el.classList.add('has-image');
     el.style.setProperty('--video-fit', 'cover');
     el.style.setProperty('--video-zoom', '1');
-    if (options.noBg) {
-      el.style.backgroundColor = 'transparent';
-    }
   }
 }
 
@@ -4168,60 +4349,60 @@ function homeClosingDevTeamFieldsHtml(home, kind) {
   const slant = !!home[kind + 'DevTeamSlant'];
   return (
     '<div class="form-field form-field--full">' +
-      '<label class="action-check" for="homeFieldDevTeam">' +
+      '<label class="action-check edit-toggle" for="homeFieldDevTeam">' +
         '<input type="checkbox" id="homeFieldDevTeam"' + (enabled ? ' checked' : '') + '>' +
         '<span>צוות פיתוח</span>' +
       '</label>' +
       '<div class="home-dev-team-fields" id="homeFieldDevTeamFields"' + (enabled ? '' : ' hidden') + '>' +
-        homeTextSizeHtml('homeFieldDevTeamFontSize', fontSize, 16, 'גודל גופן') +
-        homeTextColorHtml('homeFieldDevTeamColor', color, 'צבע גופן') +
-        homeTextColorHtml('homeFieldDevTeamBgColor', bgColor, 'צבע רקע (כשאין תמונה)') +
-        homeTextColorHtml('homeFieldDevTeamBorderColor', borderColor, 'צבע מסגרת') +
-        '<div class="form-field form-field--full">' +
-          '<label for="homeFieldDevTeamBorderWidth">עובי מסגרת</label>' +
-          '<div class="size-control-row">' +
-            '<input type="range" id="homeFieldDevTeamBorderWidth" min="0" max="8" step="1" value="' + borderWidth + '"' +
-              ' class="size-control-range" aria-label="עובי מסגרת">' +
-            '<input type="number" id="homeFieldDevTeamBorderWidthNum" min="0" max="8" step="1" value="' + borderWidth + '"' +
-              ' class="size-control-num" inputmode="numeric">' +
-            '<span class="size-control-unit">px</span>' +
-          '</div>' +
+        '<div class="edit-sizes-grid">' +
+          homeSizeControlHtml('homeFieldDevTeamFontSize', fontSize, {
+            min: 10, max: 56, step: 1, unit: 'px', label: 'גודל גופן', ico: 'text-size',
+          }) +
+          homeSizeControlHtml('homeFieldDevTeamSize', size, {
+            min: 70, max: 180, step: 5, unit: '%', label: 'גודל כפתור', ico: 'scale',
+          }) +
         '</div>' +
-        '<div class="form-field form-field--full">' +
-          '<label for="homeFieldDevTeamSize">גודל כפתור</label>' +
-          '<div class="size-control-row">' +
-            '<input type="range" id="homeFieldDevTeamSize" min="70" max="180" step="5" value="' + size + '"' +
-              ' class="size-control-range" aria-label="גודל כפתור">' +
-            '<input type="number" id="homeFieldDevTeamSizeNum" min="70" max="180" step="5" value="' + size + '"' +
-              ' class="size-control-num" inputmode="numeric">' +
-            '<span class="size-control-unit">%</span>' +
-          '</div>' +
-        '</div>' +
+        homeColorRowHtml(
+          homeColorChipHtml('homeFieldDevTeamColor', color, {
+            label: 'צבע גופן', shortLabel: 'טקסט', ico: 'text', fallback: '#ffffff',
+          }) +
+          homeColorChipHtml('homeFieldDevTeamBgColor', bgColor, {
+            label: 'צבע רקע (כשאין תמונה)', shortLabel: 'רקע', ico: 'fill', fallback: '#4a7c3f',
+          }) +
+          homeColorChipHtml('homeFieldDevTeamBorderColor', borderColor, {
+            label: 'צבע מסגרת', shortLabel: 'מסגרת', ico: 'border', fallback: '#ffffff',
+          })
+        ) +
+        homeSizeControlHtml('homeFieldDevTeamBorderWidth', borderWidth, {
+          min: 0, max: 8, step: 1, unit: 'px', label: 'עובי מסגרת', ico: 'border-w',
+        }) +
         '<div class="home-dev-team-options">' +
-          '<label class="action-check" for="homeFieldDevTeamGlow">' +
+          '<label class="edit-check-ico" for="homeFieldDevTeamGlow" title="זוהר">' +
             '<input type="checkbox" id="homeFieldDevTeamGlow"' + (glow ? ' checked' : '') + '>' +
-            '<span>זוהר (glow)</span>' +
+            editIco('glow') +
+            '<span>זוהר</span>' +
           '</label>' +
-          '<label class="action-check" for="homeFieldDevTeamSlant">' +
+          '<label class="edit-check-ico" for="homeFieldDevTeamSlant" title="צורת אלכסון">' +
             '<input type="checkbox" id="homeFieldDevTeamSlant"' + (slant ? ' checked' : '') + '>' +
-            '<span>צורת אלכסון</span>' +
+            editIco('slant') +
+            '<span>אלכסון</span>' +
           '</label>' +
         '</div>' +
-        '<div class="form-field form-field--full">' +
-          '<span class="field-label">תמונת רקע לכפתור (אופציונלי)</span>' +
-          '<label class="upload-box" for="homeFieldDevTeamImage">' +
+        '<div class="edit-media-row">' +
+          '<label class="edit-upload-btn" for="homeFieldDevTeamImage" title="תמונת רקע לכפתור">' +
             '<input type="file" id="homeFieldDevTeamImage" accept="image/*" hidden>' +
-            '<span>העלאת תמונת רקע</span>' +
+            editIco('image') +
+            '<span>תמונה</span>' +
           '</label>' +
           (imageUrl
-            ? '<button type="button" class="site-theme-clear" id="homeClearDevTeamImage" style="margin-top:8px;">הסרת תמונה</button>'
+            ? '<button type="button" class="edit-clear-btn" id="homeClearDevTeamImage" title="הסרת תמונה">×</button>'
             : '') +
-          '<img class="home-edit-preview' + (imageUrl ? ' is-visible' : '') + '" id="homeFieldDevTeamImagePreview" src="' + (imageUrl || '') + '" alt="">' +
+          '<div class="edit-link-field">' +
+            editIco('link') +
+            '<input type="url" id="homeFieldDevTeamLink" dir="ltr" placeholder="https://..." value="' + escapeHtml(link) + '" aria-label="קישור לכפתור">' +
+          '</div>' +
         '</div>' +
-        '<div class="form-field form-field--full">' +
-          '<label for="homeFieldDevTeamLink">קישור (נפתח בטאב חדש)</label>' +
-          '<input type="url" id="homeFieldDevTeamLink" dir="ltr" placeholder="https://..." value="' + escapeHtml(link) + '">' +
-        '</div>' +
+        '<img class="home-edit-preview' + (imageUrl ? ' is-visible' : '') + '" id="homeFieldDevTeamImagePreview" src="' + (imageUrl || '') + '" alt="">' +
       '</div>' +
     '</div>'
   );
@@ -4303,11 +4484,13 @@ function bindClosingDevTeamFields() {
       if (!document.getElementById('homeClearDevTeamImage')) {
         const clearBtn = document.createElement('button');
         clearBtn.type = 'button';
-        clearBtn.className = 'site-theme-clear';
+        clearBtn.className = 'edit-clear-btn';
         clearBtn.id = 'homeClearDevTeamImage';
-        clearBtn.style.marginTop = '8px';
-        clearBtn.textContent = 'הסרת תמונה';
-        imageInput.closest('.form-field').insertBefore(clearBtn, preview);
+        clearBtn.title = 'הסרת תמונה';
+        clearBtn.textContent = '×';
+        const mediaRow = imageInput.closest('.edit-media-row');
+        const uploadBtn = imageInput.closest('.edit-upload-btn');
+        if (mediaRow && uploadBtn) mediaRow.insertBefore(clearBtn, uploadBtn.nextSibling);
         clearBtn.addEventListener('click', clearDevTeamImage);
       }
       scheduleHomeEditorPreview();
@@ -4341,17 +4524,24 @@ function setSectionBgOpacity(sectionEl, opacity) {
   if (!sectionEl) return;
   const value = clampBgOpacity(opacity);
   sectionEl.style.setProperty('--section-bg-opacity', String(value));
-  sectionEl.classList.toggle('home-section--no-bg', value <= 0);
+  const hasVisualMedia = !!sectionEl.querySelector('.home-section-bg.has-image, .home-section-bg.has-media');
+  /* תמונה/סרטון: בלי צבע משני, אבל בלי למחוק את המדיה עצמה */
+  sectionEl.classList.toggle('home-section--no-bg', value <= 0 && !hasVisualMedia);
   sectionEl.classList.toggle('home-section--soft-bg', value > 0 && value < 45);
+  sectionEl.classList.toggle('home-section--has-media-bg', hasVisualMedia);
 }
 
 function homeBgOpacityHtml(opacity) {
   const value = clampBgOpacity(opacity);
   return (
     '<div class="form-field form-field--full" id="homeBgOpacityField">' +
-      '<label for="homeFieldBgOpacity">שקיפות רקע: <strong id="homeFieldBgOpacityValue">' + value + '%</strong></label>' +
-      '<input type="range" id="homeFieldBgOpacity" min="0" max="100" step="1" value="' + value + '" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">' +
-      '<p class="field-subhint">0 = שקוף לגמרי · 100 = רקע מלא בצבע המשני של האתר</p>' +
+      '<div class="edit-size" title="שקיפות רקע">' +
+        editIco('fill') +
+        '<input type="range" id="homeFieldBgOpacity" min="0" max="100" step="1" value="' + value + '"' +
+          ' class="size-control-range" aria-label="שקיפות רקע">' +
+        '<strong id="homeFieldBgOpacityValue" class="size-control-unit" style="min-width:2.8rem;">' + value + '%</strong>' +
+      '</div>' +
+      '<p class="field-subhint">0 = שקוף · 100 = רקע מלא</p>' +
     '</div>'
   );
 }
@@ -4369,14 +4559,14 @@ function bindHomeBgOpacityField() {
 function homeImageFieldHtml(imageUrl, label) {
   return (
     '<div class="form-field form-field--full" id="homeImageFieldWrap">' +
-      '<label>' + label + '</label>' +
-      '<label class="upload-box" for="homeFieldImage">' +
+      '<span class="field-label">' + label + '</span>' +
+      '<label class="edit-upload-btn edit-upload-btn--wide" for="homeFieldImage">' +
         '<input type="file" id="homeFieldImage" accept="image/*" hidden>' +
-        '<span class="upload-icon">🖼️</span>' +
-        '<span class="upload-text">לחצו להעלאת תמונה / להחלפה</span>' +
+        editIco('image') +
+        '<span>העלאת תמונה / החלפה</span>' +
       '</label>' +
       '<img class="home-edit-preview' + (imageUrl ? ' is-visible' : '') + '" id="homeFieldImagePreview" src="' + (imageUrl || '') + '" alt="">' +
-      (imageUrl ? '<button type="button" class="btn-cancel" id="homeClearImage" style="margin-top:10px;">הסרת תמונה</button>' : '') +
+      (imageUrl ? '<button type="button" class="edit-clear-btn" id="homeClearImage">הסרת תמונה</button>' : '') +
     '</div>'
   );
 }
@@ -4395,23 +4585,26 @@ function homeMediaFieldsHtml(options) {
     : 100;
 
   return (
-    '<div id="homeMediaFieldWrap">' +
+    '<div id="homeMediaFieldWrap" class="edit-block">' +
       '<div class="form-field form-field--full">' +
-        '<span class="field-label">סוג מדיה</span>' +
-        '<div class="action-checks">' +
-          '<label class="action-check" for="homeMediaBg">' +
+        '<span class="field-label">מדיה</span>' +
+        '<div class="edit-seg">' +
+          '<label class="edit-seg-btn" for="homeMediaBg" title="רקע צבע">' +
             '<input type="radio" name="homeMediaType" id="homeMediaBg" value="bg"' +
               (mediaType === 'bg' ? ' checked' : '') + '>' +
+            editIco('fill') +
             '<span>רקע</span>' +
           '</label>' +
-          '<label class="action-check" for="homeMediaImage">' +
+          '<label class="edit-seg-btn" for="homeMediaImage" title="תמונה">' +
             '<input type="radio" name="homeMediaType" id="homeMediaImage" value="image"' +
               (mediaType === 'image' ? ' checked' : '') + '>' +
+            editIco('image') +
             '<span>תמונה</span>' +
           '</label>' +
-          '<label class="action-check" for="homeMediaVideo">' +
+          '<label class="edit-seg-btn" for="homeMediaVideo" title="סרטון">' +
             '<input type="radio" name="homeMediaType" id="homeMediaVideo" value="video"' +
               (mediaType === 'video' ? ' checked' : '') + '>' +
+            editIco('video') +
             '<span>סרטון</span>' +
           '</label>' +
         '</div>' +
@@ -4420,36 +4613,30 @@ function homeMediaFieldsHtml(options) {
         homeBgOpacityHtml(bgOpacity) +
       '</div>' +
       '<div class="form-field form-field--full" id="homeImageOnlyWrap"' + (mediaType === 'image' ? '' : ' hidden') + '>' +
-        '<label>תמונה (אופציונלי)</label>' +
-        '<label class="upload-box" for="homeFieldImage">' +
+        '<label class="edit-upload-btn edit-upload-btn--wide" for="homeFieldImage">' +
           '<input type="file" id="homeFieldImage" accept="image/*" hidden>' +
-          '<span class="upload-icon">🖼️</span>' +
-          '<span class="upload-text">לחצו להעלאת תמונה / להחלפה</span>' +
+          editIco('image') +
+          '<span>העלאת תמונה / החלפה</span>' +
         '</label>' +
         '<img class="home-edit-preview' + (imageUrl ? ' is-visible' : '') + '" id="homeFieldImagePreview" src="' + (imageUrl || '') + '" alt="">' +
-        (imageUrl ? '<button type="button" class="btn-cancel" id="homeClearImage" style="margin-top:10px;">הסרת תמונה</button>' : '') +
+        (imageUrl ? '<button type="button" class="edit-clear-btn" id="homeClearImage" title="הסרת תמונה">הסרה</button>' : '') +
       '</div>' +
       '<div class="form-field form-field--full" id="homeVideoOnlyWrap"' + (mediaType === 'video' ? '' : ' hidden') + '>' +
-        '<label>בחירת סרטון מהמחשב</label>' +
-        '<label class="upload-box" for="homeFieldVideoFile">' +
+        '<label class="edit-upload-btn edit-upload-btn--wide" for="homeFieldVideoFile">' +
           '<input type="file" id="homeFieldVideoFile" accept="video/*" hidden>' +
-          '<span class="upload-icon">🎬</span>' +
-          '<span class="upload-text">לחצו לבחירת קובץ וידאו</span>' +
+          editIco('video') +
+          '<span>בחירת קובץ וידאו</span>' +
         '</label>' +
-        '<p class="field-subhint">הסרטון נשמר בדפדפן (לא באתר) — בלי מגבלת 4MB, ועובד גם בלי שרת.</p>' +
+        '<p class="field-subhint">מומלץ MP4 או WebM. נשמר בדפדפן המקומי — עדיף לפתוח דרך שרת מקומי (לא file://).</p>' +
         '<p class="field-subhint" id="homeVideoFileName"' + (videoName ? '' : ' hidden') + '>' +
-          'קובץ נוכחי: <strong dir="ltr">' + escapeHtml(videoName) + '</strong>' +
+          'קובץ: <strong dir="ltr">' + escapeHtml(videoName) + '</strong>' +
         '</p>' +
         (videoName
-          ? '<button type="button" class="btn-cancel" id="homeClearVideo" style="margin-top:10px;">הסרת סרטון</button>'
+          ? '<button type="button" class="edit-clear-btn" id="homeClearVideo" title="הסרת סרטון">הסרה</button>'
           : '') +
       '</div>' +
     '</div>'
   );
-}
-
-function bindHomeNoBgToggle() {
-  // רקע צבעוני לא מסתיר יותר את בחירת המדיה
 }
 
 function bindHomeMediaTypeToggle() {
@@ -4468,6 +4655,7 @@ function bindHomeMediaTypeToggle() {
     imageWrap.hidden = type !== 'image';
     videoWrap.hidden = type !== 'video';
     if (layoutWrap) layoutWrap.hidden = type !== 'video';
+    scheduleHomeEditorPreview();
   }
 
   if (bgRadio) bgRadio.addEventListener('change', sync);
@@ -4850,14 +5038,14 @@ function readHeaderDraftFromEditor() {
       if (colorEl) item.color = normalizeTextColor(colorEl.value, '#ffffff');
     } else {
       const textEl = document.getElementById('homeHeaderText_' + item.id);
-      const alignEl = document.querySelector('input[name="homeHeaderAlign_' + item.id + '"]:checked');
       const fontEl = document.getElementById('homeHeaderFont_' + item.id);
       const colorEl = document.getElementById('homeHeaderColor_' + item.id);
       if (textEl) {
-        const maxLen = item.type === 'badge' ? 20 : 40;
-        item.text = textEl.value.trim().slice(0, maxLen);
+        item.text = item.type === 'badge'
+          ? normalizeHeaderBadgeText(textEl.value)
+          : textEl.value.trim().slice(0, 40);
       }
-      if (alignEl) item.align = alignEl.value === 'left' || alignEl.value === 'right' ? alignEl.value : 'center';
+      item.align = 'center';
       if (fontEl) item.fontSize = clampFontSize(fontEl.value, defaultHeaderFontSize(item.type));
       if (colorEl) item.color = normalizeTextColor(colorEl.value, '#ffffff');
     }
@@ -5065,14 +5253,22 @@ function openHomeEditor(section) {
         '<label for="homeFieldSubtitle">כותרת משנה (עד 10 תווים, אופציונלי)</label>' +
         '<input type="text" id="homeFieldSubtitle" value="' + escapeHtml(subtitleValue.slice(0, 10)) + '" maxlength="10">' +
       '</div>' +
-      homeTextSizeHtml('homeFieldSubtitleSize', subtitleSize, 20, 'גודל גופן לכותרת משנה') +
-      homeTextColorHtml('homeFieldSubtitleColor', subtitleColor, 'צבע כותרת משנה') +
+      homeStyleRowHtml(
+        homeTextSizeHtml('homeFieldSubtitleSize', subtitleSize, 20, 'גודל גופן לכותרת משנה'),
+        homeColorChipHtml('homeFieldSubtitleColor', subtitleColor, {
+          label: 'צבע כותרת משנה', shortLabel: 'כותרת', ico: 'text',
+        })
+      ) +
       '<div class="form-field form-field--full">' +
         '<label for="homeFieldIntro">טקסט פתיח (אופציונלי)</label>' +
         '<textarea id="homeFieldIntro" rows="4">' + escapeHtml(home[section + 'Text'] || '') + '</textarea>' +
       '</div>' +
-      homeTextSizeHtml('homeFieldTextSize', home[section + 'TextSize'], 16, 'גודל גופן לטקסט פתיח') +
-      homeTextColorHtml('homeFieldTextColor', home[section + 'TextColor'], 'צבע טקסט פתיח') +
+      homeStyleRowHtml(
+        homeTextSizeHtml('homeFieldTextSize', home[section + 'TextSize'], 16, 'גודל גופן לטקסט פתיח'),
+        homeColorChipHtml('homeFieldTextColor', home[section + 'TextColor'], {
+          label: 'צבע טקסט פתיח', shortLabel: 'טקסט', ico: 'text',
+        })
+      ) +
       homeMediaFieldsHtml({
         mediaType: home[section + 'MediaType'] || 'bg',
         imageUrl: home[section + 'Image'] || '',
@@ -5091,8 +5287,12 @@ function openHomeEditor(section) {
         '<label for="homeFieldClosing">טקסט סגירה (אופציונלי)</label>' +
         '<textarea id="homeFieldClosing" rows="4">' + escapeHtml(home[section + 'Text'] || '') + '</textarea>' +
       '</div>' +
-      homeTextSizeHtml('homeFieldTextSize', home[section + 'TextSize'], 17, 'גודל גופן לטקסט סגירה') +
-      homeTextColorHtml('homeFieldTextColor', home[section + 'TextColor'], 'צבע טקסט סגירה') +
+      homeStyleRowHtml(
+        homeTextSizeHtml('homeFieldTextSize', home[section + 'TextSize'], 17, 'גודל גופן לטקסט סגירה'),
+        homeColorChipHtml('homeFieldTextColor', home[section + 'TextColor'], {
+          label: 'צבע טקסט סגירה', shortLabel: 'טקסט', ico: 'text',
+        })
+      ) +
       homeClosingDevTeamFieldsHtml(home, section) +
       homeMediaFieldsHtml({
         mediaType: home[section + 'MediaType'] || 'bg',
@@ -5122,7 +5322,6 @@ function openHomeEditor(section) {
     }
   }
 
-  bindHomeNoBgToggle();
   bindHomeMediaTypeToggle();
   bindHomeLayoutFields();
   bindHomeBgOpacityField();
@@ -5137,28 +5336,6 @@ function openHomeEditor(section) {
   syncHomeSectionEditingFocus();
 }
 
-function homeHeaderAlignHtml(itemId, align) {
-  return (
-    '<div class="action-checks">' +
-      '<label class="action-check" for="homeHeaderAlignRight_' + itemId + '">' +
-        '<input type="radio" name="homeHeaderAlign_' + itemId + '" id="homeHeaderAlignRight_' + itemId + '" value="right"' +
-          (align === 'right' ? ' checked' : '') + '>' +
-        '<span>ימין</span>' +
-      '</label>' +
-      '<label class="action-check" for="homeHeaderAlignCenter_' + itemId + '">' +
-        '<input type="radio" name="homeHeaderAlign_' + itemId + '" id="homeHeaderAlignCenter_' + itemId + '" value="center"' +
-          (align === 'center' ? ' checked' : '') + '>' +
-        '<span>מרכז</span>' +
-      '</label>' +
-      '<label class="action-check" for="homeHeaderAlignLeft_' + itemId + '">' +
-        '<input type="radio" name="homeHeaderAlign_' + itemId + '" id="homeHeaderAlignLeft_' + itemId + '" value="left"' +
-          (align === 'left' ? ' checked' : '') + '>' +
-        '<span>שמאל</span>' +
-      '</label>' +
-    '</div>'
-  );
-}
-
 function homeHeaderItemEditorHtml(item) {
   const fontSize = clampFontSize(item.fontSize, defaultHeaderFontSize(item.type));
   const color = normalizeTextColor(item.color, '#ffffff');
@@ -5168,7 +5345,7 @@ function homeHeaderItemEditorHtml(item) {
       '<div class="home-header-editor-item" data-header-edit-id="' + escapeHtml(item.id) + '">' +
         '<div class="home-header-editor-item-head">' +
           '<strong>לוגו</strong>' +
-          '<button type="button" class="btn-cancel home-header-remove-item" data-remove-header-item="' + escapeHtml(item.id) + '">מחיקה</button>' +
+          '<button type="button" class="home-header-remove-item" data-remove-header-item="' + escapeHtml(item.id) + '" title="מחיקה" aria-label="מחיקה">×</button>' +
         '</div>' +
         '<label class="upload-box" for="homeHeaderFile_' + escapeHtml(item.id) + '">' +
           '<input type="file" id="homeHeaderFile_' + escapeHtml(item.id) + '" accept="image/*" hidden data-header-logo-file="' + escapeHtml(item.id) + '">' +
@@ -5178,8 +5355,12 @@ function homeHeaderItemEditorHtml(item) {
         '<img class="home-edit-preview' + (item.src ? ' is-visible' : '') + '" id="homeHeaderPreview_' + escapeHtml(item.id) + '" src="' + (item.src || '') + '" alt="">' +
         '<label for="homeHeaderCaption_' + escapeHtml(item.id) + '" style="margin-top:10px;display:block;">כיתוב מתחת ללוגו</label>' +
         '<input type="text" id="homeHeaderCaption_' + escapeHtml(item.id) + '" maxlength="40" value="' + escapeHtml(item.caption || '') + '">' +
-        homeTextSizeHtml('homeHeaderFont_' + item.id, fontSize, 12, 'גודל גופן לכיתוב') +
-        homeTextColorHtml('homeHeaderColor_' + item.id, color, 'צבע כיתוב') +
+        homeStyleRowHtml(
+          homeTextSizeHtml('homeHeaderFont_' + item.id, fontSize, 12, 'גודל גופן לכיתוב'),
+          homeColorChipHtml('homeHeaderColor_' + item.id, color, {
+            label: 'צבע כיתוב', shortLabel: 'כיתוב', ico: 'text',
+          })
+        ) +
         '<label for="homeHeaderLink_' + escapeHtml(item.id) + '" style="margin-top:10px;display:block;">קישור (אופציונלי)</label>' +
         '<input type="text" id="homeHeaderLink_' + escapeHtml(item.id) + '" placeholder="https://..." value="' + escapeHtml(item.link || '') + '">' +
         '<label for="homeHeaderSize_' + escapeHtml(item.id) + '" style="margin-top:10px;display:block;">גודל לוגו: <strong id="homeHeaderSizeValue_' + escapeHtml(item.id) + '">' + item.w + '%</strong></label>' +
@@ -5189,27 +5370,39 @@ function homeHeaderItemEditorHtml(item) {
   }
 
   const labels = { title: 'כותרת', subtitle: 'כותרת משנה', badge: 'תג סיווג' };
-  const maxLen = item.type === 'badge' ? 20 : 40;
   const canDelete = item.type !== 'title';
-  const badgeHints = item.type === 'badge'
-    ? '<p class="field-subhint">יוצג כטקסט פשוט עם מקפים: - שמור - · - סודי - · - בלמ״ס -</p>'
-    : '';
+  const isBadge = item.type === 'badge';
+  const badgeValue = isBadge ? normalizeHeaderBadgeText(item.text) : '';
+  const textFieldHtml = isBadge
+    ? (
+      '<label for="homeHeaderText_' + escapeHtml(item.id) + '">סיווג</label>' +
+      '<select id="homeHeaderText_' + escapeHtml(item.id) + '" aria-label="בחירת סיווג">' +
+        HEADER_BADGE_OPTIONS.map(function (opt) {
+          return '<option value="' + escapeHtml(opt) + '"' +
+            (opt === badgeValue ? ' selected' : '') + '>' + escapeHtml(opt) + '</option>';
+        }).join('') +
+      '</select>'
+    )
+    : (
+      '<label for="homeHeaderText_' + escapeHtml(item.id) + '">טקסט (עד 40 תווים)</label>' +
+      '<input type="text" id="homeHeaderText_' + escapeHtml(item.id) + '" maxlength="40" value="' + escapeHtml(item.text || '') + '">'
+    );
 
   return (
     '<div class="home-header-editor-item" data-header-edit-id="' + escapeHtml(item.id) + '">' +
       '<div class="home-header-editor-item-head">' +
         '<strong>' + (labels[item.type] || 'טקסט') + '</strong>' +
         (canDelete
-          ? '<button type="button" class="btn-cancel home-header-remove-item" data-remove-header-item="' + escapeHtml(item.id) + '">מחיקה</button>'
+          ? '<button type="button" class="home-header-remove-item" data-remove-header-item="' + escapeHtml(item.id) + '" title="מחיקה" aria-label="מחיקה">×</button>'
           : '') +
       '</div>' +
-      '<label for="homeHeaderText_' + escapeHtml(item.id) + '">טקסט (עד ' + maxLen + ' תווים)</label>' +
-      '<input type="text" id="homeHeaderText_' + escapeHtml(item.id) + '" maxlength="' + maxLen + '" value="' + escapeHtml(item.text || '') + '">' +
-      badgeHints +
-      homeTextSizeHtml('homeHeaderFont_' + item.id, fontSize, defaultHeaderFontSize(item.type), 'גודל גופן') +
-      homeTextColorHtml('homeHeaderColor_' + item.id, color, 'צבע טקסט') +
-      '<span class="field-label" style="margin-top:10px;display:block;">יישור</span>' +
-      homeHeaderAlignHtml(item.id, item.align || 'center') +
+      textFieldHtml +
+      homeStyleRowHtml(
+        homeTextSizeHtml('homeHeaderFont_' + item.id, fontSize, defaultHeaderFontSize(item.type), 'גודל גופן'),
+        homeColorChipHtml('homeHeaderColor_' + item.id, color, {
+          label: 'צבע טקסט', shortLabel: 'טקסט', ico: 'text',
+        })
+      ) +
     '</div>'
   );
 }
@@ -5415,6 +5608,13 @@ function bindHomeEditorMediaInputs() {
     videoFile.addEventListener('change', function (e) {
       const file = e.target.files[0];
       if (!file) return;
+      if (!isBrowserPlayableVideo(file)) {
+        alert(
+          'הקובץ שנבחר עלול לא להתנגן בדפדפן.\n' +
+          'מומלץ להשתמש ב־MP4 או WebM (לא MKV).\n\n' +
+          'אפשר להמשיך, אבל ייתכן שהסרטון לא יוצג.'
+        );
+      }
       homeEditVideoFile = file;
       homeEditVideoRemoved = false;
       const nameEl = document.getElementById('homeVideoFileName');
@@ -5514,12 +5714,19 @@ async function saveHomeEditor(e) {
           await deleteHomeVideo(kind);
           home[kind + 'Video'] = '';
         } else if (homeEditVideoFile) {
-          await putHomeVideo(kind, homeEditVideoFile);
+          const putResult = await putHomeVideo(kind, homeEditVideoFile);
           home[kind + 'Video'] = homeEditVideoFile.name;
           home[kind + 'SizeAuto'] = true;
+          if (putResult && putResult.ephemeral) {
+            alert(
+              'הסרטון יוצג בסשן הנוכחי, אבל לא נשמר לצמיתות.\n\n' +
+              friendlyMediaDbError(putResult.error)
+            );
+          }
         }
       } catch (err) {
-        alert(err.message || 'שגיאה בשמירת הסרטון');
+        console.error(err);
+        alert(friendlyMediaDbError(err));
         return;
       }
     } else if (home[kind + 'MediaType'] === 'image') {
@@ -5545,12 +5752,19 @@ async function saveHomeEditor(e) {
           await deleteHomeVideo(kind);
           home[kind + 'Video'] = '';
         } else if (homeEditVideoFile) {
-          await putHomeVideo(kind, homeEditVideoFile);
+          const putResult = await putHomeVideo(kind, homeEditVideoFile);
           home[kind + 'Video'] = homeEditVideoFile.name;
           home[kind + 'SizeAuto'] = true;
+          if (putResult && putResult.ephemeral) {
+            alert(
+              'הסרטון יוצג בסשן הנוכחי, אבל לא נשמר לצמיתות.\n\n' +
+              friendlyMediaDbError(putResult.error)
+            );
+          }
         }
       } catch (err) {
-        alert(err.message || 'שגיאה בשמירת הסרטון');
+        console.error(err);
+        alert(friendlyMediaDbError(err));
         return;
       }
     } else if (home[kind + 'MediaType'] === 'image') {

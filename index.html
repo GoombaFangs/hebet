@@ -118,7 +118,7 @@
           <option value="freeform">אברים חופשים</option>
         </select>
       </label>
-      <button type="button" class="cards-layout-btn" id="addCategoryBtn" hidden>+ קטגוריה</button>
+      <button type="button" class="cards-layout-btn" id="addCategoryBtn" hidden style="display:none !important">+ קטגוריה</button>
       <label class="cards-layout-control" id="cardsPerRowControl" for="cardsPerRow">
         <span>כרטיסים בשורה</span>
         <input type="range" id="cardsPerRow" min="2" max="6" step="1" value="5">
@@ -139,12 +139,13 @@
         <input type="range" id="cardsFreeSize" min="8" max="40" step="1" value="18">
         <strong id="cardsFreeSizeValue">18%</strong>
       </label>
-      <label class="cards-layout-btn cards-layout-upload" for="cardsBgImage">
-        <span>תמונת רקע</span>
+      <label class="cards-layout-btn cards-layout-upload" for="cardsBgImage" title="תמונת רקע למטריצה">
+        <span class="edit-ico" data-ico="image" aria-hidden="true"></span>
+        <span>רקע</span>
         <input type="file" id="cardsBgImage" accept="image/*" hidden>
       </label>
-      <button type="button" class="cards-layout-btn cards-layout-clear" id="cardsBgClear" hidden title="הסרת תמונת רקע">הסרת תמונה</button>
-      <label class="cards-layout-check" for="cardsSearchEnabled">
+      <button type="button" class="cards-layout-btn cards-layout-clear" id="cardsBgClear" hidden title="הסרת תמונת רקע">× הסרה</button>
+      <label class="cards-layout-check" for="cardsSearchEnabled" title="הפעלת חיפוש בכרטיסים">
         <input type="checkbox" id="cardsSearchEnabled">
         <span>חיפוש</span>
       </label>
@@ -194,11 +195,13 @@
         <h2 id="homeEditTitle">עריכת מקטע</h2>
         <button type="button" class="wizard-close" id="homeEditCancel" aria-label="סגירה">×</button>
       </div>
-      <form id="homeEditForm">
-        <div id="homeEditFields"></div>
-        <!-- בקרות כרטיסים מחוץ ל-homeEditFields כדי שלא יימחקו ב-innerHTML -->
-        <div id="cardsEditorMount" class="cards-editor-mount" hidden></div>
-        <div class="wizard-nav" style="margin-top: 20px;">
+      <form id="homeEditForm" class="home-edit-form">
+        <div class="home-edit-body">
+          <div id="homeEditFields"></div>
+          <!-- בקרות כרטיסים מחוץ ל-homeEditFields כדי שלא יימחקו ב-innerHTML -->
+          <div id="cardsEditorMount" class="cards-editor-mount" hidden></div>
+        </div>
+        <div class="wizard-nav home-edit-nav">
           <button type="button" class="wizard-nav-btn wizard-nav-btn--back" id="homeEditCancelBtn">ביטול</button>
           <span></span>
           <button type="submit" class="wizard-nav-btn wizard-nav-btn--finish">✓ שמירה</button>
