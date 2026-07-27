@@ -2,6 +2,23 @@ const STORAGE_KEY = 'hebet-cards';
 const HOME_STORAGE_KEY = 'hebet-home';
 const FONTS_DB_NAME = 'hebet-fonts';
 const FONTS_STORE = 'fonts';
+const HEBET_BOOTSTRAP_ID = 'hebet-bootstrap';
+const HEBET_BOOTSTRAP_VERSION = 1;
+const HEBET_EXPORT_FILENAME = 'hebet-portal.html';
+
+const APP_MODE = (function detectAppMode() {
+  if (document.body) {
+    const attr = document.body.getAttribute('data-app-mode');
+    if (attr === 'user') return 'user';
+  }
+  try {
+    const params = new URLSearchParams(location.search);
+    if (params.get('mode') === 'user') return 'user';
+  } catch (err) {}
+  return 'edit';
+})();
+const IS_USER_MODE = APP_MODE === 'user';
+const IS_EDIT_MODE = !IS_USER_MODE;
 
 const BUILTIN_FONTS = [
   { value: "'Segoe UI', Tahoma, Arial, sans-serif", label: 'Segoe UI' },
@@ -174,6 +191,9 @@ const DEFAULT_CARDS = [
 const cardsGrid = document.getElementById('cardsGrid');
 const btnNew = document.getElementById('btnNew');
 const btnEdit = document.getElementById('btnEdit');
+const btnSettings = document.getElementById('btnSettings');
+const settingsMenu = document.getElementById('settingsMenu');
+const settingsWrap = document.getElementById('settingsWrap');
 const modalOverlay = document.getElementById('modalOverlay');
 const wizardForm = document.getElementById('wizardForm');
 const btnCancel = document.getElementById('btnCancel');
@@ -597,24 +617,10 @@ function syncColorPickerUiFromState() {
   if (els.vNum) els.vNum.value = String(hsv.v);
   if (els.aNumHsva) els.aNumHsva.value = String(alphaPct);
 
-  const hue = hsv.h;
-  if (els.sRange) {
-    els.sRange.style.background =
-      'linear-gradient(to left, hsl(' + hue + ', 0%, ' + Math.max(18, hsv.v * 0.5) + '%), hsl(' + hue + ', 100%, 50%))';
-  }
-  if (els.vRange) {
-    els.vRange.style.background =
-      'linear-gradient(to left, #000, hsl(' + hue + ', ' + hsv.s + '%, 50%))';
-  }
-  if (els.aRangeRgba) {
-    els.aRangeRgba.style.background =
-      'linear-gradient(to left, transparent, rgb(' + state.r + ', ' + state.g + ', ' + state.b + ')),' +
-      'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 12px 12px';
-  }
-  if (els.aRangeHsva) {
-    els.aRangeHsva.style.background =
-      'linear-gradient(to left, transparent, rgb(' + state.r + ', ' + state.g + ', ' + state.b + ')),' +
-      'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 12px 12px';
+  // H בלבד — קשת צבעים
+  if (els.hRange) {
+    els.hRange.style.background =
+      'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)';
   }
 
   colorPickerSyncing = false;
@@ -2521,7 +2527,9 @@ function buildDetailHtml(card) {
           '</div>'
         );
       })() +
-      '<button type="button" class="detail-edit-btn" data-id="' + card.id + '">✎ עריכת כרטיס</button>' +
+      (IS_EDIT_MODE
+        ? '<button type="button" class="detail-edit-btn" data-id="' + card.id + '">✎ עריכת כרטיס</button>'
+        : '') +
     '</div>'
   );
 }
@@ -2670,6 +2678,7 @@ async function deleteCard(id) {
 }
 
 function toggleEditMode() {
+  if (IS_USER_MODE) return;
   editMode = !editMode;
   btnEdit.textContent = editMode ? 'סיום עריכה' : 'עריכה';
   btnEdit.classList.toggle('active', editMode);
@@ -3422,6 +3431,7 @@ function updateWizardChrome() {
 }
 
 function openWizard() {
+  if (IS_USER_MODE) return;
   editingCardId = null;
   resetWizardData();
   wizardForm.reset();
@@ -3460,6 +3470,7 @@ function openWizard() {
 }
 
 function openWizardForEdit(cardId) {
+  if (IS_USER_MODE) return;
   const card = loadCards().find(function (c) { return c.id === cardId; });
   if (!card) {
     alert('הכרטיס לא נמצא');
@@ -5958,6 +5969,7 @@ function bindHomeEditorLivePreview() {
 }
 
 function openHomeEditor(section) {
+  if (IS_USER_MODE) return;
   clearTimeout(homeEditPreviewTimer);
   unmountCardsLayoutBarFromEditor();
 
@@ -6533,6 +6545,396 @@ btnNew.addEventListener('click', openWizard);
 btnEdit.addEventListener('click', toggleEditMode);
 btnCancel.addEventListener('click', closeWizard);
 
+function isSettingsMenuOpen() {
+  return !!(settingsMenu && !settingsMenu.hidden);
+}
+
+function openSettingsModal() {
+  if (!settingsMenu || !btnSettings) return;
+  settingsMenu.hidden = false;
+  btnSettings.setAttribute('aria-expanded', 'true');
+}
+
+function closeSettingsModal() {
+  if (!settingsMenu || !btnSettings) return;
+  settingsMenu.hidden = true;
+  btnSettings.setAttribute('aria-expanded', 'false');
+}
+
+function toggleSettingsModal() {
+  if (isSettingsMenuOpen()) closeSettingsModal();
+  else openSettingsModal();
+}
+
+function deleteIndexedDb(name) {
+  return new Promise(function (resolve) {
+    if (!window.indexedDB || !name) {
+      resolve();
+      return;
+    }
+    try {
+      const request = indexedDB.deleteDatabase(name);
+      request.onsuccess = function () { resolve(); };
+      request.onerror = function () { resolve(); };
+      request.onblocked = function () { resolve(); };
+    } catch (err) {
+      resolve();
+    }
+  });
+}
+
+function blobToBase64(blob) {
+  return new Promise(function (resolve, reject) {
+    const reader = new FileReader();
+    reader.onload = function () {
+      const result = String(reader.result || '');
+      const comma = result.indexOf(',');
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = function () { reject(reader.error || new Error('שגיאה בקריאת קובץ')); };
+    reader.readAsDataURL(blob);
+  });
+}
+
+function base64ToBlob(base64, mime) {
+  const bin = atob(String(base64 || ''));
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i += 1) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime || 'application/octet-stream' });
+}
+
+function serializeBootstrapJson(data) {
+  return JSON.stringify(data)
+    .replace(/</g, '\\u003c')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
+function escapeForInlineScript(text) {
+  return String(text || '').replace(/<\/script/gi, '<\\/script');
+}
+
+function getAllHomeVideos() {
+  return openVideoDb().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      const tx = db.transaction(VIDEO_STORE, 'readonly');
+      const store = tx.objectStore(VIDEO_STORE);
+      const req = store.openCursor();
+      const out = {};
+      req.onsuccess = function (e) {
+        const cursor = e.target.result;
+        if (!cursor) {
+          resolve(out);
+          return;
+        }
+        out[String(cursor.key)] = cursor.value;
+        cursor.continue();
+      };
+      req.onerror = function () { reject(req.error || new Error('שגיאה בטעינת מדיה')); };
+    });
+  }).catch(function () {
+    return {};
+  });
+}
+
+async function collectAppSnapshot() {
+  const home = loadHome();
+  const cards = loadCards();
+  const fonts = await listCustomFonts().catch(function () { return []; });
+  const videosRaw = await getAllHomeVideos();
+
+  const fontsSerialized = [];
+  for (let i = 0; i < fonts.length; i += 1) {
+    const font = fonts[i];
+    if (!font || !font.blob) continue;
+    fontsSerialized.push({
+      id: font.id,
+      name: font.name,
+      family: font.family,
+      cssValue: font.cssValue,
+      type: font.type || font.blob.type || 'application/octet-stream',
+      fileName: font.fileName || font.name || 'font.woff2',
+      data: await blobToBase64(font.blob),
+    });
+  }
+
+  const videos = {};
+  const videoKeys = Object.keys(videosRaw);
+  for (let i = 0; i < videoKeys.length; i += 1) {
+    const key = videoKeys[i];
+    const rec = videosRaw[key];
+    if (!rec || !rec.blob) continue;
+    videos[key] = {
+      name: rec.name || key,
+      type: rec.type || rec.blob.type || 'video/mp4',
+      data: await blobToBase64(rec.blob),
+    };
+  }
+
+  return {
+    version: HEBET_BOOTSTRAP_VERSION,
+    exportedAt: new Date().toISOString(),
+    mode: 'user',
+    home: home,
+    cards: cards,
+    fonts: fontsSerialized,
+    videos: videos,
+  };
+}
+
+async function importAppSnapshot(snapshot) {
+  if (!snapshot || !snapshot.home || !Array.isArray(snapshot.cards)) {
+    throw new Error('קובץ לא תקין או חסרים בו נתונים');
+  }
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot.cards));
+  localStorage.setItem(HOME_STORAGE_KEY, JSON.stringify(snapshot.home));
+
+  await deleteIndexedDb(FONTS_DB_NAME);
+  const fonts = Array.isArray(snapshot.fonts) ? snapshot.fonts : [];
+  for (let i = 0; i < fonts.length; i += 1) {
+    const font = fonts[i];
+    if (!font || !font.data) continue;
+    const blob = base64ToBlob(font.data, font.type);
+    await putCustomFont({
+      id: font.id || ('font-' + i),
+      name: font.name || font.family || 'CustomFont',
+      family: font.family || font.name || 'CustomFont',
+      cssValue: font.cssValue || cssValueForFontFamily(font.family || font.name || 'CustomFont'),
+      blob: blob,
+      type: font.type || blob.type,
+      fileName: font.fileName || font.name || 'font.woff2',
+    });
+  }
+
+  await deleteIndexedDb(VIDEO_DB_NAME);
+  const videos = snapshot.videos && typeof snapshot.videos === 'object' ? snapshot.videos : {};
+  const videoKeys = Object.keys(videos);
+  for (let i = 0; i < videoKeys.length; i += 1) {
+    const key = videoKeys[i];
+    const vid = videos[key];
+    if (!vid || !vid.data) continue;
+    const blob = base64ToBlob(vid.data, vid.type);
+    const file = new File([blob], vid.name || key, { type: vid.type || blob.type || 'video/mp4' });
+    await putHomeVideo(key, file);
+  }
+}
+
+async function bootstrapFromEmbeddedDataIfPresent() {
+  const el = document.getElementById(HEBET_BOOTSTRAP_ID);
+  if (!el || !String(el.textContent || '').trim()) return false;
+  const snapshot = JSON.parse(el.textContent);
+  await importAppSnapshot(snapshot);
+  return true;
+}
+
+function buildExportedPortalHtml(snapshot, indexHtml, cssText, jsText) {
+  let out = String(indexHtml || '');
+  out = out.replace('<body data-app-mode="edit">', '<body data-app-mode="user" class="user-mode">');
+  out = out.replace('<body>', '<body data-app-mode="user" class="user-mode">');
+  out = out.replace(
+    /<link rel="stylesheet" href="css\/style\.css">/,
+    '<style>\n' + cssText + '\n</style>'
+  );
+
+  const bootstrapTag =
+    '<script id="' + HEBET_BOOTSTRAP_ID + '" type="application/json">' +
+    serializeBootstrapJson(snapshot) +
+    '</script>\n';
+
+  out = out.replace(
+    '<script src="js/app.js"></script>',
+    bootstrapTag + '<script>\n' + escapeForInlineScript(jsText) + '\n</script>'
+  );
+
+  return out;
+}
+
+async function fetchProjectAsset(path) {
+  const res = await fetch(path, { cache: 'no-store' });
+  if (!res.ok) throw new Error('לא ניתן לקרוא ' + path);
+  return res.text();
+}
+
+async function exportUserModeHtml() {
+  if (IS_USER_MODE) return;
+  closeSettingsModal();
+
+  let indexHtml;
+  let cssText;
+  let jsText;
+  try {
+    indexHtml = await fetchProjectAsset('index.html');
+    cssText = await fetchProjectAsset('css/style.css');
+    jsText = await fetchProjectAsset('js/app.js');
+  } catch (err) {
+    console.error(err);
+    alert(
+      'לא ניתן לייצא מהמיקום הנוכחי.\n' +
+      'פתחו את האתר דרך שרת מקומי (לא file://) ונסו שוב.'
+    );
+    return;
+  }
+
+  let snapshot;
+  try {
+    snapshot = await collectAppSnapshot();
+  } catch (err) {
+    console.error(err);
+    alert('שגיאה באיסוף הנתונים לייצוא.');
+    return;
+  }
+
+  const html = buildExportedPortalHtml(snapshot, indexHtml, cssText, jsText);
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: HEBET_EXPORT_FILENAME,
+        types: [{ description: 'HTML', accept: { 'text/html': ['.html'] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+      console.warn('showSaveFilePicker failed, falling back to download', err);
+    }
+  }
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = HEBET_EXPORT_FILENAME;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function parseSnapshotFromHtmlText(htmlText) {
+  const doc = new DOMParser().parseFromString(String(htmlText || ''), 'text/html');
+  const bootstrapEl = doc.getElementById(HEBET_BOOTSTRAP_ID);
+  if (!bootstrapEl || !String(bootstrapEl.textContent || '').trim()) {
+    throw new Error('לא נמצאו נתוני אתר בקובץ שנבחר');
+  }
+  return JSON.parse(bootstrapEl.textContent);
+}
+
+async function loadPortalFromHtmlFile(file) {
+  if (!file) return;
+  closeSettingsModal();
+  try {
+    const htmlText = await file.text();
+    const snapshot = parseSnapshotFromHtmlText(htmlText);
+    await importAppSnapshot(snapshot);
+    window.location.reload();
+  } catch (err) {
+    console.error(err);
+    alert((err && err.message) ? err.message : 'לא הצלחנו לטעון את הקובץ');
+  }
+}
+
+function applyAppModeShell() {
+  if (!IS_USER_MODE) return;
+  document.body.classList.add('user-mode');
+  if (document.body.getAttribute('data-app-mode') !== 'user') {
+    document.body.setAttribute('data-app-mode', 'user');
+  }
+  const toolbar = document.getElementById('siteToolbar');
+  if (toolbar) toolbar.hidden = true;
+  editMode = false;
+  document.body.classList.remove('page-edit-mode');
+  if (cardsGrid) cardsGrid.classList.remove('edit-mode');
+  if (btnEdit) {
+    btnEdit.classList.remove('active');
+    btnEdit.textContent = 'עריכה';
+  }
+}
+
+async function resetSiteToDefaults() {
+  if (IS_USER_MODE) return;
+  const ok = window.confirm(
+    'לאפס את האתר ולהתחיל מהתחלה?\n\n' +
+    'כל הכרטיסים, עיצוב הדף והמדיה שנשמרו יימחקו. לא ניתן לבטל.'
+  );
+  if (!ok) return;
+
+  closeSettingsModal();
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(HOME_STORAGE_KEY);
+  } catch (err) {
+    console.warn('Failed clearing localStorage', err);
+  }
+
+  try {
+    Object.keys(videoMemoryStore).forEach(function (key) {
+      delete videoMemoryStore[key];
+    });
+  } catch (err) {}
+
+  if (cardsBgObjectUrl) {
+    try { URL.revokeObjectURL(cardsBgObjectUrl); } catch (err) {}
+    cardsBgObjectUrl = '';
+  }
+  cardsBgImageCache = '';
+  customFontsCache = [];
+
+  await Promise.all([
+    deleteIndexedDb(FONTS_DB_NAME),
+    deleteIndexedDb(VIDEO_DB_NAME),
+  ]);
+
+  window.location.reload();
+}
+
+if (btnSettings) {
+  btnSettings.addEventListener('click', function (e) {
+    e.stopPropagation();
+    toggleSettingsModal();
+  });
+}
+
+if (settingsMenu) {
+  settingsMenu.querySelectorAll('.settings-action').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const action = btn.getAttribute('data-settings-action');
+      if (action === 'reset') {
+        resetSiteToDefaults();
+        return;
+      }
+      if (action === 'export') {
+        exportUserModeHtml();
+        return;
+      }
+      if (action === 'load') {
+        const loadInput = document.getElementById('settingsLoadInput');
+        if (loadInput) loadInput.click();
+        return;
+      }
+      closeSettingsModal();
+    });
+  });
+}
+
+const settingsLoadInput = document.getElementById('settingsLoadInput');
+if (settingsLoadInput) {
+  settingsLoadInput.addEventListener('change', function (e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (file) loadPortalFromHtmlFile(file);
+  });
+}
+
+document.addEventListener('click', function (e) {
+  if (!isSettingsMenuOpen()) return;
+  if (settingsWrap && settingsWrap.contains(e.target)) return;
+  closeSettingsModal();
+});
+
 document.getElementById('siteFont').addEventListener('change', function (e) {
   updateHomeField({ siteFont: e.target.value });
 });
@@ -6729,13 +7131,15 @@ modalOverlay.addEventListener('click', function (e) {
 
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') {
-    if (!homeEditOverlay.hidden) {
+    if (isSettingsMenuOpen()) {
+      closeSettingsModal();
+    } else if (!homeEditOverlay.hidden) {
       closeHomeEditor();
     } else if (!detailOverlay.hidden) {
       closeCardDetail();
     } else if (!modalOverlay.hidden) {
       closeWizard();
-    } else if (editMode) {
+    } else if (editMode && IS_EDIT_MODE) {
       toggleEditMode();
     }
   }
@@ -6774,6 +7178,17 @@ bindSectionResizeHandles();
 syncResizeHandlesVisibility();
 
 async function initApp() {
+  applyAppModeShell();
+
+  try {
+    await bootstrapFromEmbeddedDataIfPresent();
+  } catch (err) {
+    console.warn('Bootstrap import failed', err);
+    if (document.getElementById(HEBET_BOOTSTRAP_ID)) {
+      alert('שגיאה בטעינת נתונים מוטמעים בקובץ');
+    }
+  }
+
   try {
     await loadAndRegisterCustomFonts();
   } catch (err) {

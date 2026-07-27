@@ -6,13 +6,22 @@
   <title>פורטל תוכן</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body data-app-mode="edit">
 
   <!-- שורת פונקציונליות -->
   <header class="site-toolbar" id="siteToolbar">
     <div class="site-toolbar-actions">
       <button type="button" class="btn-new" id="btnNew">+ כרטיס חדש</button>
       <button type="button" class="btn-edit" id="btnEdit">עריכה</button>
+      <div class="settings-wrap" id="settingsWrap">
+        <button type="button" class="btn-settings" id="btnSettings" aria-haspopup="menu" aria-expanded="false" aria-controls="settingsMenu">הגדרות</button>
+        <div class="settings-menu" id="settingsMenu" role="menu" aria-label="הגדרות" hidden>
+          <button type="button" class="settings-action" data-settings-action="load" role="menuitem">טעינה</button>
+          <button type="button" class="settings-action" data-settings-action="reset" role="menuitem">איפוס</button>
+          <button type="button" class="settings-action" data-settings-action="export" role="menuitem">ייצוא</button>
+        </div>
+      </div>
+      <input type="file" id="settingsLoadInput" accept=".html,text/html" hidden>
     </div>
     <div class="site-toolbar-theme">
       <div class="hsla-field site-theme-control" id="siteColorPicker" data-hsla-for="siteSecondaryColor">
