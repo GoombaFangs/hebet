@@ -43,9 +43,10 @@ let pendingCardPopId = null;
 
 const HEADER_ACCENT = '#E31C24';
 const HEADER_INK = '#1A1A1A';
+const HEADER_TEXT_COLOR = '#000000';
 
 const DEFAULT_HOME = {
-  title: 'רצינו לבקש סליחה',
+  title: 'כותרת',
   header: {
     layout: 'hero',
     height: 400,
@@ -54,30 +55,30 @@ const DEFAULT_HOME = {
     artSrc: '',
     artSide: 'left',
     artWidth: 46,
-    kicker: 'מהדורת ראש השנה התשפ״ז - 2026',
-    kickerColor: HEADER_ACCENT,
+    kicker: 'תווית עליונה',
+    kickerColor: HEADER_TEXT_COLOR,
     kickerSize: 15,
-    title: 'רצינו לבקש סליחה',
-    titleColor: HEADER_INK,
+    title: 'כותרת',
+    titleColor: HEADER_TEXT_COLOR,
     titleSize: 44,
-    body: 'סליחה שהפכנו עוד מצגת למשהו שנהנים להסתכל עליו,\nשנה טובה, מיחידת הבט',
-    bodyColor: HEADER_INK,
+    body: 'טקסט תיאור. כאן אפשר לכתוב פסקה קצרה על תוכן האתר.',
+    bodyColor: HEADER_TEXT_COLOR,
     bodySize: 17,
     bodyAccentColor: HEADER_ACCENT,
-    bodyAccents: 'סליחה\nמיחידת הבט',
-    buttonText: 'תצוגת יכולת הבט',
+    bodyAccents: '',
+    buttonText: 'כפתור',
     buttonHref: '',
     buttonBg: HEADER_ACCENT,
     buttonColor: '#ffffff',
     buttonRadius: 40,
-    linkText: 'צרו איתנו קשר',
+    linkText: 'קישור',
     linkHref: '',
     linkColor: HEADER_ACCENT,
   },
-  subtitle: 'צפייה מהנה',
+  subtitle: 'כותרת משנה',
   subtitleSize: 20,
   subtitleColor: '#ffffff',
-  introText: 'ברוכים הבאים לפורטל התוכן. כאן תמצאו מצגות, לומדות וסרטים.',
+  introText: 'טקסט פתיח',
   introTextSize: 16,
   introTextColor: '#ffffff',
   introImage: '',
@@ -112,7 +113,7 @@ const DEFAULT_HOME = {
   intro2VideoPosY: 50,
   intro2VideoBgMode: 'transparent',
   intro2VideoBgColor: '#2f5a28',
-  closingText: 'תודה שביקרתם. נשתמע בפעם הבאה.',
+  closingText: 'טקסט סגירה',
   closingTextSize: 17,
   closingTextColor: '#ffffff',
   closingImage: '',
@@ -187,7 +188,7 @@ const DEFAULT_HOME = {
   floatMenu: {
     enabled: true,
     side: 'start',
-    title: 'ניווט באתר',
+    title: 'כותרת תפריט',
     items: [],
     tags: [],
   },
@@ -207,16 +208,16 @@ const GRADIENTS = [
 ];
 
 const DEFAULT_CARDS = [
-  { id: 'card-1', title: 'כותרת 1', description: 'תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.', link: 'pages/page1.html', gradient: GRADIENTS[0], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-2', title: 'כותרת 2', description: 'תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.', link: 'pages/page2.html', gradient: GRADIENTS[1], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-3', title: 'כותרת 3', description: 'תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.', link: 'pages/page3.html', gradient: GRADIENTS[2], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-4', title: 'כותרת 4', description: 'תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.', link: 'pages/page4.html', gradient: GRADIENTS[3], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-5', title: 'כותרת 5', description: 'תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.', link: 'pages/page5.html', gradient: GRADIENTS[4], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-6', title: 'כותרת 6', description: 'תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.', link: 'pages/page6.html', gradient: GRADIENTS[5], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-7', title: 'כותרת 7', description: 'תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.', link: 'pages/page7.html', gradient: GRADIENTS[6], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-8', title: 'כותרת 8', description: 'תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.', link: 'pages/page8.html', gradient: GRADIENTS[7], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-9', title: 'כותרת 9', description: 'תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.', link: 'pages/page9.html', gradient: GRADIENTS[8], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-10', title: 'כותרת 10', description: 'תיאור קצר של התוכן שמופיע בכרטיס זה. לחצו לצפייה.', link: 'pages/page10.html', gradient: GRADIENTS[9], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
+  { id: 'card-1', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page1.html', gradient: GRADIENTS[0], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
+  { id: 'card-2', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page2.html', gradient: GRADIENTS[1], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
+  { id: 'card-3', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page3.html', gradient: GRADIENTS[2], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
+  { id: 'card-4', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page4.html', gradient: GRADIENTS[3], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
+  { id: 'card-5', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page5.html', gradient: GRADIENTS[4], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
+  { id: 'card-6', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page6.html', gradient: GRADIENTS[5], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
+  { id: 'card-7', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page7.html', gradient: GRADIENTS[6], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
+  { id: 'card-8', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page8.html', gradient: GRADIENTS[7], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
+  { id: 'card-9', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page9.html', gradient: GRADIENTS[8], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
+  { id: 'card-10', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page10.html', gradient: GRADIENTS[9], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
 ];
 
 const cardsGrid = document.getElementById('cardsGrid');
@@ -239,6 +240,7 @@ let activeInlineEdit = null;
 let draggedElement = null;
 let currentStep = 1;
 let editingCardId = null;
+let wizardPreviewTextEdit = null;
 let cardsSearchQuery = '';
 const TOTAL_STEPS = 3;
 
@@ -389,6 +391,16 @@ function isRichTextValue(value) {
   return /<span[\s>]/i.test(String(value || ''));
 }
 
+function clampStoredInlineText(value, maxLen) {
+  const raw = String(value || '');
+  if (!raw || !maxLen) return raw;
+  if (!isRichTextValue(raw)) return raw.slice(0, maxLen);
+  const sanitized = sanitizeInlineHtml(raw);
+  const plain = plainTextFromHtml(sanitized);
+  if (plain.length <= maxLen) return sanitized;
+  return plain.slice(0, maxLen);
+}
+
 function plainTextFromHtml(html) {
   const div = document.createElement('div');
   div.innerHTML = html || '';
@@ -444,7 +456,6 @@ function renderStoredInlineText(value, plainFallback) {
 let savedInlineTextSelection = null;
 
 function saveInlineTextSelection() {
-  savedInlineTextSelection = null;
   if (!activeInlineEdit) return;
   const sel = window.getSelection();
   if (!sel || !sel.rangeCount || sel.isCollapsed) return;
@@ -494,6 +505,8 @@ function hasActiveInlineTextSelection() {
 
 function applyInlineTextColor(hex) {
   if (!activeInlineEdit) return;
+  const spec = getInlineEditSpec(activeInlineEdit.el);
+  if (!spec || !spec.richText) return;
   if (!hasActiveInlineTextSelection() && !restoreInlineTextSelection()) return;
   const el = activeInlineEdit.el;
   const sel = window.getSelection();
@@ -502,19 +515,20 @@ function applyInlineTextColor(hex) {
   if (!el.contains(range.commonAncestorContainer) || range.collapsed) return;
 
   const color = colorToCss(hex);
+  const workingRange = range.cloneRange();
   el.focus();
+  sel.removeAllRanges();
+  sel.addRange(workingRange);
   try {
     document.execCommand('styleWithCSS', false, true);
     if (!document.execCommand('foreColor', false, color)) {
-      wrapRangeWithColor(range.cloneRange(), color);
+      wrapRangeWithColor(workingRange.cloneRange(), color);
     }
   } catch (_) {
-    wrapRangeWithColor(range.cloneRange(), color);
+    wrapRangeWithColor(workingRange.cloneRange(), color);
   }
   activeInlineEdit.lastGoodHtml = el.innerHTML;
-  try {
-    if (sel.rangeCount) savedInlineTextSelection = sel.getRangeAt(0).cloneRange();
-  } catch (_) {}
+  saveInlineTextSelection();
 }
 
 const INLINE_EDIT_SIZE_FIELDS = {
@@ -1096,7 +1110,10 @@ function openHslaPopover(field, onChange) {
   const els = getHslaPopoverEls();
   if (!input || !swatch || !els.popover) return;
 
-  if (field.id === 'inlineTextColorPicker') saveInlineTextSelection();
+  if (field.id === 'inlineTextColorPicker') {
+    saveInlineTextSelection();
+    applyInlineTextColor(input.value);
+  }
 
   activeHslaTarget = { field: field, input: input, onChange: onChange };
   colorPickerState = parseColorToRgba(input.value);
@@ -1212,6 +1229,12 @@ function setupHslaField(field, onChange) {
   updateHslaSwatch(field);
   const swatch = field.querySelector('.hsla-swatch');
   if (!swatch) return;
+  if (field.id === 'inlineTextColorPicker') {
+    field.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      saveInlineTextSelection();
+    });
+  }
   swatch.addEventListener('click', function (e) {
     e.preventDefault();
     e.stopPropagation();
@@ -3086,6 +3109,7 @@ function toggleEditMode() {
   renderCards(loadCards());
   renderClosingDevTeam('closing', home);
   if (home.hasClosing2) renderClosingDevTeam('closing2', home);
+  syncInlineEditableHosts();
   syncInlineTextSizeControl();
 }
 
@@ -3145,8 +3169,10 @@ function buildPreviewCard() {
 }
 
 function updateLivePreview() {
+  if (wizardPreviewTextEdit) commitWizardPreviewTextEdit();
   livePreview.innerHTML = buildPreviewCard();
   setupWizardFreeDrag();
+  markWizardPreviewTextFields();
 }
 
 function bindFreeDragHandle(cardEl, handle, onMovePos) {
@@ -3209,6 +3235,176 @@ function setupWizardFreeDrag() {
   }
 }
 
+function getWizardPreviewTextSpec(el) {
+  if (!el) return null;
+  if (el.classList.contains('card-title')) {
+    return { field: 'pageName', inputId: 'pageName', maxLen: 10, placeholder: 'שם הדף' };
+  }
+  if (el.classList.contains('card-notes')) {
+    return { field: 'notes', inputId: 'notes', maxLen: 30, placeholder: 'התיאור יופיע כאן...' };
+  }
+  return null;
+}
+
+function readPreviewEditableText(el) {
+  return String(el.innerText || el.textContent || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\r\n/g, '\n')
+    .replace(/\n/g, '');
+}
+
+function applyPreviewTextToWizard(spec, value) {
+  wizardData[spec.field] = value;
+  const input = document.getElementById(spec.inputId);
+  if (input) input.value = value;
+}
+
+function placeCaretAtEnd(el) {
+  try {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch (_) {}
+}
+
+function selectElementContents(el) {
+  try {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch (_) {}
+}
+
+function finishWizardPreviewTextDom(el) {
+  if (!el) return;
+  el.removeAttribute('contenteditable');
+  el.classList.remove('is-preview-editing');
+}
+
+function commitWizardPreviewTextEdit() {
+  if (!wizardPreviewTextEdit) return;
+  const el = wizardPreviewTextEdit.el;
+  const spec = wizardPreviewTextEdit.spec;
+  let value = readPreviewEditableText(el).trim();
+  if (value === spec.placeholder) value = '';
+  value = value.slice(0, spec.maxLen);
+  applyPreviewTextToWizard(spec, value);
+  finishWizardPreviewTextDom(el);
+  wizardPreviewTextEdit = null;
+}
+
+function cancelWizardPreviewTextEdit() {
+  if (!wizardPreviewTextEdit) return;
+  applyPreviewTextToWizard(wizardPreviewTextEdit.spec, wizardPreviewTextEdit.original);
+  finishWizardPreviewTextDom(wizardPreviewTextEdit.el);
+  wizardPreviewTextEdit = null;
+  updateLivePreview();
+}
+
+function startWizardPreviewTextEdit(el) {
+  const spec = getWizardPreviewTextSpec(el);
+  if (!spec) return;
+  if (wizardPreviewTextEdit && wizardPreviewTextEdit.el === el) return;
+  if (wizardPreviewTextEdit) commitWizardPreviewTextEdit();
+
+  const original = wizardData[spec.field] || '';
+  el.textContent = original;
+  el.classList.add('is-preview-editing');
+  el.setAttribute('contenteditable', 'true');
+  wizardPreviewTextEdit = { el: el, spec: spec, original: original };
+  el.focus();
+  selectElementContents(el);
+}
+
+function markWizardPreviewTextFields() {
+  const cardEl = livePreview && livePreview.querySelector('.card--preview');
+  if (!cardEl) return;
+
+  const fields = [
+    [cardEl.querySelector('.card-title'), 'עריכת כותרת'],
+    [cardEl.querySelector('.card-notes'), 'עריכת תיאור'],
+  ];
+
+  fields.forEach(function (pair) {
+    const el = pair[0];
+    if (!el) return;
+    el.classList.add('is-preview-text');
+    el.setAttribute('role', 'textbox');
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('spellcheck', 'false');
+    el.setAttribute('title', 'לחצו לעריכה');
+    el.setAttribute('aria-label', pair[1]);
+  });
+}
+
+function bindWizardPreviewTextEdit() {
+  if (!livePreview || livePreview.dataset.previewTextBound === '1') return;
+  livePreview.dataset.previewTextBound = '1';
+
+  livePreview.addEventListener('pointerdown', function (e) {
+    const el = e.target.closest('.is-preview-text');
+    if (!el || !livePreview.contains(el)) return;
+    e.stopPropagation();
+    if (wizardPreviewTextEdit && wizardPreviewTextEdit.el !== el) {
+      commitWizardPreviewTextEdit();
+    }
+  });
+
+  livePreview.addEventListener('click', function (e) {
+    const el = e.target.closest('.is-preview-text');
+    if (!el || !livePreview.contains(el)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    startWizardPreviewTextEdit(el);
+  });
+
+  livePreview.addEventListener('keydown', function (e) {
+    const el = e.target.closest('.is-preview-text');
+    if (!el || !livePreview.contains(el)) return;
+
+    if (el.getAttribute('contenteditable') !== 'true') {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        startWizardPreviewTextEdit(el);
+      }
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commitWizardPreviewTextEdit();
+      updateLivePreview();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelWizardPreviewTextEdit();
+    }
+  });
+
+  livePreview.addEventListener('input', function (e) {
+    const el = e.target.closest('.is-preview-text');
+    if (!el || !wizardPreviewTextEdit || wizardPreviewTextEdit.el !== el) return;
+    const spec = wizardPreviewTextEdit.spec;
+    let value = readPreviewEditableText(el);
+    if (value.length > spec.maxLen) {
+      value = value.slice(0, spec.maxLen);
+      el.textContent = value;
+      placeCaretAtEnd(el);
+    }
+    applyPreviewTextToWizard(spec, value);
+  });
+
+  livePreview.addEventListener('blur', function (e) {
+    if (!wizardPreviewTextEdit || wizardPreviewTextEdit.el !== e.target) return;
+    commitWizardPreviewTextEdit();
+    updateLivePreview();
+  }, true);
+}
+
 /* ===== ניהול שלבים ===== */
 
 function showError(msg) {
@@ -3239,11 +3435,19 @@ function updateStepUI() {
 
 function validateStep(step) {
   if (step === 1) {
+    if ((wizardData.bgMode === 'image' || wizardData.bgMode === 'squareImage') && !wizardData.mainImage) {
+      return wizardData.bgMode === 'squareImage'
+        ? 'יש להעלות תמונת ארט'
+        : 'יש להעלות תמונה לחלק העליון של הכרטיס';
+    }
+  }
+
+  if (step === 2) {
     if (!wizardData.pageName.trim()) return 'שם הדף הוא שדה חובה';
     if (!wizardData.classification) return 'סיווג הוא שדה חובה';
   }
 
-  if (step === 2) {
+  if (step === 3) {
     if (isProjectTypeOtherSelected() && !getWizardProjectTypeValue()) {
       return 'יש להזין סוג פרויקט מותאם (עד 10 תווים)';
     }
@@ -3260,14 +3464,6 @@ function validateStep(step) {
       } catch {
         return 'הקישור ל"' + action + '" אינו תקין';
       }
-    }
-  }
-
-  if (step === 3) {
-    if ((wizardData.bgMode === 'image' || wizardData.bgMode === 'squareImage') && !wizardData.mainImage) {
-      return wizardData.bgMode === 'squareImage'
-        ? 'יש להעלות תמונת ארט'
-        : 'יש להעלות תמונה לחלק העליון של הכרטיס';
     }
   }
 
@@ -3856,7 +4052,6 @@ function openWizard() {
 
   modalOverlay.hidden = false;
   updateStepUI();
-  document.getElementById('pageName').focus();
 }
 
 function openWizardForEdit(cardId) {
@@ -3922,16 +4117,17 @@ function openWizardForEdit(cardId) {
 
   modalOverlay.hidden = false;
   updateStepUI();
-  document.getElementById('pageName').focus();
 }
 
 function closeWizard() {
+  if (wizardPreviewTextEdit) commitWizardPreviewTextEdit();
   modalOverlay.hidden = true;
   editingCardId = null;
   showError('');
 }
 
 function finishWizard() {
+  if (wizardPreviewTextEdit) commitWizardPreviewTextEdit();
   syncFormToData();
 
   for (let step = 1; step <= TOTAL_STEPS; step++) {
@@ -4169,13 +4365,13 @@ function normalizeHeader(header, fallbackTitle) {
     artSrc: source.artSrc || '',
     artSide: 'left',
     artWidth: clampHeaderArtWidth(source.artWidth != null ? source.artWidth : defaults.artWidth),
-    kicker: pickHeaderText(source, 'kicker', defaults.kicker).slice(0, 80),
+    kicker: clampStoredInlineText(pickHeaderText(source, 'kicker', defaults.kicker), 80),
     kickerColor: normalizeTextColor(source.kickerColor, defaults.kickerColor),
     kickerSize: clampFontSize(source.kickerSize, defaults.kickerSize, 32),
-    title: pickHeaderText(source, 'title', titleFallback).slice(0, 80),
+    title: clampStoredInlineText(pickHeaderText(source, 'title', titleFallback), 80),
     titleColor: normalizeTextColor(source.titleColor, defaults.titleColor),
     titleSize: clampFontSize(source.titleSize, defaults.titleSize, 72),
-    body: pickHeaderText(source, 'body', defaults.body).slice(0, 400),
+    body: clampStoredInlineText(pickHeaderText(source, 'body', defaults.body), 400),
     bodyColor: normalizeTextColor(source.bodyColor, defaults.bodyColor),
     bodySize: clampFontSize(source.bodySize, defaults.bodySize, 32),
     bodyAccentColor: normalizeTextColor(source.bodyAccentColor, defaults.bodyAccentColor),
@@ -4219,10 +4415,10 @@ function migrateItemsToHero(header, fallbackTitle) {
     artSrc: logoItem ? logoItem.src : '',
     artSide: 'left',
     title: titleItem && titleItem.text ? titleItem.text : fallbackTitle,
-    titleColor: titleItem && titleItem.color ? titleItem.color : HEADER_INK,
+    titleColor: titleItem && titleItem.color ? titleItem.color : HEADER_TEXT_COLOR,
     titleSize: titleItem && titleItem.fontSize ? titleItem.fontSize : 44,
     kicker: subtitleItem && subtitleItem.text ? subtitleItem.text : '',
-    kickerColor: subtitleItem && subtitleItem.color ? subtitleItem.color : HEADER_ACCENT,
+    kickerColor: subtitleItem && subtitleItem.color ? subtitleItem.color : HEADER_TEXT_COLOR,
     kickerSize: subtitleItem && subtitleItem.fontSize ? subtitleItem.fontSize : 15,
     body: '',
     bodyAccents: '',
@@ -5404,6 +5600,7 @@ function bindSectionResizeHandles() {
 function setOptionalText(el, text, maxLen) {
   if (!el) return;
   if (activeInlineEdit && activeInlineEdit.el === el) return;
+  if (editMode && document.activeElement === el) return;
   let value = text == null ? '' : String(text);
   const plain = isRichTextValue(value) ? plainTextFromHtml(value) : value;
   if (maxLen && plain.length > maxLen) value = isRichTextValue(value) ? plain.slice(0, maxLen) : plain.slice(0, maxLen);
@@ -5978,7 +6175,8 @@ function floatMenuItemButtonHtml(item, extraClass) {
   const label = renderStoredInlineText(item.label || '');
   const idAttr = ' data-fm-id="' + escapeHtml(item.id) + '"';
   const inlineAttr = editMode
-    ? ' data-inline-edit="floatMenu.item" data-inline-placeholder="תווית"'
+    ? ' data-inline-edit="floatMenu.item" data-inline-placeholder="תווית"' +
+      ' contenteditable="true" spellcheck="false" role="textbox" tabindex="0"'
     : '';
   if (item.type === 'url' && !editMode) {
     const href = escapeHtml(item.target || '#');
@@ -6116,7 +6314,7 @@ function bindFloatMenuInteractions() {
 }
 
 function renderFloatMenu(home) {
-  if (activeInlineEdit && String(activeInlineEdit.key || '').indexOf('floatMenu.') === 0) return;
+  if (isInlineEditPrefixActive('floatMenu.')) return;
   home = home || loadHome();
   const menu = normalizeFloatMenu(home.floatMenu, home);
   const aside = document.getElementById('floatMenu');
@@ -6350,6 +6548,7 @@ async function renderHome(homeOverride, previewOptions) {
   syncHomeSectionControls(home);
   applySiteTheme(home);
   renderFloatMenu(home);
+  syncInlineEditableHosts();
   document.title = title.trim() || 'פורטל תוכן';
 }
 
@@ -6395,14 +6594,60 @@ function headerActionHref(href) {
   return 'https://' + value;
 }
 
+function isInlineEditPrefixActive(prefix) {
+  if (activeInlineEdit && String(activeInlineEdit.key || '').indexOf(prefix) === 0) return true;
+  const ae = document.activeElement;
+  if (!ae || !ae.closest) return false;
+  const host = ae.closest('[data-inline-edit]');
+  if (!host) return false;
+  return String(host.getAttribute('data-inline-edit') || '').indexOf(prefix) === 0;
+}
+
+function findInlineEditHost(target) {
+  if (!target || !target.closest) return null;
+  const direct = target.closest('[data-inline-edit]');
+  if (direct) return direct;
+  const link = target.closest('.home-header-link');
+  if (link) return link.querySelector('[data-inline-edit]');
+  return null;
+}
+
+function syncInlineEditableHost(el, spec) {
+  if (!el) return;
+  spec = spec || getInlineEditSpec(el);
+  if (editMode && !IS_USER_MODE && spec) {
+    el.setAttribute('contenteditable', spec.richText ? 'true' : 'plaintext-only');
+    if (el.getAttribute('contenteditable') !== 'true' && el.getAttribute('contenteditable') !== 'plaintext-only') {
+      el.setAttribute('contenteditable', 'true');
+    }
+    el.setAttribute('spellcheck', 'false');
+    el.setAttribute('role', 'textbox');
+    el.setAttribute('tabindex', '0');
+    if (!el.getAttribute('aria-label')) {
+      el.setAttribute('aria-label', el.getAttribute('data-inline-placeholder') || 'עריכת טקסט');
+    }
+  } else {
+    el.removeAttribute('contenteditable');
+    el.removeAttribute('role');
+    if (el.getAttribute('tabindex') === '0') el.removeAttribute('tabindex');
+  }
+}
+
+function syncInlineEditableHosts() {
+  document.querySelectorAll('[data-inline-edit]').forEach(function (el) {
+    syncInlineEditableHost(el);
+  });
+}
+
 function inlineEditAttr(key, placeholder) {
   if (!editMode) return '';
   return ' data-inline-edit="' + escapeHtml(key) + '"' +
-    (placeholder ? ' data-inline-placeholder="' + escapeHtml(placeholder) + '"' : '');
+    (placeholder ? ' data-inline-placeholder="' + escapeHtml(placeholder) + '"' : '') +
+    ' contenteditable="true" spellcheck="false" role="textbox" tabindex="0"';
 }
 
 function renderHomeHeader(home) {
-  if (activeInlineEdit && String(activeInlineEdit.key || '').indexOf('header.') === 0) return;
+  if (isInlineEditPrefixActive('header.')) return;
   const section = document.getElementById('homeHeader');
   const canvas = document.getElementById('homeHeaderCanvas');
   const itemsEl = document.getElementById('homeHeaderItems');
@@ -6513,11 +6758,11 @@ function getInlineEditSpec(el) {
   }
 
   const headerFields = {
-    'header.kicker': { field: 'kicker', maxLen: 80, input: 'homeHeaderKicker', richText: true },
+    'header.kicker': { field: 'kicker', maxLen: 80, richText: true },
     'header.title': { field: 'title', maxLen: 80, richText: true },
-    'header.body': { field: 'body', maxLen: 400, input: 'homeHeaderBody', multiline: true, richText: true },
-    'header.buttonText': { field: 'buttonText', maxLen: 40, input: 'homeHeaderButtonText' },
-    'header.linkText': { field: 'linkText', maxLen: 40, input: 'homeHeaderLinkText' },
+    'header.body': { field: 'body', maxLen: 400, multiline: true, richText: true },
+    'header.buttonText': { field: 'buttonText', maxLen: 40 },
+    'header.linkText': { field: 'linkText', maxLen: 40 },
   };
   if (headerFields[key]) {
     const spec = headerFields[key];
@@ -6533,7 +6778,9 @@ function getInlineEditSpec(el) {
       },
       set: function (home, value) {
         const next = Object.assign({}, normalizeHeader(home.header, home.title));
-        next[spec.field] = value.slice(0, spec.maxLen);
+        next[spec.field] = spec.richText
+          ? clampStoredInlineText(value, spec.maxLen)
+          : String(value || '').slice(0, spec.maxLen);
         home.header = normalizeHeader(next, next.title);
         if (spec.field === 'title') syncTitleFromHeader(home);
         if (homeEditHeaderDraft) homeEditHeaderDraft[spec.field] = next[spec.field];
@@ -6602,10 +6849,27 @@ function readInlineEditStoredValue(el, richText) {
 
 function finishInlineEditDom(el) {
   if (!el) return;
-  el.removeAttribute('contenteditable');
   el.classList.remove('is-inline-editing');
-  el.blur();
   savedInlineTextSelection = null;
+  if (!editMode || IS_USER_MODE) {
+    el.removeAttribute('contenteditable');
+    el.removeAttribute('role');
+    if (el.getAttribute('tabindex') === '0') el.removeAttribute('tabindex');
+  }
+}
+
+function syncInlinePlaceholder(el, spec, value) {
+  if (!el || !spec) return;
+  const placeholder = el.getAttribute('data-inline-placeholder') || '';
+  const plain = spec.richText && isRichTextValue(value)
+    ? plainTextFromHtml(value).trim()
+    : String(value || '').trim();
+  if (!plain) {
+    el.textContent = placeholder;
+    el.classList.add('is-inline-placeholder');
+  } else {
+    el.classList.remove('is-inline-placeholder');
+  }
 }
 
 function cancelInlineEdit() {
@@ -6618,15 +6882,24 @@ function cancelInlineEdit() {
   if (String(spec.key || '').indexOf('header.') === 0) renderHomeHeader(home);
   else if (String(spec.key || '').indexOf('floatMenu.') === 0) renderFloatMenu(home);
   else renderHome();
+  syncInlineEditableHosts();
 }
 
-function commitInlineEdit() {
+function commitInlineEdit(options) {
+  options = options || {};
+  const silent = !!options.silent;
   if (!activeInlineEdit) return;
-  const spec = getInlineEditSpec(activeInlineEdit.el);
-  if (!spec) return;
-  let value = readInlineEditStoredValue(spec.el, spec.richText);
+  const el = activeInlineEdit.el;
+  const spec = getInlineEditSpec(el);
+  if (!spec) {
+    finishInlineEditDom(el);
+    activeInlineEdit = null;
+    syncInlineTextSizeControl();
+    return;
+  }
+  let value = readInlineEditStoredValue(el, spec.richText);
   let plain = spec.richText && isRichTextValue(value) ? plainTextFromHtml(value).trim() : value.trim();
-  const placeholder = spec.el.getAttribute('data-inline-placeholder') || '';
+  const placeholder = el.getAttribute('data-inline-placeholder') || '';
   const stored = spec.get(loadHome());
   const storedPlain = spec.richText && isRichTextValue(stored)
     ? plainTextFromHtml(stored).trim()
@@ -6648,9 +6921,15 @@ function commitInlineEdit() {
     if (input) input.value = isRichTextValue(value) ? plainTextFromHtml(value) : value;
   }
 
-  finishInlineEditDom(spec.el);
+  finishInlineEditDom(el);
   activeInlineEdit = null;
   syncInlineTextSizeControl();
+
+  if (silent) {
+    syncInlinePlaceholder(el, spec, value);
+    syncInlineEditableHost(el, spec);
+    return;
+  }
 
   if (String(spec.key || '').indexOf('header.') === 0) {
     renderHomeHeader(home);
@@ -6660,40 +6939,29 @@ function commitInlineEdit() {
   } else {
     renderHome();
   }
+  syncInlineEditableHosts();
 }
 
 function startInlineEdit(el) {
-  if (!editMode || IS_USER_MODE || !el) return;
+  if (!editMode || IS_USER_MODE || !el || !document.body.contains(el)) return;
   const spec = getInlineEditSpec(el);
   if (!spec) return;
   if (activeInlineEdit && activeInlineEdit.el === el) return;
-  if (activeInlineEdit) commitInlineEdit();
+  if (activeInlineEdit) commitInlineEdit({ silent: true });
 
-  const current = spec.get(loadHome());
-  if (spec.richText && isRichTextValue(current)) {
-    el.innerHTML = sanitizeInlineHtml(current);
-  } else {
-    el.textContent = current;
+  if (el.classList.contains('is-inline-placeholder')) {
+    el.classList.remove('is-inline-placeholder');
+    el.textContent = '';
   }
-  el.classList.remove('is-inline-placeholder');
   el.classList.add('is-inline-editing');
-  el.setAttribute('contenteditable', 'true');
   el.hidden = false;
+  syncInlineEditableHost(el, spec);
   activeInlineEdit = {
     el: el,
     key: spec.key,
-    original: current,
+    original: spec.get(loadHome()),
     lastGoodHtml: spec.richText ? el.innerHTML : '',
   };
-
-  el.focus();
-  try {
-    const range = document.createRange();
-    range.selectNodeContents(el);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-  } catch (_) {}
   syncInlineTextSizeControl();
 }
 
@@ -6702,34 +6970,33 @@ function bindInlineEditing() {
   document.body.dataset.inlineEditBound = '1';
 
   document.addEventListener('pointerdown', function (e) {
-    if (!editMode || !activeInlineEdit) return;
-    if (activeInlineEdit.el.contains(e.target)) return;
-    if (e.target.closest && e.target.closest('.site-toolbar, .hsla-popover')) return;
-    const next = e.target.closest('[data-inline-edit]');
-    const nextKey = next ? next.getAttribute('data-inline-edit') : '';
-    const nextFmId = next ? next.getAttribute('data-fm-id') : '';
-    commitInlineEdit();
-    if (!nextKey) return;
-    e.preventDefault();
-    const selector = nextFmId
-      ? '[data-inline-edit="' + nextKey + '"][data-fm-id="' + nextFmId + '"]'
-      : '[data-inline-edit="' + nextKey + '"]';
-    const fresh = document.querySelector(selector);
-    if (fresh) startInlineEdit(fresh);
-  }, true);
-
-  document.addEventListener('click', function (e) {
     if (!editMode || IS_USER_MODE) return;
-    if (e.target.closest('.home-section-edit, .home-section-dup, .home-section-delete, .home-resize-handle, .site-toolbar, .home-edit-modal, .wizard, .settings-menu, .detail-overlay')) {
+    if (e.target.closest && e.target.closest('.site-toolbar, .hsla-popover')) return;
+    const next = findInlineEditHost(e.target);
+    if (next) {
+      if (next.classList.contains('is-inline-placeholder')) {
+        next.classList.remove('is-inline-placeholder');
+        next.textContent = '';
+      }
+      if (activeInlineEdit && activeInlineEdit.el !== next) {
+        commitInlineEdit({ silent: true });
+      }
+      startInlineEdit(next);
       return;
     }
-    const el = e.target.closest('[data-inline-edit]');
-    if (!el) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if (activeInlineEdit && activeInlineEdit.el === el) return;
-    startInlineEdit(el);
+    if (e.target.closest && e.target.closest('.home-edit-modal, .wizard, .settings-menu, .detail-overlay')) {
+      if (activeInlineEdit) commitInlineEdit({ silent: true });
+      return;
+    }
+    if (activeInlineEdit) commitInlineEdit();
   }, true);
+
+  document.addEventListener('focusin', function (e) {
+    if (!editMode || IS_USER_MODE) return;
+    const el = findInlineEditHost(e.target);
+    if (!el) return;
+    startInlineEdit(el);
+  });
 
   document.addEventListener('keydown', function (e) {
     if (!activeInlineEdit) return;
@@ -6739,19 +7006,68 @@ function bindInlineEditing() {
       cancelInlineEdit();
       return;
     }
+    const spec = getInlineEditSpec(activeInlineEdit.el);
+    if (!spec) return;
+    if (!spec.richText && (e.ctrlKey || e.metaKey) && /[biu]/i.test(e.key)) {
+      e.preventDefault();
+      return;
+    }
     if (e.key === 'Enter') {
-      const spec = getInlineEditSpec(activeInlineEdit.el);
-      if (spec && spec.multiline) {
+      if (spec.multiline) {
         if (e.ctrlKey || e.metaKey) {
           e.preventDefault();
+          const el = activeInlineEdit.el;
           commitInlineEdit();
+          if (el) el.blur();
         }
         return;
       }
       e.preventDefault();
+      const el = activeInlineEdit.el;
       commitInlineEdit();
+      if (el) el.blur();
     }
   }, true);
+
+  document.addEventListener('paste', function (e) {
+    if (!activeInlineEdit || !activeInlineEdit.el.contains(e.target)) return;
+    const spec = getInlineEditSpec(activeInlineEdit.el);
+    if (!spec) return;
+    e.preventDefault();
+    let text = '';
+    try {
+      text = (e.clipboardData || window.clipboardData).getData('text/plain') || '';
+    } catch (_) {}
+    if (!spec.multiline) text = text.replace(/\s+/g, ' ').trim();
+    if (spec.maxLen) {
+      const current = spec.richText
+        ? plainTextFromHtml(activeInlineEdit.el.innerHTML)
+        : readInlineEditValue(activeInlineEdit.el);
+      const selected = window.getSelection() ? String(window.getSelection()) : '';
+      const room = spec.maxLen - Math.max(0, current.length - selected.length);
+      if (room <= 0) return;
+      text = text.slice(0, room);
+    }
+    if (!text) return;
+    try {
+      if (!document.execCommand('insertText', false, text)) {
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return;
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        const node = document.createTextNode(text);
+        range.insertNode(node);
+        range.setStartAfter(node);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    } catch (_) {}
+  }, true);
+
+  document.addEventListener('selectionchange', function () {
+    saveInlineTextSelection();
+  });
 
   document.addEventListener('input', function () {
     if (!activeInlineEdit) return;
@@ -6906,22 +7222,32 @@ function readHeaderDraftFromEditor() {
 
   homeEditHeaderDraft.artSide = 'left';
   homeEditHeaderDraft.artWidth = clampHeaderArtWidth(readHeaderField('homeHeaderArtWidth') || homeEditHeaderDraft.artWidth);
-  homeEditHeaderDraft.kicker = readHeaderField('homeHeaderKicker').trim().slice(0, 80);
-  homeEditHeaderDraft.kickerSize = clampFontSize(readHeaderField('homeHeaderKickerSize'), 15, 32);
-  homeEditHeaderDraft.kickerColor = normalizeTextColor(readHeaderField('homeHeaderKickerColor'), HEADER_ACCENT);
-  homeEditHeaderDraft.body = readHeaderField('homeHeaderBody').slice(0, 400);
-  homeEditHeaderDraft.bodySize = clampFontSize(readHeaderField('homeHeaderBodySize'), 17, 32);
-  homeEditHeaderDraft.bodyColor = normalizeTextColor(readHeaderField('homeHeaderBodyColor'), HEADER_INK);
-  homeEditHeaderDraft.bodyAccentColor = normalizeTextColor(readHeaderField('homeHeaderAccentColor'), HEADER_ACCENT);
-  homeEditHeaderDraft.bodyAccents = normalizeAccentList(readHeaderField('homeHeaderAccents'));
-  homeEditHeaderDraft.buttonText = readHeaderField('homeHeaderButtonText').trim().slice(0, 40);
+  homeEditHeaderDraft.kickerSize = clampFontSize(readHeaderField('homeHeaderKickerSize') || homeEditHeaderDraft.kickerSize, 15, 32);
+  homeEditHeaderDraft.kickerColor = normalizeTextColor(
+    readHeaderField('homeHeaderKickerColor') || homeEditHeaderDraft.kickerColor,
+    HEADER_TEXT_COLOR
+  );
+  homeEditHeaderDraft.titleSize = clampFontSize(readHeaderField('homeHeaderTitleSize') || homeEditHeaderDraft.titleSize, 44, 72);
+  homeEditHeaderDraft.titleColor = normalizeTextColor(
+    readHeaderField('homeHeaderTitleColor') || homeEditHeaderDraft.titleColor,
+    HEADER_TEXT_COLOR
+  );
+  homeEditHeaderDraft.bodySize = clampFontSize(readHeaderField('homeHeaderBodySize') || homeEditHeaderDraft.bodySize, 17, 32);
+  homeEditHeaderDraft.bodyColor = normalizeTextColor(
+    readHeaderField('homeHeaderBodyColor') || homeEditHeaderDraft.bodyColor,
+    HEADER_TEXT_COLOR
+  );
+  homeEditHeaderDraft.bodyAccentColor = normalizeTextColor(
+    readHeaderField('homeHeaderAccentColor') || homeEditHeaderDraft.bodyAccentColor,
+    HEADER_ACCENT
+  );
   homeEditHeaderDraft.buttonHref = readHeaderField('homeHeaderButtonHref').trim();
-  homeEditHeaderDraft.buttonBg = normalizeTextColor(readHeaderField('homeHeaderButtonBg'), HEADER_ACCENT);
-  homeEditHeaderDraft.buttonColor = normalizeTextColor(readHeaderField('homeHeaderButtonColor'), '#ffffff');
   homeEditHeaderDraft.buttonRadius = clampButtonRadius(readHeaderField('homeHeaderButtonRadius') || homeEditHeaderDraft.buttonRadius);
-  homeEditHeaderDraft.linkText = readHeaderField('homeHeaderLinkText').trim().slice(0, 40);
   homeEditHeaderDraft.linkHref = readHeaderField('homeHeaderLinkHref').trim();
-  homeEditHeaderDraft.linkColor = normalizeTextColor(readHeaderField('homeHeaderLinkColor'), HEADER_ACCENT);
+  homeEditHeaderDraft.linkColor = normalizeTextColor(
+    readHeaderField('homeHeaderLinkColor') || homeEditHeaderDraft.linkColor,
+    HEADER_ACCENT
+  );
 
   homeEditHeaderDraft = normalizeHeader(homeEditHeaderDraft, homeEditHeaderDraft.title);
   return homeEditHeaderDraft;
@@ -7380,6 +7706,7 @@ function openHomeEditor(section) {
     'is-editing-float-menu',
     section === 'floatmenu' && homeEditFloatMenuDraft && homeEditFloatMenuDraft.side !== 'end'
   );
+  homeEditOverlay.classList.toggle('is-editing-header', section === 'header');
 
   if (section === 'cards') {
     if (!mountCardsLayoutBarIntoEditor()) {
@@ -7479,6 +7806,7 @@ function homeHeaderFieldsHtml(header) {
   const artWidth = clampHeaderArtWidth(header.artWidth);
   const radius = clampButtonRadius(header.buttonRadius);
   return (
+    '<p class="field-subhint">את הטקסט עורכים ישירות על הכותרת: לוחצים על השדה, מסמנים עם העכבר ומקלידים. החלונית הזו מיועדת לאיור, קישורים ועיצוב בלבד.</p>' +
     '<div class="home-header-editor-item">' +
       '<div class="home-header-editor-item-head"><strong>איור</strong></div>' +
       '<label class="edit-upload-btn edit-upload-btn--wide" for="homeHeaderArtFile">' +
@@ -7494,8 +7822,6 @@ function homeHeaderFieldsHtml(header) {
     '</div>' +
     '<div class="home-header-editor-item">' +
       '<div class="home-header-editor-item-head"><strong>תווית עליונה</strong></div>' +
-      '<label for="homeHeaderKicker">טקסט</label>' +
-      '<input type="text" id="homeHeaderKicker" maxlength="80" value="' + escapeHtml(header.kicker || '') + '">' +
       homeStyleRowHtml(
         homeTextSizeHtml('homeHeaderKickerSize', header.kickerSize, 15, 'גודל תווית', 32),
         homeColorChipHtml('homeHeaderKickerColor', header.kickerColor, {
@@ -7504,44 +7830,39 @@ function homeHeaderFieldsHtml(header) {
       ) +
     '</div>' +
     '<div class="home-header-editor-item">' +
+      '<div class="home-header-editor-item-head"><strong>כותרת</strong></div>' +
+      homeStyleRowHtml(
+        homeTextSizeHtml('homeHeaderTitleSize', header.titleSize, 44, 'גודל כותרת', 72),
+        homeColorChipHtml('homeHeaderTitleColor', header.titleColor, {
+          label: 'צבע כותרת', shortLabel: 'כותרת', ico: 'text',
+        })
+      ) +
+    '</div>' +
+    '<div class="home-header-editor-item">' +
       '<div class="home-header-editor-item-head"><strong>פסקה</strong></div>' +
-      '<label for="homeHeaderBody">טקסט</label>' +
-      '<textarea id="homeHeaderBody" rows="3" maxlength="400">' + escapeHtml(header.body || '') + '</textarea>' +
       homeStyleRowHtml(
         homeTextSizeHtml('homeHeaderBodySize', header.bodySize, 17, 'גודל פסקה', 32),
         homeColorChipHtml('homeHeaderBodyColor', header.bodyColor, {
           label: 'צבע פסקה', shortLabel: 'פסקה', ico: 'text',
         }) +
         homeColorChipHtml('homeHeaderAccentColor', header.bodyAccentColor, {
-          label: 'צבע הדגשה', shortLabel: 'הדגשה', ico: 'text',
+          label: 'צבע הדגשה לטקסט מסומן', shortLabel: 'הדגשה', ico: 'text',
         })
       ) +
-      '<label for="homeHeaderAccents">מילים בצבע הדגשה (שורה לכל ביטוי)</label>' +
-      '<textarea id="homeHeaderAccents" rows="2">' + escapeHtml(header.bodyAccents || '') + '</textarea>' +
+      '<p class="field-subhint">לצביעת מילים: סמנו אותן בכותרת ובחרו צבע בסרגל העליון.</p>' +
     '</div>' +
     '<div class="home-header-editor-item">' +
       '<div class="home-header-editor-item-head"><strong>כפתור</strong></div>' +
-      '<label for="homeHeaderButtonText">טקסט</label>' +
-      '<input type="text" id="homeHeaderButtonText" maxlength="40" value="' + escapeHtml(header.buttonText || '') + '">' +
-      '<label for="homeHeaderButtonHref" style="margin-top:10px;display:block;">קישור (אופציונלי)</label>' +
+      '<label for="homeHeaderButtonHref">קישור (אופציונלי)</label>' +
       '<input type="text" id="homeHeaderButtonHref" placeholder="https://..." value="' + escapeHtml(header.buttonHref || '') + '">' +
-      homeStyleRowHtml(
-        homeSizeControlHtml('homeHeaderButtonRadius', radius, {
-          min: 0, max: 48, step: 1, unit: 'px', label: 'עיגול כפתור', ico: 'size',
-        }),
-        homeColorChipHtml('homeHeaderButtonBg', header.buttonBg, {
-          label: 'רקע כפתור', shortLabel: 'רקע', ico: 'fill',
-        }) +
-        homeColorChipHtml('homeHeaderButtonColor', header.buttonColor, {
-          label: 'צבע טקסט כפתור', shortLabel: 'טקסט', ico: 'text',
-        })
-      ) +
+      homeSizeControlHtml('homeHeaderButtonRadius', radius, {
+        min: 0, max: 48, step: 1, unit: 'px', label: 'חדות פינות', ico: 'size',
+      }) +
+      '<p class="field-subhint">0 = פינות חדות, 48 = עגול לחלוטין. את טקסט הכפתור עורכים ישירות על הכותרת.</p>' +
     '</div>' +
     '<div class="home-header-editor-item">' +
       '<div class="home-header-editor-item-head"><strong>קישור משני</strong></div>' +
-      '<label for="homeHeaderLinkText">טקסט</label>' +
-      '<input type="text" id="homeHeaderLinkText" maxlength="40" value="' + escapeHtml(header.linkText || '') + '">' +
-      '<label for="homeHeaderLinkHref" style="margin-top:10px;display:block;">קישור (אופציונלי)</label>' +
+      '<label for="homeHeaderLinkHref">כתובת (אופציונלי)</label>' +
       '<input type="text" id="homeHeaderLinkHref" placeholder="https://..." value="' + escapeHtml(header.linkHref || '') + '">' +
       homeStyleRowHtml(
         '',
@@ -7549,6 +7870,7 @@ function homeHeaderFieldsHtml(header) {
           label: 'צבע קישור', shortLabel: 'קישור', ico: 'text',
         })
       ) +
+      '<p class="field-subhint">את טקסט הקישור עורכים ישירות על הכותרת.</p>' +
     '</div>' +
     '<div class="form-field form-field--full">' +
       '<label for="homeFieldHeaderHeight">גובה מסגרת: <strong id="homeFieldHeaderHeightValue">' + header.height + 'px</strong></label>' +
@@ -7584,12 +7906,12 @@ function bindHomeHeaderEditor() {
   }
 
   bindHomeTextSizeField('homeHeaderKickerSize', 32);
+  bindHomeTextSizeField('homeHeaderTitleSize', 72);
   bindHomeTextSizeField('homeHeaderBodySize', 32);
   bindHomeTextColorField('homeHeaderKickerColor');
+  bindHomeTextColorField('homeHeaderTitleColor');
   bindHomeTextColorField('homeHeaderBodyColor');
   bindHomeTextColorField('homeHeaderAccentColor');
-  bindHomeTextColorField('homeHeaderButtonBg');
-  bindHomeTextColorField('homeHeaderButtonColor');
   bindHomeTextColorField('homeHeaderLinkColor');
 
   ['homeHeaderArtWidth', 'homeHeaderButtonRadius'].forEach(function (id) {
@@ -7711,6 +8033,7 @@ function closeHomeEditor() {
   homeEditOverlay.hidden = true;
   homeEditOverlay.classList.remove('home-edit-live');
   homeEditOverlay.classList.remove('is-editing-float-menu');
+  homeEditOverlay.classList.remove('is-editing-header');
   editingHomeSection = null;
   clearHomeSectionEditingFocus();
   homeEditImageData = '';
@@ -7731,6 +8054,7 @@ function closeHomeEditor() {
 async function saveHomeEditor(e) {
   e.preventDefault();
   if (!editingHomeSection) return;
+  if (activeInlineEdit) commitInlineEdit();
 
   if (editingHomeSection === 'cards') {
     homeEditCommitted = true;
@@ -8513,6 +8837,7 @@ detailOverlay.addEventListener('click', function (e) {
 })();
 
 bindLiveInputs();
+bindWizardPreviewTextEdit();
 bindHslaPickers();
 setupHslaField(document.getElementById('inlineTextColorPicker'), function (hex) {
   applyInlineTextColor(hex);

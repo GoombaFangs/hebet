@@ -4,12 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>פורטל תוכן</title>
-  <link rel="stylesheet" href="css/style.css?v=float-offset">
+  <link rel="stylesheet" href="css/style.css?v=inline-header">
 </head>
 <body data-app-mode="edit">
 
   <!-- שורת פונקציונליות -->
-  <header class="site-toolbar" id="siteToolbar">
+  <div class="site-toolbar-shell" id="siteToolbar">
+  <header class="site-toolbar">
     <div class="site-toolbar-actions">
       <button type="button" class="btn-new" id="btnNew">+ כרטיס חדש</button>
       <button type="button" class="btn-edit" id="btnEdit">עריכה</button>
@@ -74,6 +75,7 @@
       </label>
     </div>
   </header>
+  </div>
 
   <!-- כותרת hero: טקסטים + איור + כפתורים -->
   <section class="home-section home-header" id="homeHeader" data-home-section="header">
@@ -106,8 +108,8 @@
     <div class="home-intro-main" id="homeIntroMain">
       <div class="home-section-bg home-intro-bg" id="homeIntroBg"></div>
       <div class="home-section-content">
-        <h2 class="home-subtitle" id="homeSubtitle" data-inline-edit="subtitle" data-inline-placeholder="כותרת משנה">צפייה מהנה</h2>
-        <p class="home-intro-text" id="homeIntroText" data-inline-edit="introText" data-inline-placeholder="טקסט פתיח">ברוכים הבאים לפורטל התוכן. כאן תמצאו מצגות, לומדות וסרטים.</p>
+        <h2 class="home-subtitle" id="homeSubtitle" data-inline-edit="subtitle" data-inline-placeholder="כותרת משנה">כותרת משנה</h2>
+        <p class="home-intro-text" id="homeIntroText" data-inline-edit="introText" data-inline-placeholder="טקסט פתיח">טקסט פתיח</p>
       </div>
       <div class="home-resize-handle" data-resize="intro" hidden title="גררו לשינוי גובה">
         <span class="home-resize-grip"></span>
@@ -203,7 +205,7 @@
   <section class="home-section home-closing" id="homeClosing" data-home-section="closing">
     <div class="home-section-bg" id="homeClosingBg"></div>
     <div class="home-section-content">
-      <p class="home-closing-text" id="homeClosingText" data-inline-edit="closingText" data-inline-placeholder="טקסט סגירה">תודה שביקרתם. נשתמע בפעם הבאה.</p>
+      <p class="home-closing-text" id="homeClosingText" data-inline-edit="closingText" data-inline-placeholder="טקסט סגירה">טקסט סגירה</p>
     </div>
     <a class="home-dev-team-btn" id="homeClosingDevTeam" hidden target="_blank" rel="noopener noreferrer" aria-label="צוות פיתוח">
       <span class="home-dev-team-label">צוות פיתוח</span>
@@ -285,17 +287,17 @@
         <nav class="wizard-steps" aria-label="שלבי יצירה">
           <div class="wizard-step" data-step="1">
             <span class="step-circle">1</span>
-            <span class="step-label">תיאור כללי</span>
+            <span class="step-label">עיצוב</span>
           </div>
           <div class="wizard-step-line"></div>
           <div class="wizard-step" data-step="2">
             <span class="step-circle">2</span>
-            <span class="step-label">סוג הפרויקט</span>
+            <span class="step-label">תיאור כללי</span>
           </div>
           <div class="wizard-step-line"></div>
           <div class="wizard-step" data-step="3">
             <span class="step-circle">3</span>
-            <span class="step-label">עיצוב</span>
+            <span class="step-label">סוג הפרויקט</span>
           </div>
         </nav>
 
@@ -306,7 +308,7 @@
 
       <form id="wizardForm" novalidate>
 
-        <section class="wizard-panel" data-panel="1">
+        <section class="wizard-panel" data-panel="2" hidden>
           <h3>תיאור כללי</h3>
           <p class="wizard-hint">הזינו את הפרטים הבסיסיים של הדף החדש</p>
 
@@ -339,7 +341,7 @@
           </div>
         </section>
 
-        <section class="wizard-panel" data-panel="2" hidden>
+        <section class="wizard-panel" data-panel="3" hidden>
           <h3>סוג הפרויקט</h3>
           <p class="wizard-hint">בחרו את סוג התוכן ואת פעולות הכפתור</p>
 
@@ -381,7 +383,7 @@
           </div>
         </section>
 
-        <section class="wizard-panel" data-panel="3" hidden>
+        <section class="wizard-panel" data-panel="1">
           <h3>עיצוב</h3>
           <p class="wizard-hint">העלו תמונות ובחרו צבעים</p>
 
@@ -655,6 +657,6 @@
     </label>
   </div>
 
-  <script src="js/app.js?v=float-offset"></script>
+  <script src="js/app.js?v=inline-header"></script>
 </body>
 </html>
