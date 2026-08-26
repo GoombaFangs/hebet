@@ -92,7 +92,7 @@ const DEFAULT_HOME = {
   introVideoPosY: 50,
   introVideoBgMode: 'transparent',
   introVideoBgColor: '#2f5a28',
-  hasIntro: true,
+  hasIntro: false,
   hasIntro2: false,
   intro2Subtitle: '',
   intro2SubtitleSize: 20,
@@ -185,7 +185,7 @@ const DEFAULT_HOME = {
   cardsBgFullBleed: true,
   cardsSearchEnabled: false,
   floatMenu: {
-    enabled: false,
+    enabled: true,
     side: 'start',
     title: 'ניווט באתר',
     items: [],
@@ -517,6 +517,88 @@ function applyInlineTextColor(hex) {
   } catch (_) {}
 }
 
+const INLINE_EDIT_SIZE_FIELDS = {
+  subtitle: { homeKey: 'subtitleSize', fallback: 20, max: 56 },
+  introText: { homeKey: 'introTextSize', fallback: 16, max: 56 },
+  intro2Subtitle: { homeKey: 'intro2SubtitleSize', fallback: 20, max: 56 },
+  intro2Text: { homeKey: 'intro2TextSize', fallback: 16, max: 56 },
+  closingText: { homeKey: 'closingTextSize', fallback: 17, max: 56 },
+  closing2Text: { homeKey: 'closing2TextSize', fallback: 17, max: 56 },
+  'header.kicker': { headerField: 'kickerSize', fallback: 15, max: 32 },
+  'header.title': { headerField: 'titleSize', fallback: 44, max: 72 },
+  'header.body': { headerField: 'bodySize', fallback: 17, max: 32 },
+};
+
+function getInlineEditFontSize(home, key) {
+  const cfg = INLINE_EDIT_SIZE_FIELDS[key];
+  if (!cfg) return null;
+  if (cfg.headerField) {
+    const header = normalizeHeader(home.header, home.title);
+    return clampFontSize(header[cfg.headerField], cfg.fallback, cfg.max);
+  }
+  return clampFontSize(home[cfg.homeKey], cfg.fallback, cfg.max);
+}
+
+function setInlineEditFontSize(home, key, size) {
+  const cfg = INLINE_EDIT_SIZE_FIELDS[key];
+  if (!cfg) return null;
+  const clamped = clampFontSize(size, cfg.fallback, cfg.max);
+  if (cfg.headerField) {
+    const next = Object.assign({}, normalizeHeader(home.header, home.title));
+    next[cfg.headerField] = clamped;
+    home.header = normalizeHeader(next, next.title);
+    if (homeEditHeaderDraft) homeEditHeaderDraft[cfg.headerField] = clamped;
+  } else {
+    home[cfg.homeKey] = clamped;
+  }
+  return clamped;
+}
+
+function syncInlineTextSizeControl() {
+  const control = document.getElementById('inlineTextSizeControl');
+  const range = document.getElementById('inlineTextSize');
+  const valueEl = document.getElementById('inlineTextSizeValue');
+  if (!control || !range || !valueEl) return;
+
+  if (!editMode || !activeInlineEdit) {
+    control.classList.add('is-disabled');
+    range.disabled = true;
+    return;
+  }
+
+  const cfg = INLINE_EDIT_SIZE_FIELDS[activeInlineEdit.key];
+  if (!cfg) {
+    control.classList.add('is-disabled');
+    range.disabled = true;
+    return;
+  }
+
+  control.classList.remove('is-disabled');
+  range.disabled = false;
+  range.max = String(cfg.max);
+  const size = getInlineEditFontSize(loadHome(), activeInlineEdit.key);
+  range.value = String(size);
+  valueEl.textContent = String(size);
+}
+
+function applyInlineTextSize(rawSize) {
+  if (!activeInlineEdit) return;
+  const key = activeInlineEdit.key;
+  const cfg = INLINE_EDIT_SIZE_FIELDS[key];
+  if (!cfg) return;
+
+  const home = loadHome();
+  const size = setInlineEditFontSize(home, key, rawSize);
+  if (size == null) return;
+  saveHome(home);
+  activeInlineEdit.el.style.fontSize = size + 'px';
+
+  const range = document.getElementById('inlineTextSize');
+  const valueEl = document.getElementById('inlineTextSizeValue');
+  if (range) range.value = String(size);
+  if (valueEl) valueEl.textContent = String(size);
+}
+
 function clampNumber(value, min, max) {
   const num = Number(value);
   if (!Number.isFinite(num)) return min;
@@ -718,6 +800,11 @@ let colorPickerSyncing = false;
 function getHslaPopoverEls() {
   return {
     popover: document.getElementById('hslaPopover'),
+    svWrap: document.getElementById('colorSvWrap'),
+    svBase: document.getElementById('colorSvBase'),
+    svCursor: document.getElementById('colorSvCursor'),
+    hueWrap: document.getElementById('colorHueWrap'),
+    hueCursor: document.getElementById('colorHueCursor'),
     preview: document.getElementById('hslaPreview'),
     eyedropper: document.getElementById('colorEyedropper'),
     hex: document.getElementById('colorHexInput'),
@@ -740,6 +827,35 @@ function getHslaPopoverEls() {
     vNum: document.getElementById('colorVNum'),
     aNumHsva: document.getElementById('colorANumHsva'),
   };
+}
+
+function hsvPureHueCss(h) {
+  const rgb = hsvToRgb(h, 100, 100);
+  return 'rgb(' + rgb.r + ', ' + rgb.g + ', ' + rgb.b + ')';
+}
+
+function updateVisualPickerFromState() {
+  const els = getHslaPopoverEls();
+  if (!els.svWrap) return;
+  const hsv = rgbToHsv(colorPickerState.r, colorPickerState.g, colorPickerState.b);
+
+  if (els.svBase) {
+    els.svBase.style.backgroundColor = hsvPureHueCss(hsv.h);
+  }
+  if (els.svCursor) {
+    els.svCursor.style.left = hsv.s + '%';
+    els.svCursor.style.top = (100 - hsv.v) + '%';
+  }
+  if (els.hueCursor) {
+    els.hueCursor.style.top = (hsv.h / 360 * 100) + '%';
+  }
+  if (els.svWrap) {
+    els.svWrap.setAttribute('aria-valuenow', String(hsv.s));
+    els.svWrap.setAttribute('aria-valuetext', 'S ' + hsv.s + '%, V ' + hsv.v + '%');
+  }
+  if (els.hueWrap) {
+    els.hueWrap.setAttribute('aria-valuenow', String(hsv.h));
+  }
 }
 
 function updateHslaSwatch(field) {
@@ -790,6 +906,19 @@ function syncColorPickerUiFromState() {
   if (els.bNum) els.bNum.value = String(state.b);
   if (els.aNumRgba) els.aNumRgba.value = String(alphaPct);
 
+  if (els.rRange) {
+    els.rRange.style.background =
+      'linear-gradient(to right, rgb(0,' + state.g + ',' + state.b + '), rgb(255,' + state.g + ',' + state.b + '))';
+  }
+  if (els.gRange) {
+    els.gRange.style.background =
+      'linear-gradient(to right, rgb(' + state.r + ',0,' + state.b + '), rgb(' + state.r + ',255,' + state.b + '))';
+  }
+  if (els.bRange) {
+    els.bRange.style.background =
+      'linear-gradient(to right, rgb(' + state.r + ',' + state.g + ',0), rgb(' + state.r + ',' + state.g + ',255))';
+  }
+
   if (els.hRange) els.hRange.value = String(hsv.h);
   if (els.sRange) els.sRange.value = String(hsv.s);
   if (els.vRange) els.vRange.value = String(hsv.v);
@@ -805,6 +934,7 @@ function syncColorPickerUiFromState() {
       'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)';
   }
 
+  updateVisualPickerFromState();
   colorPickerSyncing = false;
 }
 
@@ -864,12 +994,83 @@ function updateColorFromHexInput(commit) {
   applyColorPickerState(!!commit);
 }
 
+function updateColorFromVisualSv(clientX, clientY, commit) {
+  const els = getHslaPopoverEls();
+  if (!els.svWrap) return;
+  const rect = els.svWrap.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const s = clampNumber(((clientX - rect.left) / rect.width) * 100, 0, 100);
+  const v = clampNumber((1 - (clientY - rect.top) / rect.height) * 100, 0, 100);
+  const hsv = rgbToHsv(colorPickerState.r, colorPickerState.g, colorPickerState.b);
+  const rgb = hsvToRgb(hsv.h, s, v);
+  colorPickerState = { r: rgb.r, g: rgb.g, b: rgb.b, a: colorPickerState.a };
+  applyColorPickerState(!!commit);
+}
+
+function updateColorFromVisualHue(clientY, commit) {
+  const els = getHslaPopoverEls();
+  if (!els.hueWrap) return;
+  const rect = els.hueWrap.getBoundingClientRect();
+  if (!rect.height) return;
+  const h = clampNumber(((clientY - rect.top) / rect.height) * 360, 0, 360);
+  const hsv = rgbToHsv(colorPickerState.r, colorPickerState.g, colorPickerState.b);
+  const rgb = hsvToRgb(h, hsv.s, hsv.v);
+  colorPickerState = { r: rgb.r, g: rgb.g, b: rgb.b, a: colorPickerState.a };
+  applyColorPickerState(!!commit);
+}
+
+function bindVisualColorDrag(targetEl, onMove, onEnd) {
+  if (!targetEl) return;
+  let dragging = false;
+
+  function handleMove(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    onMove(e.clientX, e.clientY, false);
+  }
+
+  function stopDrag(e) {
+    if (!dragging) return;
+    dragging = false;
+    document.removeEventListener('pointermove', handleMove);
+    document.removeEventListener('pointerup', stopDrag);
+    document.removeEventListener('pointercancel', stopDrag);
+    if (e) onMove(e.clientX, e.clientY, true);
+    else onEnd(true);
+  }
+
+  targetEl.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragging = true;
+    targetEl.setPointerCapture(e.pointerId);
+    onMove(e.clientX, e.clientY, false);
+    document.addEventListener('pointermove', handleMove);
+    document.addEventListener('pointerup', stopDrag);
+    document.addEventListener('pointercancel', stopDrag);
+  });
+}
+
+function bindVisualColorPicker() {
+  const els = getHslaPopoverEls();
+  bindVisualColorDrag(els.svWrap, function (x, y, commit) {
+    updateColorFromVisualSv(x, y, commit);
+  }, function (commit) {
+    applyColorPickerState(commit);
+  });
+  bindVisualColorDrag(els.hueWrap, function (_x, y, commit) {
+    updateColorFromVisualHue(y, commit);
+  }, function (commit) {
+    applyColorPickerState(commit);
+  });
+}
+
 function positionHslaPopover(anchor) {
   const els = getHslaPopoverEls();
   if (!els.popover || !anchor) return;
   const pad = 8;
-  const width = els.popover.offsetWidth || 300;
-  const height = els.popover.offsetHeight || 360;
+  const width = els.popover.offsetWidth || 280;
+  const height = els.popover.offsetHeight || 480;
   const rect = anchor.getBoundingClientRect();
   let left = rect.left;
   let top = rect.bottom + pad;
@@ -949,6 +1150,8 @@ function bindHslaPickers() {
       pickColorFromScreen();
     });
   }
+
+  bindVisualColorPicker();
 
   bindPair(els.rRange, els.rNum, updateColorFromRgbaFields, function () {
     updateColorFromRgbaFields('range');
@@ -2883,6 +3086,7 @@ function toggleEditMode() {
   renderCards(loadCards());
   renderClosingDevTeam('closing', home);
   if (home.hasClosing2) renderClosingDevTeam('closing2', home);
+  syncInlineTextSizeControl();
 }
 
 /* ===== תצוגה מקדימה חיה ===== */
@@ -3957,7 +4161,10 @@ function normalizeHeader(header, fallbackTitle) {
   return {
     layout: 'hero',
     height: clampHeaderHeight(source.height != null ? source.height : defaults.height),
-    bgOpacity: clampBgOpacity(source.bgOpacity != null ? source.bgOpacity : defaults.bgOpacity),
+    bgOpacity: clampBgOpacity(
+      source.bgOpacity != null ? source.bgOpacity : defaults.bgOpacity,
+      defaults.bgOpacity
+    ),
     bgImage: source.bgImage || '',
     artSrc: source.artSrc || '',
     artSide: 'left',
@@ -4094,6 +4301,7 @@ function loadHome() {
   const saved = localStorage.getItem(HOME_STORAGE_KEY);
   let home = Object.assign({}, DEFAULT_HOME);
   home.header = normalizeHeader(DEFAULT_HOME.header, DEFAULT_HOME.title);
+  home.floatMenu = normalizeFloatMenu(home.floatMenu, home);
 
   if (saved) {
     try {
@@ -4103,7 +4311,11 @@ function loadHome() {
       home.intro2BgOpacity = migrateBgOpacity(parsed, 'intro2');
       home.closingBgOpacity = migrateBgOpacity(parsed, 'closing');
       home.closing2BgOpacity = migrateBgOpacity(parsed, 'closing2');
-      home.hasIntro = home.hasIntro !== false;
+      if (Object.prototype.hasOwnProperty.call(parsed, 'hasIntro')) {
+        home.hasIntro = !!parsed.hasIntro;
+      } else {
+        home.hasIntro = true;
+      }
       home.hasIntro2 = !!home.hasIntro2;
       home.hasClosing2 = !!home.hasClosing2;
       home.header = buildHomeHeader(parsed);
@@ -4125,6 +4337,7 @@ function loadHome() {
     } catch {
       home = Object.assign({}, DEFAULT_HOME);
       home.header = normalizeHeader(DEFAULT_HOME.header, DEFAULT_HOME.title);
+      home.floatMenu = normalizeFloatMenu(home.floatMenu, home);
     }
   }
   return home;
@@ -4134,9 +4347,10 @@ function migrateBgOpacity(parsed, kind) {
   const opacityKey = kind + 'BgOpacity';
   const hasBgKey = kind === 'title' ? 'titleHasBg' : kind + 'HasBg';
   const noBgKey = kind === 'title' ? 'titleNoBg' : kind + 'NoBg';
+  const fallback = defaultBgOpacityForKind(kind);
 
   if (Object.prototype.hasOwnProperty.call(parsed, opacityKey)) {
-    return clampBgOpacity(parsed[opacityKey]);
+    return clampBgOpacity(parsed[opacityKey], fallback);
   }
   if (Object.prototype.hasOwnProperty.call(parsed, hasBgKey)) {
     return parsed[hasBgKey] ? 100 : 0;
@@ -4144,12 +4358,17 @@ function migrateBgOpacity(parsed, kind) {
   if (Object.prototype.hasOwnProperty.call(parsed, noBgKey)) {
     return parsed[noBgKey] ? 0 : 100;
   }
-  return 100;
+  return fallback;
 }
 
-function clampBgOpacity(value) {
+function defaultBgOpacityForKind(kind) {
+  return kind === 'title' ? DEFAULT_HOME.header.bgOpacity : 100;
+}
+
+function clampBgOpacity(value, fallback) {
+  if (fallback == null) fallback = 100;
   const num = Number(value);
-  if (!Number.isFinite(num)) return 100;
+  if (!Number.isFinite(num)) return fallback;
   return Math.min(100, Math.max(0, Math.round(num)));
 }
 
@@ -4235,7 +4454,7 @@ function getSectionHeightEl(kind) {
 }
 
 function homeHasIntro(home) {
-  return !home || home.hasIntro !== false;
+  return !!(home && home.hasIntro);
 }
 
 function getSectionRootEl(kind) {
@@ -5729,14 +5948,18 @@ function defaultFloatMenuSectionItems(home) {
 function normalizeFloatMenu(raw, home) {
   const defaults = DEFAULT_HOME.floatMenu;
   const src = raw && typeof raw === 'object' ? raw : defaults;
-  const items = Array.isArray(src.items)
+  let items = Array.isArray(src.items)
     ? src.items.map(normalizeFloatMenuItem).filter(function (item) { return item.label; })
     : [];
   const tags = Array.isArray(src.tags)
     ? src.tags.map(normalizeFloatMenuItem).filter(function (item) { return item.label; })
     : [];
+  const enabled = Object.prototype.hasOwnProperty.call(src, 'enabled') ? !!src.enabled : !!defaults.enabled;
+  if (enabled && !items.length) {
+    items = defaultFloatMenuSectionItems(home);
+  }
   return {
-    enabled: !!src.enabled,
+    enabled: enabled,
     side: src.side === 'end' ? 'end' : 'start',
     title: String(src.title == null ? defaults.title : src.title).trim().slice(0, 40),
     items: items,
@@ -5795,21 +6018,18 @@ function syncFloatMenuAnchor() {
   if (aside.hidden || isFloatMenuCompactViewport()) {
     aside.style.top = '';
     aside.style.maxHeight = '';
+    document.body.style.removeProperty('--float-menu-sticky-top');
     return;
   }
 
-  const header = document.getElementById('homeHeader');
   const toolbar = document.getElementById('siteToolbar');
-  const headerBottom = (header && !header.hidden)
-    ? header.getBoundingClientRect().bottom
-    : 0;
-  let minTop = 16;
+  let top = 16;
   if (!IS_USER_MODE && toolbar && !toolbar.hidden) {
-    minTop = Math.max(minTop, Math.round(toolbar.getBoundingClientRect().bottom) + 8);
+    top = Math.max(top, Math.round(toolbar.getBoundingClientRect().height) + 8);
   }
-  const top = Math.max(minTop, Math.round(headerBottom) + 12);
-  aside.style.top = top + 'px';
-  aside.style.maxHeight = 'calc(100vh - ' + (top + 16) + 'px)';
+  document.body.style.setProperty('--float-menu-sticky-top', top + 'px');
+  aside.style.top = '';
+  aside.style.maxHeight = '';
 }
 
 function syncFloatMenuFromViewport() {
@@ -5887,10 +6107,10 @@ function bindFloatMenuInteractions() {
     floatMenuSpyBound = true;
     window.addEventListener('scroll', syncFloatMenuFromViewport, { passive: true });
     window.addEventListener('resize', syncFloatMenuFromViewport);
-    const header = document.getElementById('homeHeader');
-    if (header && typeof ResizeObserver === 'function') {
+    const toolbar = document.getElementById('siteToolbar');
+    if (toolbar && typeof ResizeObserver === 'function') {
       const observer = new ResizeObserver(function () { syncFloatMenuAnchor(); });
-      observer.observe(header);
+      observer.observe(toolbar);
     }
   }
 }
@@ -6294,7 +6514,7 @@ function getInlineEditSpec(el) {
 
   const headerFields = {
     'header.kicker': { field: 'kicker', maxLen: 80, input: 'homeHeaderKicker', richText: true },
-    'header.title': { field: 'title', maxLen: 80, input: 'homeHeaderTitle', richText: true },
+    'header.title': { field: 'title', maxLen: 80, richText: true },
     'header.body': { field: 'body', maxLen: 400, input: 'homeHeaderBody', multiline: true, richText: true },
     'header.buttonText': { field: 'buttonText', maxLen: 40, input: 'homeHeaderButtonText' },
     'header.linkText': { field: 'linkText', maxLen: 40, input: 'homeHeaderLinkText' },
@@ -6393,6 +6613,7 @@ function cancelInlineEdit() {
   const spec = activeInlineEdit;
   finishInlineEditDom(spec.el);
   activeInlineEdit = null;
+  syncInlineTextSizeControl();
   const home = loadHome();
   if (String(spec.key || '').indexOf('header.') === 0) renderHomeHeader(home);
   else if (String(spec.key || '').indexOf('floatMenu.') === 0) renderFloatMenu(home);
@@ -6429,6 +6650,7 @@ function commitInlineEdit() {
 
   finishInlineEditDom(spec.el);
   activeInlineEdit = null;
+  syncInlineTextSizeControl();
 
   if (String(spec.key || '').indexOf('header.') === 0) {
     renderHomeHeader(home);
@@ -6472,6 +6694,7 @@ function startInlineEdit(el) {
     sel.removeAllRanges();
     sel.addRange(range);
   } catch (_) {}
+  syncInlineTextSizeControl();
 }
 
 function bindInlineEditing() {
@@ -6678,7 +6901,7 @@ function readHeaderDraftFromEditor() {
   const heightEl = document.getElementById('homeFieldHeaderHeight');
   const opacityEl = document.getElementById('homeFieldBgOpacity');
   if (heightEl) homeEditHeaderDraft.height = clampHeaderHeight(heightEl.value);
-  if (opacityEl) homeEditHeaderDraft.bgOpacity = clampBgOpacity(opacityEl.value);
+  if (opacityEl) homeEditHeaderDraft.bgOpacity = clampBgOpacity(opacityEl.value, DEFAULT_HOME.header.bgOpacity);
   homeEditHeaderDraft.bgImage = homeEditImageData || '';
 
   homeEditHeaderDraft.artSide = 'left';
@@ -6686,9 +6909,6 @@ function readHeaderDraftFromEditor() {
   homeEditHeaderDraft.kicker = readHeaderField('homeHeaderKicker').trim().slice(0, 80);
   homeEditHeaderDraft.kickerSize = clampFontSize(readHeaderField('homeHeaderKickerSize'), 15, 32);
   homeEditHeaderDraft.kickerColor = normalizeTextColor(readHeaderField('homeHeaderKickerColor'), HEADER_ACCENT);
-  homeEditHeaderDraft.title = readHeaderField('homeHeaderTitle').trim().slice(0, 80);
-  homeEditHeaderDraft.titleSize = clampFontSize(readHeaderField('homeHeaderTitleSize'), 44, 72);
-  homeEditHeaderDraft.titleColor = normalizeTextColor(readHeaderField('homeHeaderTitleColor'), HEADER_INK);
   homeEditHeaderDraft.body = readHeaderField('homeHeaderBody').slice(0, 400);
   homeEditHeaderDraft.bodySize = clampFontSize(readHeaderField('homeHeaderBodySize'), 17, 32);
   homeEditHeaderDraft.bodyColor = normalizeTextColor(readHeaderField('homeHeaderBodyColor'), HEADER_INK);
@@ -7284,17 +7504,6 @@ function homeHeaderFieldsHtml(header) {
       ) +
     '</div>' +
     '<div class="home-header-editor-item">' +
-      '<div class="home-header-editor-item-head"><strong>כותרת</strong></div>' +
-      '<label for="homeHeaderTitle">טקסט</label>' +
-      '<input type="text" id="homeHeaderTitle" maxlength="80" value="' + escapeHtml(header.title || '') + '">' +
-      homeStyleRowHtml(
-        homeTextSizeHtml('homeHeaderTitleSize', header.titleSize, 44, 'גודל כותרת', 72),
-        homeColorChipHtml('homeHeaderTitleColor', header.titleColor, {
-          label: 'צבע כותרת', shortLabel: 'כותרת', ico: 'text',
-        })
-      ) +
-    '</div>' +
-    '<div class="home-header-editor-item">' +
       '<div class="home-header-editor-item-head"><strong>פסקה</strong></div>' +
       '<label for="homeHeaderBody">טקסט</label>' +
       '<textarea id="homeHeaderBody" rows="3" maxlength="400">' + escapeHtml(header.body || '') + '</textarea>' +
@@ -7375,10 +7584,8 @@ function bindHomeHeaderEditor() {
   }
 
   bindHomeTextSizeField('homeHeaderKickerSize', 32);
-  bindHomeTextSizeField('homeHeaderTitleSize', 72);
   bindHomeTextSizeField('homeHeaderBodySize', 32);
   bindHomeTextColorField('homeHeaderKickerColor');
-  bindHomeTextColorField('homeHeaderTitleColor');
   bindHomeTextColorField('homeHeaderBodyColor');
   bindHomeTextColorField('homeHeaderAccentColor');
   bindHomeTextColorField('homeHeaderButtonBg');
@@ -8310,6 +8517,13 @@ bindHslaPickers();
 setupHslaField(document.getElementById('inlineTextColorPicker'), function (hex) {
   applyInlineTextColor(hex);
 });
+(function bindInlineTextSizeControl() {
+  const range = document.getElementById('inlineTextSize');
+  if (!range) return;
+  range.addEventListener('input', function () {
+    applyInlineTextSize(range.value);
+  });
+})();
 setupHslaField(document.getElementById('siteColorPicker'), function (hex) {
   updateHomeField({ siteSecondaryColor: hex });
 });

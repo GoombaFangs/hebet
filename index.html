@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>פורטל תוכן</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=float-offset">
 </head>
 <body data-app-mode="edit">
 
@@ -29,6 +29,11 @@
         <button type="button" class="hsla-swatch" id="inlineTextColorSwatch" title="צביעת הקטע המסומן בעריכת טקסט" aria-label="צבע טקסט"></button>
         <input type="hidden" id="inlineTextColor" value="#000000">
       </div>
+      <label class="site-theme-control site-theme-size is-disabled" id="inlineTextSizeControl" for="inlineTextSize" title="גודל טקסט בעריכה ישירה">
+        <span>גודל טקסט</span>
+        <input type="range" id="inlineTextSize" min="10" max="56" step="1" value="16" disabled aria-label="גודל טקסט">
+        <strong id="inlineTextSizeValue">16</strong>
+      </label>
       <div class="hsla-field site-theme-control" id="siteColorPicker" data-hsla-for="siteSecondaryColor">
         <span>צבע אתר</span>
         <button type="button" class="hsla-swatch" id="siteColorSwatch" title="צבע משני של האתר" aria-label="צבע אתר"></button>
@@ -82,7 +87,8 @@
     <button type="button" class="home-section-edit" data-edit-home="header" hidden title="עריכת כותרת">✎</button>
   </section>
 
-  <!-- תפריט צף — מתחת לכותרת, נשאר במסך בזמן גלילה -->
+  <div class="home-main" id="homeMain">
+  <!-- תפריט צף — מיושר מתחת לכותרת, התוכן ב-offset לצדו -->
   <aside class="float-menu" id="floatMenu" hidden aria-label="תפריט צף">
     <div class="float-menu-stack">
       <div class="float-menu-card">
@@ -94,8 +100,9 @@
     </div>
   </aside>
 
+  <div class="home-main-content" id="homeMainContent">
   <!-- כותרת משנה + פתיח -->
-  <section class="home-section home-intro" id="homeIntro" data-home-section="intro">
+  <section class="home-section home-intro" id="homeIntro" data-home-section="intro" hidden>
     <div class="home-intro-main" id="homeIntroMain">
       <div class="home-section-bg home-intro-bg" id="homeIntroBg"></div>
       <div class="home-section-content">
@@ -227,6 +234,8 @@
       <button type="button" class="home-section-delete" data-delete-home="closing2" hidden title="מחיקת סגירה 2" aria-label="מחיקת סגירה 2">×</button>
     </div>
   </section>
+  </div>
+  </div>
 
   <!-- עריכת מקטע בדף הבית -->
   <div class="modal-overlay" id="homeEditOverlay" hidden>
@@ -568,72 +577,84 @@
   </button>
 
   <div class="hsla-popover" id="hslaPopover" hidden>
+    <div class="color-picker-visual">
+      <div class="color-sv-wrap" id="colorSvWrap" role="slider" aria-label="רוויה ובהירות" aria-valuemin="0" aria-valuemax="100">
+        <div class="color-sv-base" id="colorSvBase"></div>
+        <div class="color-sv-overlay-white"></div>
+        <div class="color-sv-overlay-black"></div>
+        <div class="color-sv-cursor" id="colorSvCursor"></div>
+      </div>
+      <div class="color-hue-wrap" id="colorHueWrap" role="slider" aria-label="גוון" aria-valuemin="0" aria-valuemax="360">
+        <div class="color-hue-cursor" id="colorHueCursor"></div>
+      </div>
+    </div>
+
     <div class="color-picker-top">
+      <div class="hsla-popover-preview" id="hslaPreview"></div>
       <button type="button" class="color-eyedropper" id="colorEyedropper" title="בחירת צבע מהמסך" aria-label="בחירת צבע מהמסך">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
           <path fill="currentColor" d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-3.12 3.12-1.23-1.21 1.42-1.42-1.42-1.41-6.36 6.36 1.41 1.41 1.42-1.41 1.22 1.22-6.77 6.76a3 3 0 0 0-.73 1.2l-.85 3.06a1 1 0 0 0 1.22 1.22l3.06-.85a3 3 0 0 0 1.2-.73l10.44-10.44a1 1 0 0 0 0-1.41zM7.3 18.28l-1.66.46.46-1.66 7.58-7.58 1.2 1.2-7.58 7.58z"/>
         </svg>
       </button>
-      <div class="hsla-popover-preview" id="hslaPreview"></div>
     </div>
 
     <div class="color-picker-tabs" role="tablist">
-      <button type="button" class="color-tab is-active" data-color-tab="rgba" role="tab" aria-selected="true">RGBA</button>
       <button type="button" class="color-tab" data-color-tab="hsva" role="tab" aria-selected="false">HSVA</button>
+      <button type="button" class="color-tab is-active" data-color-tab="rgba" role="tab" aria-selected="true">RGBA</button>
     </div>
 
     <div class="color-tab-panel" id="colorTabRgba" data-panel="rgba">
       <label class="color-channel">
-        <span>R</span>
-        <input type="range" id="colorRRange" min="0" max="255" step="1" value="0">
         <input type="number" id="colorRNum" min="0" max="255" step="1" value="0" inputmode="numeric">
+        <input type="range" id="colorRRange" min="0" max="255" step="1" value="0">
+        <span>R</span>
       </label>
       <label class="color-channel">
-        <span>G</span>
-        <input type="range" id="colorGRange" min="0" max="255" step="1" value="0">
         <input type="number" id="colorGNum" min="0" max="255" step="1" value="0" inputmode="numeric">
+        <input type="range" id="colorGRange" min="0" max="255" step="1" value="0">
+        <span>G</span>
       </label>
       <label class="color-channel">
-        <span>B</span>
-        <input type="range" id="colorBRange" min="0" max="255" step="1" value="0">
         <input type="number" id="colorBNum" min="0" max="255" step="1" value="0" inputmode="numeric">
+        <input type="range" id="colorBRange" min="0" max="255" step="1" value="0">
+        <span>B</span>
       </label>
       <label class="color-channel">
-        <span>A</span>
-        <input type="range" id="colorARangeRgba" min="0" max="100" step="1" value="100">
         <input type="number" id="colorANumRgba" min="0" max="100" step="1" value="100" inputmode="numeric">
+        <input type="range" id="colorARangeRgba" min="0" max="100" step="1" value="100">
+        <span>A</span>
       </label>
     </div>
 
     <div class="color-tab-panel" id="colorTabHsva" data-panel="hsva" hidden>
       <label class="color-channel">
-        <span>H</span>
-        <input type="range" id="colorHRange" class="color-hue-range" min="0" max="360" step="1" value="0">
         <input type="number" id="colorHNum" min="0" max="360" step="1" value="0" inputmode="numeric">
+        <input type="range" id="colorHRange" class="color-hue-range" min="0" max="360" step="1" value="0">
+        <span>H</span>
       </label>
       <label class="color-channel">
-        <span>S</span>
-        <input type="range" id="colorSRange" min="0" max="100" step="1" value="0">
         <input type="number" id="colorSNum" min="0" max="100" step="1" value="0" inputmode="numeric">
+        <input type="range" id="colorSRange" min="0" max="100" step="1" value="0">
+        <span>S</span>
       </label>
       <label class="color-channel">
-        <span>V</span>
-        <input type="range" id="colorVRange" min="0" max="100" step="1" value="0">
         <input type="number" id="colorVNum" min="0" max="100" step="1" value="0" inputmode="numeric">
+        <input type="range" id="colorVRange" min="0" max="100" step="1" value="0">
+        <span>V</span>
       </label>
       <label class="color-channel">
-        <span>A</span>
-        <input type="range" id="colorARangeHsva" min="0" max="100" step="1" value="100">
         <input type="number" id="colorANumHsva" min="0" max="100" step="1" value="100" inputmode="numeric">
+        <input type="range" id="colorARangeHsva" min="0" max="100" step="1" value="100">
+        <span>A</span>
       </label>
     </div>
 
     <label class="color-hex-row">
-      <span>HEX</span>
       <input type="text" id="colorHexInput" spellcheck="false" dir="ltr" maxlength="9" value="#000000">
+      <span>HEX</span>
     </label>
   </div>
 
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=float-offset"></script>
 </body>
 </html>
