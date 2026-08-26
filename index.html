@@ -24,10 +24,20 @@
       <input type="file" id="settingsLoadInput" accept=".html,text/html" hidden>
     </div>
     <div class="site-toolbar-theme">
+      <div class="hsla-field site-theme-control" id="inlineTextColorPicker" data-hsla-for="inlineTextColor">
+        <span>צבע טקסט</span>
+        <button type="button" class="hsla-swatch" id="inlineTextColorSwatch" title="צביעת הקטע המסומן בעריכת טקסט" aria-label="צבע טקסט"></button>
+        <input type="hidden" id="inlineTextColor" value="#000000">
+      </div>
       <div class="hsla-field site-theme-control" id="siteColorPicker" data-hsla-for="siteSecondaryColor">
-        <span>צבע</span>
-        <button type="button" class="hsla-swatch" id="siteColorSwatch" title="בחירת צבע" aria-label="בחירת צבע"></button>
+        <span>צבע אתר</span>
+        <button type="button" class="hsla-swatch" id="siteColorSwatch" title="צבע משני של האתר" aria-label="צבע אתר"></button>
         <input type="hidden" id="siteSecondaryColor" value="#4a7c3f">
+      </div>
+      <div class="hsla-field site-theme-control" id="siteBgColorPicker" data-hsla-for="siteBgColor">
+        <span>רקע</span>
+        <button type="button" class="hsla-swatch" id="siteBgColorSwatch" title="בחירת צבע רקע" aria-label="בחירת צבע רקע"></button>
+        <input type="hidden" id="siteBgColor" value="#F3EEE4">
       </div>
       <label class="site-theme-control site-theme-upload" for="siteBgImage">
         <span>תמונת רקע</span>
@@ -99,8 +109,13 @@
     <div class="home-section-actions">
       <button type="button" class="home-section-edit" data-edit-home="intro" hidden title="עריכת פתיח">✎</button>
       <button type="button" class="home-section-dup" data-dup-home="intro" hidden title="שכפול פתיח" aria-label="שכפול פתיח">⧉</button>
+      <button type="button" class="home-section-delete" data-delete-home="intro" hidden title="הסרת כותרת משנה ופתיח" aria-label="הסרת כותרת משנה ופתיח">×</button>
     </div>
   </section>
+
+  <button type="button" class="home-section-restore" id="homeIntroRestore" hidden>
+    + הוספת כותרת משנה ופתיח
+  </button>
 
   <!-- פתיח שני (אופציונלי) -->
   <section class="home-section home-intro" id="homeIntro2" data-home-section="intro2" hidden>

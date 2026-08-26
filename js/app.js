@@ -92,6 +92,7 @@ const DEFAULT_HOME = {
   introVideoPosY: 50,
   introVideoBgMode: 'transparent',
   introVideoBgColor: '#2f5a28',
+  hasIntro: true,
   hasIntro2: false,
   intro2Subtitle: '',
   intro2SubtitleSize: 20,
@@ -382,6 +383,138 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text || '';
   return div.innerHTML;
+}
+
+function isRichTextValue(value) {
+  return /<span[\s>]/i.test(String(value || ''));
+}
+
+function plainTextFromHtml(html) {
+  const div = document.createElement('div');
+  div.innerHTML = html || '';
+  return String(div.textContent || '').replace(/\u00a0/g, ' ').replace(/\r\n/g, '\n');
+}
+
+function sanitizeInlineColor(value) {
+  const color = String(value || '').trim();
+  if (!color || !/^[#a-z0-9(),.%\s-]+$/i.test(color)) return '';
+  return color;
+}
+
+function sanitizeInlineHtml(html) {
+  const div = document.createElement('div');
+  div.innerHTML = html || '';
+
+  function walkChildren(node) {
+    let out = '';
+    node.childNodes.forEach(function (child) { out += walkNode(child); });
+    return out;
+  }
+
+  function walkNode(node) {
+    if (node.nodeType === Node.TEXT_NODE) return escapeHtml(node.textContent);
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+    const tag = node.tagName.toLowerCase();
+    if (tag === 'br') return '<br>';
+    if (tag === 'span') {
+      const style = node.getAttribute('style') || '';
+      const colorMatch = style.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
+      const color = colorMatch ? sanitizeInlineColor(colorMatch[1]) : '';
+      if (!color) return walkChildren(node);
+      return '<span style="color:' + color + '">' + walkChildren(node) + '</span>';
+    }
+    if (tag === 'font') {
+      const color = sanitizeInlineColor(node.getAttribute('color') || '');
+      if (color) return '<span style="color:' + color + '">' + walkChildren(node) + '</span>';
+      return walkChildren(node);
+    }
+    return walkChildren(node);
+  }
+
+  return walkChildren(div);
+}
+
+function renderStoredInlineText(value, plainFallback) {
+  const raw = String(value || '');
+  if (!raw.trim()) return escapeHtml(plainFallback || '');
+  if (isRichTextValue(raw)) return sanitizeInlineHtml(raw);
+  return escapeHtml(raw);
+}
+
+let savedInlineTextSelection = null;
+
+function saveInlineTextSelection() {
+  savedInlineTextSelection = null;
+  if (!activeInlineEdit) return;
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount || sel.isCollapsed) return;
+  const range = sel.getRangeAt(0);
+  if (!activeInlineEdit.el.contains(range.commonAncestorContainer)) return;
+  savedInlineTextSelection = range.cloneRange();
+}
+
+function restoreInlineTextSelection() {
+  if (!savedInlineTextSelection || !activeInlineEdit) return false;
+  try {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedInlineTextSelection);
+    return !sel.isCollapsed;
+  } catch (_) {
+    return false;
+  }
+}
+
+function wrapRangeWithColor(range, color) {
+  const span = document.createElement('span');
+  span.style.color = color;
+  try {
+    range.surroundContents(span);
+    return;
+  } catch (_) {}
+  const fragment = range.extractContents();
+  span.appendChild(fragment);
+  range.insertNode(span);
+  range.setStartAfter(span);
+  range.collapse(true);
+  const sel = window.getSelection();
+  if (sel) {
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+}
+
+function hasActiveInlineTextSelection() {
+  if (!activeInlineEdit) return false;
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount || sel.isCollapsed) return false;
+  const range = sel.getRangeAt(0);
+  return activeInlineEdit.el.contains(range.commonAncestorContainer);
+}
+
+function applyInlineTextColor(hex) {
+  if (!activeInlineEdit) return;
+  if (!hasActiveInlineTextSelection() && !restoreInlineTextSelection()) return;
+  const el = activeInlineEdit.el;
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  if (!el.contains(range.commonAncestorContainer) || range.collapsed) return;
+
+  const color = colorToCss(hex);
+  el.focus();
+  try {
+    document.execCommand('styleWithCSS', false, true);
+    if (!document.execCommand('foreColor', false, color)) {
+      wrapRangeWithColor(range.cloneRange(), color);
+    }
+  } catch (_) {
+    wrapRangeWithColor(range.cloneRange(), color);
+  }
+  activeInlineEdit.lastGoodHtml = el.innerHTML;
+  try {
+    if (sel.rangeCount) savedInlineTextSelection = sel.getRangeAt(0).cloneRange();
+  } catch (_) {}
 }
 
 function clampNumber(value, min, max) {
@@ -761,6 +894,8 @@ function openHslaPopover(field, onChange) {
   const swatch = field.querySelector('.hsla-swatch');
   const els = getHslaPopoverEls();
   if (!input || !swatch || !els.popover) return;
+
+  if (field.id === 'inlineTextColorPicker') saveInlineTextSelection();
 
   activeHslaTarget = { field: field, input: input, onChange: onChange };
   colorPickerState = parseColorToRgba(input.value);
@@ -3968,6 +4103,7 @@ function loadHome() {
       home.intro2BgOpacity = migrateBgOpacity(parsed, 'intro2');
       home.closingBgOpacity = migrateBgOpacity(parsed, 'closing');
       home.closing2BgOpacity = migrateBgOpacity(parsed, 'closing2');
+      home.hasIntro = home.hasIntro !== false;
       home.hasIntro2 = !!home.hasIntro2;
       home.hasClosing2 = !!home.hasClosing2;
       home.header = buildHomeHeader(parsed);
@@ -4098,6 +4234,10 @@ function getSectionHeightEl(kind) {
   return null;
 }
 
+function homeHasIntro(home) {
+  return !home || home.hasIntro !== false;
+}
+
 function getSectionRootEl(kind) {
   if (kind === 'intro') return document.getElementById('homeIntro');
   if (kind === 'intro2') return document.getElementById('homeIntro2');
@@ -4121,6 +4261,8 @@ function syncHomeSectionControls(home) {
   const closing2 = document.getElementById('homeClosing2');
   const intro = document.getElementById('homeIntro');
   const closing = document.getElementById('homeClosing');
+  const introRestore = document.getElementById('homeIntroRestore');
+  const hasIntro = homeHasIntro(home);
 
   [intro, intro2, closing, closing2].forEach(function (el) {
     if (!el) return;
@@ -4128,24 +4270,31 @@ function syncHomeSectionControls(home) {
     el.style.removeProperty('opacity');
   });
 
+  if (intro) intro.hidden = !hasIntro;
   if (intro2) intro2.hidden = !home.hasIntro2;
   if (closing2) closing2.hidden = !home.hasClosing2;
+  if (introRestore) introRestore.hidden = !editMode || hasIntro || IS_USER_MODE;
 
   document.querySelectorAll('[data-dup-home]').forEach(function (btn) {
     const kind = btn.dataset.dupHome;
-    const blocked = (kind === 'intro' && home.hasIntro2) || (kind === 'closing' && home.hasClosing2);
+    const blocked = (kind === 'intro' && (!hasIntro || home.hasIntro2)) || (kind === 'closing' && home.hasClosing2);
     btn.hidden = !editMode || blocked;
   });
 
   document.querySelectorAll('[data-delete-home]').forEach(function (btn) {
     const kind = btn.dataset.deleteHome;
-    const allowed = (kind === 'intro2' && home.hasIntro2) || (kind === 'closing2' && home.hasClosing2);
+    const allowed =
+      (kind === 'intro' && hasIntro) ||
+      (kind === 'intro2' && home.hasIntro2) ||
+      (kind === 'closing2' && home.hasClosing2);
     btn.hidden = !editMode || !allowed;
   });
 
   document.querySelectorAll('[data-edit-home]').forEach(function (btn) {
     const section = btn.dataset.editHome;
-    if (section === 'intro2') {
+    if (section === 'intro') {
+      btn.hidden = !editMode || !hasIntro;
+    } else if (section === 'intro2') {
       btn.hidden = !editMode || !home.hasIntro2;
     } else if (section === 'closing2') {
       btn.hidden = !editMode || !home.hasClosing2;
@@ -4157,10 +4306,44 @@ function syncHomeSectionControls(home) {
   });
 }
 
+async function hideHomeIntro() {
+  if (!confirm('להסתיר את כותרת המשנה והפתיח?\nאפשר להחזיר אותם אחר כך ממצב עריכה.')) return;
+
+  if (editingHomeSection === 'intro') {
+    closeHomeEditor();
+  }
+
+  const sectionEl = getSectionRootEl('intro');
+  if (sectionEl) {
+    await animateElementOut(sectionEl);
+    sectionEl.classList.remove('is-removing');
+    sectionEl.style.removeProperty('opacity');
+  }
+
+  const home = loadHome();
+  home.hasIntro = false;
+  if (!saveHome(home)) {
+    alert('שגיאה בשמירה.');
+    return;
+  }
+  await renderHome();
+}
+
+async function restoreHomeIntro() {
+  const home = loadHome();
+  home.hasIntro = true;
+  if (!saveHome(home)) {
+    alert('אין מספיק מקום לשמירה.');
+    return;
+  }
+  await renderHome();
+}
+
 async function duplicateHomeSection(kind) {
   if (kind !== 'intro' && kind !== 'closing') return;
 
   const home = loadHome();
+  if (kind === 'intro' && !homeHasIntro(home)) return;
   const flag = kind === 'intro' ? 'hasIntro2' : 'hasClosing2';
   if (home[flag]) return;
 
@@ -5003,16 +5186,18 @@ function setOptionalText(el, text, maxLen) {
   if (!el) return;
   if (activeInlineEdit && activeInlineEdit.el === el) return;
   let value = text == null ? '' : String(text);
-  if (maxLen) value = value.slice(0, maxLen);
-  if (editMode && !value.trim()) {
+  const plain = isRichTextValue(value) ? plainTextFromHtml(value) : value;
+  if (maxLen && plain.length > maxLen) value = isRichTextValue(value) ? plain.slice(0, maxLen) : plain.slice(0, maxLen);
+  if (editMode && !plain.trim()) {
     el.textContent = el.getAttribute('data-inline-placeholder') || '';
     el.classList.add('is-inline-placeholder');
     el.hidden = false;
     return;
   }
   el.classList.remove('is-inline-placeholder');
-  el.textContent = value;
-  el.hidden = !value.trim();
+  if (isRichTextValue(value)) el.innerHTML = sanitizeInlineHtml(value);
+  else el.textContent = value;
+  el.hidden = !plain.trim();
 }
 
 function applyTextFontSize(el, size, fallback) {
@@ -5510,6 +5695,7 @@ function isFloatMenuSectionAvailable(sectionId, home) {
   home = home || loadHome();
   const el = getFloatMenuSectionEl(sectionId);
   if (!el || el.hidden) return false;
+  if (sectionId === 'intro' && !homeHasIntro(home)) return false;
   if (sectionId === 'intro2' && !home.hasIntro2) return false;
   if (sectionId === 'closing2' && !home.hasClosing2) return false;
   return true;
@@ -5566,7 +5752,7 @@ function visibleFloatMenuItems(items, home) {
 }
 
 function floatMenuItemButtonHtml(item, extraClass) {
-  const label = escapeHtml(item.label || '');
+  const label = renderStoredInlineText(item.label || '');
   const idAttr = ' data-fm-id="' + escapeHtml(item.id) + '"';
   const inlineAttr = editMode
     ? ' data-inline-edit="floatMenu.item" data-inline-placeholder="תווית"'
@@ -5735,14 +5921,16 @@ function renderFloatMenu(home) {
   }
 
   if (titleEl) {
-    if (editMode && !String(menu.title || '').trim()) {
+    const titlePlain = isRichTextValue(menu.title) ? plainTextFromHtml(menu.title) : String(menu.title || '');
+    if (editMode && !titlePlain.trim()) {
       titleEl.textContent = titleEl.getAttribute('data-inline-placeholder') || 'כותרת תפריט';
       titleEl.classList.add('is-inline-placeholder');
       titleEl.hidden = false;
     } else {
       titleEl.classList.remove('is-inline-placeholder');
-      titleEl.textContent = menu.title || '';
-      titleEl.hidden = !menu.title;
+      if (isRichTextValue(menu.title)) titleEl.innerHTML = sanitizeInlineHtml(menu.title);
+      else titleEl.textContent = menu.title || '';
+      titleEl.hidden = !titlePlain.trim();
     }
   }
 
@@ -5762,14 +5950,14 @@ function renderFloatMenu(home) {
 }
 
 function applySiteTheme(home) {
-  const bgColor = DEFAULT_HOME.siteBgColor;
+  const bgColor = home.siteBgColor || DEFAULT_HOME.siteBgColor;
   const bgImage = home.siteBgImage || '';
   const secondary = home.siteSecondaryColor || DEFAULT_HOME.siteSecondaryColor;
   const font = home.siteFont || DEFAULT_HOME.siteFont;
   const perRow = Math.min(6, Math.max(2, Number(home.cardsPerRow) || DEFAULT_HOME.cardsPerRow));
   const gap = Math.min(48, Math.max(4, Number(home.cardsGap) || DEFAULT_HOME.cardsGap));
 
-  document.body.style.setProperty('--site-bg-color', bgColor);
+  document.body.style.setProperty('--site-bg-color', colorToCss(bgColor));
   document.body.style.setProperty(
     '--site-bg-image',
     bgImage ? 'url(' + JSON.stringify(bgImage) + ')' : 'none'
@@ -5860,7 +6048,8 @@ async function renderHome(homeOverride, previewOptions) {
   if (home.hasClosing2) renderClosingDevTeam('closing2', home);
 
   const mediaJobs = [];
-  const kinds = ['intro', 'closing'];
+  const kinds = ['closing'];
+  if (homeHasIntro(home)) kinds.unshift('intro');
   if (home.hasIntro2) kinds.push('intro2');
   if (home.hasClosing2) kinds.push('closing2');
 
@@ -5908,7 +6097,10 @@ async function renderHome(homeOverride, previewOptions) {
 
   await Promise.all(mediaJobs);
 
-  // Clear media on hidden secondary sections
+  // Clear media on hidden sections
+  if (!homeHasIntro(home)) {
+    clearSectionMedia(document.getElementById('homeIntroBg'));
+  }
   if (!home.hasIntro2) {
     clearSectionMedia(document.getElementById('homeIntro2Bg'));
   }
@@ -5923,7 +6115,9 @@ async function renderHome(homeOverride, previewOptions) {
     return 0;
   }
 
-  setSectionBgOpacity(document.getElementById('homeIntro'), sectionDisplayOpacity('intro'));
+  if (homeHasIntro(home)) {
+    setSectionBgOpacity(document.getElementById('homeIntro'), sectionDisplayOpacity('intro'));
+  }
   setSectionBgOpacity(document.getElementById('homeClosing'), sectionDisplayOpacity('closing'));
   if (home.hasIntro2) {
     setSectionBgOpacity(document.getElementById('homeIntro2'), sectionDisplayOpacity('intro2'));
@@ -6012,20 +6206,22 @@ function renderHomeHeader(home) {
     ? '<p class="home-header-kicker' + (!kicker && editMode ? ' is-inline-placeholder' : '') + '"' +
         inlineEditAttr('header.kicker', 'תווית עליונה') +
         ' style="font-size:' + header.kickerSize + 'px;color:' + colorToCss(header.kickerColor) + ';">' +
-        escapeHtml(kicker || 'תווית עליונה') + '</p>'
+        (kicker ? renderStoredInlineText(kicker) : escapeHtml('תווית עליונה')) + '</p>'
     : '';
   const titleHtml = (title || editMode)
     ? '<h1 class="home-header-title' + (!title && editMode ? ' is-inline-placeholder' : '') + '"' +
         inlineEditAttr('header.title', 'כותרת') +
         ' style="font-size:' + header.titleSize + 'px;color:' + colorToCss(header.titleColor) + ';">' +
-        escapeHtml(title || 'כותרת') + '</h1>'
+        (title ? renderStoredInlineText(title) : escapeHtml('כותרת')) + '</h1>'
     : '';
   const bodyHtml = (body || editMode)
     ? '<p class="home-header-body' + (!body && editMode ? ' is-inline-placeholder' : '') + '"' +
         inlineEditAttr('header.body', 'פסקת טקסט') +
         ' style="font-size:' + header.bodySize + 'px;color:' + colorToCss(header.bodyColor) + ';">' +
         (body
-          ? renderAccentedText(body, header.bodyAccents, header.bodyAccentColor)
+          ? (isRichTextValue(body)
+              ? sanitizeInlineHtml(body)
+              : renderAccentedText(body, header.bodyAccents, header.bodyAccentColor))
           : escapeHtml('פסקת טקסט')) +
       '</p>'
     : '';
@@ -6078,6 +6274,7 @@ function getInlineEditSpec(el) {
       key: key,
       maxLen: 40,
       multiline: false,
+      richText: true,
       placeholder: 'תווית',
       get: function (home) {
         const menu = normalizeFloatMenu(home.floatMenu, home);
@@ -6096,9 +6293,9 @@ function getInlineEditSpec(el) {
   }
 
   const headerFields = {
-    'header.kicker': { field: 'kicker', maxLen: 80, input: 'homeHeaderKicker' },
-    'header.title': { field: 'title', maxLen: 80, input: 'homeHeaderTitle' },
-    'header.body': { field: 'body', maxLen: 400, input: 'homeHeaderBody', multiline: true },
+    'header.kicker': { field: 'kicker', maxLen: 80, input: 'homeHeaderKicker', richText: true },
+    'header.title': { field: 'title', maxLen: 80, input: 'homeHeaderTitle', richText: true },
+    'header.body': { field: 'body', maxLen: 400, input: 'homeHeaderBody', multiline: true, richText: true },
     'header.buttonText': { field: 'buttonText', maxLen: 40, input: 'homeHeaderButtonText' },
     'header.linkText': { field: 'linkText', maxLen: 40, input: 'homeHeaderLinkText' },
   };
@@ -6108,6 +6305,7 @@ function getInlineEditSpec(el) {
       key: key,
       maxLen: spec.maxLen,
       multiline: !!spec.multiline,
+      richText: !!spec.richText,
       inputId: spec.input,
       get: function (home) {
         const header = normalizeHeader(home.header, home.title);
@@ -6124,13 +6322,13 @@ function getInlineEditSpec(el) {
   }
 
   const homeFields = {
-    subtitle: { maxLen: 10, input: 'homeFieldSubtitle' },
-    introText: { maxLen: 2000, input: 'homeFieldIntro', multiline: true },
-    intro2Subtitle: { maxLen: 10, input: 'homeFieldSubtitle' },
-    intro2Text: { maxLen: 2000, input: 'homeFieldIntro', multiline: true },
-    closingText: { maxLen: 2000, input: 'homeFieldClosing', multiline: true },
-    closing2Text: { maxLen: 2000, input: 'homeFieldClosing', multiline: true },
-    'floatMenu.title': { maxLen: 40, input: 'floatMenuTitleField', homeKey: 'floatMenu' },
+    subtitle: { maxLen: 10, input: 'homeFieldSubtitle', richText: true },
+    introText: { maxLen: 2000, input: 'homeFieldIntro', multiline: true, richText: true },
+    intro2Subtitle: { maxLen: 10, input: 'homeFieldSubtitle', richText: true },
+    intro2Text: { maxLen: 2000, input: 'homeFieldIntro', multiline: true, richText: true },
+    closingText: { maxLen: 2000, input: 'homeFieldClosing', multiline: true, richText: true },
+    closing2Text: { maxLen: 2000, input: 'homeFieldClosing', multiline: true, richText: true },
+    'floatMenu.title': { maxLen: 40, input: 'floatMenuTitleField', homeKey: 'floatMenu', richText: true },
   };
   const field = homeFields[key];
   if (!field) return null;
@@ -6140,6 +6338,7 @@ function getInlineEditSpec(el) {
       key: key,
       maxLen: 40,
       multiline: false,
+      richText: true,
       inputId: 'floatMenuTitleField',
       get: function (home) {
         return String(normalizeFloatMenu(home.floatMenu, home).title || '');
@@ -6157,6 +6356,7 @@ function getInlineEditSpec(el) {
     key: key,
     maxLen: field.maxLen,
     multiline: !!field.multiline,
+    richText: !!field.richText,
     inputId: field.input,
     get: function (home) {
       return home[key] == null ? '' : String(home[key]);
@@ -6171,11 +6371,21 @@ function readInlineEditValue(el) {
   return String(el.innerText || el.textContent || '').replace(/\u00a0/g, ' ').replace(/\r\n/g, '\n');
 }
 
+function readInlineEditStoredValue(el, richText) {
+  if (!richText) return readInlineEditValue(el).trim();
+  const sanitized = sanitizeInlineHtml(el.innerHTML);
+  const plain = plainTextFromHtml(sanitized).trim();
+  if (!plain) return '';
+  if (!isRichTextValue(sanitized)) return plain;
+  return sanitized;
+}
+
 function finishInlineEditDom(el) {
   if (!el) return;
   el.removeAttribute('contenteditable');
   el.classList.remove('is-inline-editing');
   el.blur();
+  savedInlineTextSelection = null;
 }
 
 function cancelInlineEdit() {
@@ -6191,11 +6401,22 @@ function cancelInlineEdit() {
 
 function commitInlineEdit() {
   if (!activeInlineEdit) return;
-  const spec = activeInlineEdit;
-  let value = readInlineEditValue(spec.el).trim();
+  const spec = getInlineEditSpec(activeInlineEdit.el);
+  if (!spec) return;
+  let value = readInlineEditStoredValue(spec.el, spec.richText);
+  let plain = spec.richText && isRichTextValue(value) ? plainTextFromHtml(value).trim() : value.trim();
   const placeholder = spec.el.getAttribute('data-inline-placeholder') || '';
-  if (value === placeholder && spec.get(loadHome()) === '') value = '';
-  if (spec.maxLen) value = value.slice(0, spec.maxLen);
+  const stored = spec.get(loadHome());
+  const storedPlain = spec.richText && isRichTextValue(stored)
+    ? plainTextFromHtml(stored).trim()
+    : String(stored || '').trim();
+  if (plain === placeholder && storedPlain === '') {
+    value = '';
+    plain = '';
+  }
+  if (spec.maxLen && plain.length > spec.maxLen) {
+    value = spec.richText && isRichTextValue(value) ? plain.slice(0, spec.maxLen) : value.slice(0, spec.maxLen);
+  }
 
   const home = loadHome();
   spec.set(home, value);
@@ -6203,7 +6424,7 @@ function commitInlineEdit() {
 
   if (spec.inputId && editingHomeSection) {
     const input = document.getElementById(spec.inputId);
-    if (input) input.value = value;
+    if (input) input.value = isRichTextValue(value) ? plainTextFromHtml(value) : value;
   }
 
   finishInlineEditDom(spec.el);
@@ -6227,12 +6448,21 @@ function startInlineEdit(el) {
   if (activeInlineEdit) commitInlineEdit();
 
   const current = spec.get(loadHome());
-  el.textContent = current;
+  if (spec.richText && isRichTextValue(current)) {
+    el.innerHTML = sanitizeInlineHtml(current);
+  } else {
+    el.textContent = current;
+  }
   el.classList.remove('is-inline-placeholder');
   el.classList.add('is-inline-editing');
   el.setAttribute('contenteditable', 'true');
   el.hidden = false;
-  activeInlineEdit = { el: el, key: spec.key, original: current };
+  activeInlineEdit = {
+    el: el,
+    key: spec.key,
+    original: current,
+    lastGoodHtml: spec.richText ? el.innerHTML : '',
+  };
 
   el.focus();
   try {
@@ -6251,6 +6481,7 @@ function bindInlineEditing() {
   document.addEventListener('pointerdown', function (e) {
     if (!editMode || !activeInlineEdit) return;
     if (activeInlineEdit.el.contains(e.target)) return;
+    if (e.target.closest && e.target.closest('.site-toolbar, .hsla-popover')) return;
     const next = e.target.closest('[data-inline-edit]');
     const nextKey = next ? next.getAttribute('data-inline-edit') : '';
     const nextFmId = next ? next.getAttribute('data-fm-id') : '';
@@ -6303,9 +6534,15 @@ function bindInlineEditing() {
     if (!activeInlineEdit) return;
     const spec = getInlineEditSpec(activeInlineEdit.el);
     if (!spec || !spec.maxLen) return;
-    const raw = readInlineEditValue(activeInlineEdit.el);
+    const raw = spec.richText
+      ? plainTextFromHtml(activeInlineEdit.el.innerHTML)
+      : readInlineEditValue(activeInlineEdit.el);
     if (raw.length > spec.maxLen) {
-      activeInlineEdit.el.textContent = raw.slice(0, spec.maxLen);
+      if (spec.richText && activeInlineEdit.lastGoodHtml != null) {
+        activeInlineEdit.el.innerHTML = activeInlineEdit.lastGoodHtml;
+      } else {
+        activeInlineEdit.el.textContent = raw.slice(0, spec.maxLen);
+      }
       try {
         const range = document.createRange();
         range.selectNodeContents(activeInlineEdit.el);
@@ -6314,7 +6551,9 @@ function bindInlineEditing() {
         sel.removeAllRanges();
         sel.addRange(range);
       } catch (_) {}
+      return;
     }
+    if (spec.richText) activeInlineEdit.lastGoodHtml = activeInlineEdit.el.innerHTML;
   });
 }
 
@@ -6809,6 +7048,7 @@ function openHomeEditor(section) {
   unmountCardsLayoutBarFromEditor();
 
   const home = loadHome();
+  if (section === 'intro' && !homeHasIntro(home)) return;
   editingHomeSection = section;
   homeEditSnapshot = JSON.parse(JSON.stringify(home));
   homeEditCommitted = false;
@@ -7976,9 +8216,18 @@ document.querySelectorAll('[data-dup-home]').forEach(function (btn) {
 
 document.querySelectorAll('[data-delete-home]').forEach(function (btn) {
   btn.addEventListener('click', function () {
-    deleteSecondaryHomeSection(btn.dataset.deleteHome);
+    const kind = btn.dataset.deleteHome;
+    if (kind === 'intro') hideHomeIntro();
+    else deleteSecondaryHomeSection(kind);
   });
 });
+
+const homeIntroRestore = document.getElementById('homeIntroRestore');
+if (homeIntroRestore) {
+  homeIntroRestore.addEventListener('click', function () {
+    restoreHomeIntro();
+  });
+}
 
 homeEditForm.addEventListener('submit', saveHomeEditor);
 document.getElementById('homeEditCancel').addEventListener('click', closeHomeEditor);
@@ -8058,6 +8307,9 @@ detailOverlay.addEventListener('click', function (e) {
 
 bindLiveInputs();
 bindHslaPickers();
+setupHslaField(document.getElementById('inlineTextColorPicker'), function (hex) {
+  applyInlineTextColor(hex);
+});
 setupHslaField(document.getElementById('siteColorPicker'), function (hex) {
   updateHomeField({ siteSecondaryColor: hex });
 });
