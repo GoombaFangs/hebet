@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>פורטל תוכן</title>
-  <link rel="stylesheet" href="css/style.css?v=inline-header">
+  <link rel="stylesheet" href="css/style.css?v=hide-section-titles">
 </head>
 <body data-app-mode="edit">
 
@@ -38,7 +38,7 @@
       <div class="hsla-field site-theme-control" id="siteColorPicker" data-hsla-for="siteSecondaryColor">
         <span>צבע אתר</span>
         <button type="button" class="hsla-swatch" id="siteColorSwatch" title="צבע משני של האתר" aria-label="צבע אתר"></button>
-        <input type="hidden" id="siteSecondaryColor" value="#4a7c3f">
+        <input type="hidden" id="siteSecondaryColor" value="#e31c23">
       </div>
       <div class="hsla-field site-theme-control" id="siteBgColorPicker" data-hsla-for="siteBgColor">
         <span>רקע</span>
@@ -144,15 +144,25 @@
     </div>
   </section>
 
-  <!-- כרטיסי תוכן -->
-  <section class="cards-section home-section" id="cardsSection" data-home-section="cards">
-    <div class="cards-section-bg" id="cardsSectionBg" aria-hidden="true"></div>
-    <div class="cards-search-bar" id="cardsSearchBar" hidden>
-      <input type="search" id="cardsSearchInput" placeholder="הקלידו טקסט לחיפוש בכרטיסים..." autocomplete="off" dir="rtl" aria-label="חיפוש בכרטיסים">
-    </div>
-    <main class="cards-grid" id="cardsGrid"></main>
+  <!-- כרטיסי תוכן — סקשן עליון -->
+  <section class="cards-section home-section" id="cardsSectionTop" data-home-section="cardsTop">
+    <header class="cards-section-head">
+      <h2 class="cards-section-title" id="cardsTopTitle">סקשן עליון</h2>
+    </header>
+    <main class="cards-grid" id="cardsGridTop" data-cards-section="top"></main>
     <div class="home-section-actions">
-      <button type="button" class="home-section-edit" data-edit-home="cards" hidden title="עריכת כרטיסי תוכן">✎</button>
+      <button type="button" class="home-section-edit" data-edit-home="cardsTop" hidden title="עריכת סקשן עליון">✎</button>
+    </div>
+  </section>
+
+  <!-- כרטיסי תוכן — סקשן תחתון -->
+  <section class="cards-section home-section" id="cardsSectionBottom" data-home-section="cardsBottom">
+    <header class="cards-section-head">
+      <h2 class="cards-section-title" id="cardsBottomTitle">סקשן תחתון</h2>
+    </header>
+    <main class="cards-grid" id="cardsGridBottom" data-cards-section="bottom"></main>
+    <div class="home-section-actions">
+      <button type="button" class="home-section-edit" data-edit-home="cardsBottom" hidden title="עריכת סקשן תחתון">✎</button>
     </div>
   </section>
 
@@ -187,16 +197,6 @@
         <span>גודל כרטיסים</span>
         <input type="range" id="cardsFreeSize" min="8" max="40" step="1" value="18">
         <strong id="cardsFreeSizeValue">18%</strong>
-      </label>
-      <label class="cards-layout-btn cards-layout-upload" for="cardsBgImage" title="תמונת רקע למטריצה">
-        <span class="edit-ico" data-ico="image" aria-hidden="true"></span>
-        <span>רקע</span>
-        <input type="file" id="cardsBgImage" accept="image/*" hidden>
-      </label>
-      <button type="button" class="cards-layout-btn cards-layout-clear" id="cardsBgClear" hidden title="הסרת תמונת רקע">× הסרה</button>
-      <label class="cards-layout-check" for="cardsSearchEnabled" title="הפעלת חיפוש בכרטיסים">
-        <input type="checkbox" id="cardsSearchEnabled">
-        <span>חיפוש</span>
       </label>
     </div>
   </div>
@@ -261,15 +261,12 @@
     </div>
   </div>
 
-  <!-- תצוגת פרטי כרטיס — card flip -->
+  <!-- תצוגת פרטי כרטיס -->
   <div class="detail-overlay" id="detailOverlay" hidden>
     <div class="detail-fly" id="detailFly">
-      <div class="detail-flipper" id="detailFlipper">
-        <div class="detail-face detail-face--front" id="detailFront"></div>
-        <div class="detail-face detail-face--back">
-          <button type="button" class="detail-close" id="detailClose" aria-label="סגירה">×</button>
-          <div class="detail-content" id="detailContent"></div>
-        </div>
+      <div class="detail-face">
+        <button type="button" class="detail-close" id="detailClose" aria-label="סגירה">×</button>
+        <div class="detail-content" id="detailContent"></div>
       </div>
     </div>
   </div>
@@ -392,7 +389,7 @@
               <span class="field-label">סוג עיצוב</span>
               <div class="edit-seg" id="cardBgModeGroup" role="radiogroup" aria-label="סוג עיצוב">
                 <label class="edit-seg-btn" for="cardBgModeColors" title="כרטיס רגיל: חלק עליון צבעוני וגוף לבן">
-                  <input type="radio" name="cardBgMode" id="cardBgModeColors" value="colors" checked>
+                  <input type="radio" name="cardBgMode" id="cardBgModeColors" value="colors">
                   <span>קלאסי · צבעים</span>
                 </label>
                 <label class="edit-seg-btn" for="cardBgModeImage" title="כרטיס רגיל: תמונה בחלק העליון וגוף לבן">
@@ -404,7 +401,7 @@
                   <span>שטוח · צבע</span>
                 </label>
                 <label class="edit-seg-btn" for="cardBgModeSquareImage" title="משטח אחד מתמונה — מומלץ PNG עם שקיפות">
-                  <input type="radio" name="cardBgMode" id="cardBgModeSquareImage" value="squareImage">
+                  <input type="radio" name="cardBgMode" id="cardBgModeSquareImage" value="squareImage" checked>
                   <span>שטוח · ארט</span>
                 </label>
               </div>
@@ -415,13 +412,13 @@
               <label>צבע הרקע</label>
               <div class="hsla-field" id="flatBgColorPicker" data-hsla-for="flatBgColor">
                 <button type="button" class="hsla-swatch" title="בחירת צבע הרקע" aria-label="בחירת צבע הרקע"></button>
-                <span class="color-hex" id="flatBgColorHex">#f4f4f2</span>
-                <input type="hidden" id="flatBgColor" name="flatBgColor" value="#f4f4f2">
+                <span class="color-hex" id="flatBgColorHex">#ffffff</span>
+                <input type="hidden" id="flatBgColor" name="flatBgColor" value="#ffffff">
               </div>
               <p class="field-subhint">הצבע של כל המשטח השטוח</p>
             </div>
 
-            <div class="form-field form-field--full" id="flatEdgeFieldWrap" hidden>
+            <div class="form-field form-field--full" id="flatEdgeFieldWrap">
               <span class="field-label">שוליים</span>
               <div class="edit-seg" id="flatEdgeGroup" role="radiogroup" aria-label="סוג שוליים">
                 <label class="edit-seg-btn" for="flatEdgeOutline" title="קו מסביב לכרטיס">
@@ -440,7 +437,7 @@
               <p class="field-subhint">מסגרת = קו חד · זוהר = הילה רכה · בלי = ללא אפקט</p>
             </div>
 
-            <div class="form-field" id="outlineColorFieldWrap" hidden>
+            <div class="form-field" id="outlineColorFieldWrap">
               <label id="outlineColorLabel">צבע מסגרת</label>
               <div class="hsla-field" id="outlineColorPicker" data-hsla-for="outlineColor">
                 <button type="button" class="hsla-swatch" title="בחירת צבע" aria-label="בחירת צבע מסגרת או זוהר"></button>
@@ -450,13 +447,13 @@
               <p class="field-subhint" id="outlineColorHint">צבע המסגרת סביב הכרטיס</p>
             </div>
 
-            <div class="form-field form-field--full" id="outlineWidthFieldWrap" hidden>
+            <div class="form-field form-field--full" id="outlineWidthFieldWrap">
               <label for="outlineWidth" id="outlineWidthLabel">עובי מסגרת <span class="field-value" id="outlineWidthValue">4px</span></label>
-              <input type="range" id="outlineWidth" name="outlineWidth" min="1" max="20" step="1" value="4" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">
+              <input type="range" id="outlineWidth" name="outlineWidth" min="1" max="20" step="1" value="4" style="width:100%; accent-color: var(--site-secondary, #e31c23);">
               <p class="field-subhint" id="outlineWidthHint">כמה עבה תהיה המסגרת</p>
             </div>
 
-            <div class="form-field" id="primaryColorFieldWrap">
+            <div class="form-field" id="primaryColorFieldWrap" hidden>
               <label>צבע ראשי</label>
               <div class="hsla-field" id="primaryColorPicker" data-hsla-for="primaryColor">
                 <button type="button" class="hsla-swatch" title="בחירת צבע ראשי" aria-label="בחירת צבע ראשי"></button>
@@ -466,7 +463,7 @@
               <p class="field-subhint">הצבע העליון בשילוב של כרטיס קלאסי</p>
             </div>
 
-            <div class="form-field" id="secondaryColorFieldWrap">
+            <div class="form-field" id="secondaryColorFieldWrap" hidden>
               <label>צבע משני</label>
               <div class="hsla-field" id="secondaryColorPicker" data-hsla-for="secondaryColor">
                 <button type="button" class="hsla-swatch" title="בחירת צבע משני" aria-label="בחירת צבע משני"></button>
@@ -476,8 +473,8 @@
               <p class="field-subhint">הצבע הנוסף בשילוב של כרטיס קלאסי</p>
             </div>
 
-            <div class="form-field form-field--full" id="mainImageFieldWrap" hidden>
-              <label id="mainImageFieldLabel">תמונה לחלק העליון <span class="req">*</span></label>
+            <div class="form-field form-field--full" id="mainImageFieldWrap">
+              <label id="mainImageFieldLabel">תמונת ארט <span class="req">*</span></label>
               <label class="upload-box" for="mainImage">
                 <input type="file" id="mainImage" name="mainImage" accept="image/*" hidden>
                 <span class="upload-icon">🖼️</span>
@@ -487,13 +484,13 @@
               <p class="field-subhint" id="mainImageFieldHint">מומלץ PNG עם שקיפות לאלמנטים מהארט</p>
             </div>
 
-            <div class="form-field form-field--full" id="flatImagePosWrap" hidden>
+            <div class="form-field form-field--full" id="flatImagePosWrap">
               <label for="flatImageZoom">זום ארט <span class="field-value" id="flatImageZoomValue">100%</span></label>
-              <input type="range" id="flatImageZoom" name="flatImageZoom" min="50" max="200" step="5" value="100" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">
+              <input type="range" id="flatImageZoom" name="flatImageZoom" min="50" max="200" step="5" value="100" style="width:100%; accent-color: var(--site-secondary, #e31c23);">
               <label for="flatImagePosX" style="margin-top:10px;display:block;">מיקום אופקי <span class="field-value" id="flatImagePosXValue">50%</span></label>
-              <input type="range" id="flatImagePosX" name="flatImagePosX" min="0" max="100" step="1" value="50" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">
+              <input type="range" id="flatImagePosX" name="flatImagePosX" min="0" max="100" step="1" value="50" style="width:100%; accent-color: var(--site-secondary, #e31c23);">
               <label for="flatImagePosY" style="margin-top:10px;display:block;">מיקום אנכי <span class="field-value" id="flatImagePosYValue">50%</span></label>
-              <input type="range" id="flatImagePosY" name="flatImagePosY" min="0" max="100" step="1" value="50" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">
+              <input type="range" id="flatImagePosY" name="flatImagePosY" min="0" max="100" step="1" value="50" style="width:100%; accent-color: var(--site-secondary, #e31c23);">
               <p class="field-subhint">התאמת גודל ומיקום של תמונת הארט בתוך הכרטיס</p>
             </div>
 
@@ -539,7 +536,7 @@
 
             <div class="form-field form-field--full" id="iconOptionsWrap" hidden>
               <label for="iconSize">גודל אייקונים <span class="field-value" id="iconSizeValue">22px</span></label>
-              <input type="range" id="iconSize" name="iconSize" min="14" max="48" step="1" value="22" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">
+              <input type="range" id="iconSize" name="iconSize" min="14" max="48" step="1" value="22" style="width:100%; accent-color: var(--site-secondary, #e31c23);">
 
               <label class="action-check" for="iconsFree" style="margin-top:12px;">
                 <input type="checkbox" id="iconsFree" name="iconsFree">
@@ -657,6 +654,6 @@
     </label>
   </div>
 
-  <script src="js/app.js?v=inline-header"></script>
+  <script src="js/app.js?v=flat-art-default"></script>
 </body>
 </html>

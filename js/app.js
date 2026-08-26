@@ -172,7 +172,7 @@ const DEFAULT_HOME = {
   closing2DevTeamY: 78,
   siteBgColor: '#F3EEE4',
   siteBgImage: '',
-  siteSecondaryColor: '#4a7c3f',
+  siteSecondaryColor: '#e31c23',
   colorCards: false,
   siteFont: "'Segoe UI', Tahoma, Arial, sans-serif",
   cardsPerRow: 5,
@@ -182,9 +182,6 @@ const DEFAULT_HOME = {
   cardsFreeHeight: 420,
   cardsFreeSize: 18,
   cardPositions: {},
-  cardsBgImage: '',
-  cardsBgFullBleed: true,
-  cardsSearchEnabled: false,
   floatMenu: {
     enabled: true,
     side: 'start',
@@ -207,20 +204,23 @@ const GRADIENTS = [
   'linear-gradient(135deg, #2b3d1f, #5e8b3c)',
 ];
 
+const DEFAULT_CARD_BG_MODE = 'squareImage';
+
 const DEFAULT_CARDS = [
-  { id: 'card-1', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page1.html', gradient: GRADIENTS[0], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-2', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page2.html', gradient: GRADIENTS[1], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-3', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page3.html', gradient: GRADIENTS[2], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-4', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page4.html', gradient: GRADIENTS[3], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-5', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page5.html', gradient: GRADIENTS[4], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-6', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page6.html', gradient: GRADIENTS[5], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-7', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page7.html', gradient: GRADIENTS[6], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-8', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page8.html', gradient: GRADIENTS[7], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-9', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page9.html', gradient: GRADIENTS[8], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
-  { id: 'card-10', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page10.html', gradient: GRADIENTS[9], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f' },
+  { id: 'card-1', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page1.html', gradient: GRADIENTS[0], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
+  { id: 'card-2', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page2.html', gradient: GRADIENTS[1], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
+  { id: 'card-3', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page3.html', gradient: GRADIENTS[2], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
+  { id: 'card-4', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page4.html', gradient: GRADIENTS[3], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
+  { id: 'card-5', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page5.html', gradient: GRADIENTS[4], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
+  { id: 'card-6', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page6.html', gradient: GRADIENTS[5], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
+  { id: 'card-7', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page7.html', gradient: GRADIENTS[6], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
+  { id: 'card-8', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page8.html', gradient: GRADIENTS[7], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
+  { id: 'card-9', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page9.html', gradient: GRADIENTS[8], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
+  { id: 'card-10', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page10.html', gradient: GRADIENTS[9], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
 ];
 
-const cardsGrid = document.getElementById('cardsGrid');
+const cardsGridTop = document.getElementById('cardsGridTop');
+const cardsGridBottom = document.getElementById('cardsGridBottom');
 const btnNew = document.getElementById('btnNew');
 const btnEdit = document.getElementById('btnEdit');
 const btnSettings = document.getElementById('btnSettings');
@@ -241,7 +241,6 @@ let draggedElement = null;
 let currentStep = 1;
 let editingCardId = null;
 let wizardPreviewTextEdit = null;
-let cardsSearchQuery = '';
 const TOTAL_STEPS = 3;
 
 function createEmptyWizardData() {
@@ -260,9 +259,9 @@ function createEmptyWizardData() {
     logo: '',
     primaryColor: '#e87722',
     secondaryColor: '#4a7c3f',
-    outlineColor: '#e87722',
-    flatBgColor: '#f4f4f2',
-    outlineWidth: 4,
+    outlineColor: '#e31c23',
+    flatBgColor: '#ffffff',
+    outlineWidth: 2,
     flatEdge: 'outline',
     actionStyle: 'text',
     actionColor: '#e87722',
@@ -275,7 +274,7 @@ function createEmptyWizardData() {
     flatImagePosX: 50,
     flatImagePosY: 50,
     fontFamily: "'Segoe UI', Tahoma, Arial, sans-serif",
-    bgMode: 'colors',
+    bgMode: DEFAULT_CARD_BG_MODE,
     useImageBg: false,
   };
 }
@@ -332,14 +331,31 @@ function resetWizardData() {
 
 function loadCards() {
   const saved = localStorage.getItem(STORAGE_KEY);
+  let cards;
   if (saved) {
     try {
-      return JSON.parse(saved);
+      cards = JSON.parse(saved);
     } catch {
-      return [...DEFAULT_CARDS];
+      cards = [...DEFAULT_CARDS];
     }
+  } else {
+    cards = [...DEFAULT_CARDS];
   }
-  return [...DEFAULT_CARDS];
+  return normalizeStoredCards(cards);
+}
+
+function normalizeStoredCards(cards) {
+  cards = Array.isArray(cards) ? cards : [];
+  let changed = false;
+  const normalized = cards.map(function (card, index) {
+    if (card.section === 'top' || card.section === 'bottom') return card;
+    changed = true;
+    return Object.assign({}, card, {
+      section: index < Math.ceil(cards.length / 2) ? 'top' : 'bottom',
+    });
+  });
+  if (changed) saveCards(normalized);
+  return normalized;
 }
 
 function saveCards(cards) {
@@ -363,11 +379,150 @@ function createCardId() {
   return 'card-' + Date.now();
 }
 
+const CARD_SECTIONS = [
+  {
+    id: 'top',
+    editKey: 'cardsTop',
+    label: 'סקשן עליון',
+    defaultTitle: 'סקשן עליון',
+    sectionElId: 'cardsSectionTop',
+    gridElId: 'cardsGridTop',
+    titleElId: 'cardsTopTitle',
+  },
+  {
+    id: 'bottom',
+    editKey: 'cardsBottom',
+    label: 'סקשן תחתון',
+    defaultTitle: 'סקשן תחתון',
+    sectionElId: 'cardsSectionBottom',
+    gridElId: 'cardsGridBottom',
+    titleElId: 'cardsBottomTitle',
+  },
+];
+
+let activeCardsSectionId = 'top';
+
+function defaultCardsSectionConfig(overrides) {
+  return Object.assign({
+    title: '',
+    layoutMode: 'matrix',
+    cardsPerRow: 5,
+    cardsGap: 16,
+    categories: [],
+    cardPositions: {},
+    cardsFreeHeight: 420,
+    cardsFreeSize: 18,
+  }, overrides || {});
+}
+
+function getCardsSectionMeta(sectionId) {
+  return CARD_SECTIONS.find(function (row) { return row.id === sectionId; }) || CARD_SECTIONS[0];
+}
+
+function getCardsSectionIdFromEditKey(editKey) {
+  const row = CARD_SECTIONS.find(function (item) { return item.editKey === editKey; });
+  return row ? row.id : 'top';
+}
+
+function getCardsEditKeyFromSectionId(sectionId) {
+  return getCardsSectionMeta(sectionId).editKey;
+}
+
+function isCardsHomeSection(section) {
+  return section === 'cardsTop' || section === 'cardsBottom';
+}
+
+function getCardsGridEl(sectionId) {
+  return document.getElementById(getCardsSectionMeta(sectionId).gridElId);
+}
+
+function getCardsSectionEl(sectionId) {
+  return document.getElementById(getCardsSectionMeta(sectionId).sectionElId);
+}
+
+function getCardsSectionIdFromGridEl(gridEl) {
+  if (!gridEl) return activeCardsSectionId;
+  const sectionId = gridEl.dataset.cardsSection;
+  if (sectionId === 'top' || sectionId === 'bottom') return sectionId;
+  return activeCardsSectionId;
+}
+
+function forEachCardsGrid(callback) {
+  CARD_SECTIONS.forEach(function (row) {
+    const grid = getCardsGridEl(row.id);
+    if (grid) callback(grid, row.id);
+  });
+}
+
+function normalizeCardSection(card) {
+  return card && card.section === 'bottom' ? 'bottom' : 'top';
+}
+
+function getCardsForSection(cards, sectionId) {
+  return (cards || []).filter(function (card) {
+    return normalizeCardSection(card) === sectionId;
+  });
+}
+
+function ensureCardsSections(home) {
+  if (home.cardsSections && home.cardsSections.top && home.cardsSections.bottom) {
+    home.cardsSections.top = defaultCardsSectionConfig(home.cardsSections.top);
+    home.cardsSections.bottom = defaultCardsSectionConfig(home.cardsSections.bottom);
+    return home;
+  }
+
+  let legacyLayoutMode = 'matrix';
+  if (home.cardsLayoutMode === 'matrix' || home.cardsLayoutMode === 'categories' || home.cardsLayoutMode === 'freeform') {
+    legacyLayoutMode = home.cardsLayoutMode;
+  } else if (home.categoriesEnabled) {
+    legacyLayoutMode = 'categories';
+  }
+
+  const legacyTop = defaultCardsSectionConfig({
+    title: home.cardsTopTitle || 'סקשן עליון',
+    layoutMode: legacyLayoutMode,
+    cardsPerRow: home.cardsPerRow,
+    cardsGap: home.cardsGap,
+    categories: Array.isArray(home.categories) ? home.categories : [],
+    cardPositions: home.cardPositions && typeof home.cardPositions === 'object' ? home.cardPositions : {},
+    cardsFreeHeight: home.cardsFreeHeight,
+    cardsFreeSize: home.cardsFreeSize,
+  });
+
+  home.cardsSections = {
+    top: legacyTop,
+    bottom: defaultCardsSectionConfig({
+      title: home.cardsBottomTitle || 'סקשן תחתון',
+    }),
+  };
+  return home;
+}
+
+function getCardsSectionConfig(home, sectionId) {
+  home = ensureCardsSections(home || loadHome());
+  return home.cardsSections[sectionId] || home.cardsSections.top;
+}
+
+function setCardsSectionConfig(home, sectionId, patch) {
+  home = ensureCardsSections(home || loadHome());
+  home.cardsSections[sectionId] = Object.assign({}, getCardsSectionConfig(home, sectionId), patch);
+  return home;
+}
+
+function getActiveCardsSectionId() {
+  return activeCardsSectionId || 'top';
+}
+
+function setActiveCardsSectionId(sectionId) {
+  activeCardsSectionId = sectionId === 'bottom' ? 'bottom' : 'top';
+}
+
 const FLOAT_MENU_SECTIONS = [
   { id: 'header', label: 'כותרת', el: 'homeHeader' },
   { id: 'intro', label: 'פתיח', el: 'homeIntro' },
   { id: 'intro2', label: 'פתיח 2', el: 'homeIntro2' },
-  { id: 'cards', label: 'כרטיסי תוכן', el: 'cardsSection' },
+  { id: 'cardsTop', label: 'סקשן עליון', el: 'cardsSectionTop' },
+  { id: 'cardsBottom', label: 'סקשן תחתון', el: 'cardsSectionBottom' },
   { id: 'closing', label: 'סגירה', el: 'homeClosing' },
   { id: 'closing2', label: 'סגירה 2', el: 'homeClosing2' },
 ];
@@ -1270,54 +1425,8 @@ function formatDate(dateStr) {
 function formatNotesHtml(notes) {
   const text = (notes || '').slice(0, 30);
   if (!text) return '';
-  if (text.length <= 15) return highlightSearchHtml(text);
-  return highlightSearchHtml(text.slice(0, 15)) + '<br>' + highlightSearchHtml(text.slice(15));
-}
-
-function getActiveCardsSearchQuery() {
-  if (!loadHome().cardsSearchEnabled) return '';
-  return String(cardsSearchQuery || '').trim();
-}
-
-function highlightSearchHtml(text) {
-  const raw = text == null ? '' : String(text);
-  const query = getActiveCardsSearchQuery();
-  if (!query) return escapeHtml(raw);
-
-  const lower = raw.toLowerCase();
-  const q = query.toLowerCase();
-  let result = '';
-  let i = 0;
-  while (i < raw.length) {
-    const idx = lower.indexOf(q, i);
-    if (idx === -1) {
-      result += escapeHtml(raw.slice(i));
-      break;
-    }
-    result += escapeHtml(raw.slice(i, idx));
-    result += '<mark class="card-search-mark">' + escapeHtml(raw.slice(idx, idx + query.length)) + '</mark>';
-    i = idx + query.length;
-  }
-  return result;
-}
-
-function cardMatchesSearch(card) {
-  const query = getActiveCardsSearchQuery();
-  if (!query) return true;
-  const hay = [
-    card.title,
-    card.unitName,
-    card.notes,
-    card.description,
-    card.projectType,
-    card.classification,
-    card.status,
-  ].join('\n').toLowerCase();
-  return hay.indexOf(query.toLowerCase()) !== -1;
-}
-
-function getCardSearchMissClass(card) {
-  return getActiveCardsSearchQuery() && !cardMatchesSearch(card) ? ' card--search-miss' : '';
+  if (text.length <= 15) return escapeHtml(text);
+  return escapeHtml(text.slice(0, 15)) + '<br>' + escapeHtml(text.slice(15));
 }
 
 function getColorBlend(primary, secondary) {
@@ -1327,7 +1436,7 @@ function getColorBlend(primary, secondary) {
 }
 
 function getCardBgMode(card) {
-  if (!card) return 'colors';
+  if (!card) return DEFAULT_CARD_BG_MODE;
   if (
     card.bgMode === 'colors' ||
     card.bgMode === 'image' ||
@@ -1337,14 +1446,16 @@ function getCardBgMode(card) {
     return card.bgMode;
   }
   /* תאימות לכרטיסים ישנים עם useImageBg */
-  return card.useImageBg === false ? 'colors' : 'image';
+  if (card.useImageBg === true) return 'image';
+  if (card.useImageBg === false) return 'colors';
+  return DEFAULT_CARD_BG_MODE;
 }
 
 function normalizeCardBgMode(value) {
   if (value === 'image' || value === 'none' || value === 'colors' || value === 'squareImage') {
     return value;
   }
-  return 'colors';
+  return DEFAULT_CARD_BG_MODE;
 }
 
 function isFlatCardMode(mode) {
@@ -1353,7 +1464,7 @@ function isFlatCardMode(mode) {
 
 function getSelectedCardBgMode() {
   const checked = document.querySelector('input[name="cardBgMode"]:checked');
-  return normalizeCardBgMode(checked ? checked.value : 'colors');
+  return normalizeCardBgMode(checked ? checked.value : DEFAULT_CARD_BG_MODE);
 }
 
 function setCardBgModeInputs(mode) {
@@ -1481,8 +1592,8 @@ function getCardOutlineColor(card) {
 }
 
 function getCardFlatBgColor(card) {
-  if (!card) return '#f4f4f2';
-  return card.flatBgColor || '#f4f4f2';
+  if (!card) return '#ffffff';
+  return card.flatBgColor || '#ffffff';
 }
 
 function getCardOutlineWidth(card) {
@@ -1893,9 +2004,10 @@ function buildFreeLogoHtml(card) {
   );
 }
 
-function buildCardInner(card) {
-  const typeTag = card.projectType || 'מצגת';
-  const classTag = card.classification || 'שמור';
+function buildCardInner(card, options) {
+  options = options || {};
+  const showTags = options.showTags === true;
+  const showActions = options.showActions === true;
   const logoFree = isCardLogoFree(card);
   const logoHtml = (!logoFree && card.logo)
     ? '<img class="card-logo" src="' + card.logo + '" alt="">'
@@ -1903,16 +2015,19 @@ function buildCardInner(card) {
   const titleRaw = (card.title || '').slice(0, 10);
   const unitRaw = (card.unitName || '').slice(0, 10);
   const unitLine = unitRaw
-    ? '<p class="card-unit">' + highlightSearchHtml(unitRaw) + '</p>'
+    ? '<p class="card-unit">' + escapeHtml(unitRaw) + '</p>'
     : '';
   const desc = card.notes || card.description || '';
-  const tagsHtml =
-    '<div class="card-image-tags">' +
-      '<span class="card-overlay-tag">' + highlightSearchHtml(typeTag) + '</span>' +
-      '<span class="card-overlay-tag">' + highlightSearchHtml(classTag) + '</span>' +
-    '</div>';
-  const actionsHtml = buildActionButtonsHtml(card);
-  const freeIconsHtml = buildFreeIconsLayerHtml(card);
+  const tagsHtml = showTags
+    ? (
+      '<div class="card-image-tags">' +
+        '<span class="card-overlay-tag">' + escapeHtml(card.projectType || 'מצגת') + '</span>' +
+        '<span class="card-overlay-tag">' + escapeHtml(card.classification || 'שמור') + '</span>' +
+      '</div>'
+    )
+    : '';
+  const actionsHtml = showActions ? buildActionButtonsHtml(card) : '';
+  const freeIconsHtml = showActions ? buildFreeIconsLayerHtml(card) : '';
   const freeLogoHtml = buildFreeLogoHtml(card);
   const flatImageHtml = buildFlatImageHtml(card);
   const footerHtml = actionsHtml
@@ -1925,7 +2040,7 @@ function buildCardInner(card) {
       '<div class="card-flat-body">' +
         tagsHtml +
         (logoHtml ? '<div class="card-flat-logo">' + logoHtml + '</div>' : '') +
-        '<span class="card-title">' + highlightSearchHtml(titleRaw) + '</span>' +
+        '<span class="card-title">' + escapeHtml(titleRaw) + '</span>' +
         unitLine +
         '<p class="card-notes">' + formatNotesHtml(desc) + '</p>' +
       '</div>' +
@@ -1942,7 +2057,7 @@ function buildCardInner(card) {
       getCardBgPhotoHtml(card) +
       logoHtml +
       tagsHtml +
-      '<span class="card-title">' + highlightSearchHtml(titleRaw) + '</span>' +
+      '<span class="card-title">' + escapeHtml(titleRaw) + '</span>' +
     '</div>' +
     '<div class="card-body">' +
       unitLine +
@@ -1972,6 +2087,7 @@ function normalizeCategories(categories, cards) {
     return {
       id: cat.id || createCategoryId(),
       title: String(cat.title || 'קטגוריה').slice(0, 40),
+      subtitle: String(cat.subtitle || '').slice(0, 80),
       cardIds: ids,
       fontSize: clampFontSize(cat.fontSize, 22),
       color: normalizeTextColor(cat.color, '#2a3a2f'),
@@ -1981,6 +2097,12 @@ function normalizeCategories(categories, cards) {
 
 function getCategoryTitleStyle(cat) {
   const size = clampFontSize(cat && cat.fontSize, 22);
+  const color = colorToCss(normalizeTextColor(cat && cat.color, '#2a3a2f'));
+  return 'font-size:' + size + 'px;color:' + color + ';';
+}
+
+function getCategorySubtitleStyle(cat) {
+  const size = Math.max(10, Math.round(clampFontSize(cat && cat.fontSize, 22) * 0.72));
   const color = colorToCss(normalizeTextColor(cat && cat.color, '#2a3a2f'));
   return 'font-size:' + size + 'px;color:' + color + ';';
 }
@@ -1998,12 +2120,14 @@ function getUncategorizedCards(cards, categories) {
   return cards.filter(function (c) { return !assigned.has(c.id); });
 }
 
-function getCardsLayoutMode(home) {
-  home = home || loadHome();
-  if (home.cardsLayoutMode === 'matrix' || home.cardsLayoutMode === 'categories' || home.cardsLayoutMode === 'freeform') {
-    return home.cardsLayoutMode;
+function getCardsLayoutMode(home, sectionId) {
+  home = ensureCardsSections(home || loadHome());
+  sectionId = sectionId || getActiveCardsSectionId();
+  const cfg = getCardsSectionConfig(home, sectionId);
+  if (cfg.layoutMode === 'matrix' || cfg.layoutMode === 'categories' || cfg.layoutMode === 'freeform') {
+    return cfg.layoutMode;
   }
-  if (home.categoriesEnabled) return 'categories';
+  if (home.categoriesEnabled && sectionId === 'top') return 'categories';
   return 'matrix';
 }
 
@@ -2020,8 +2144,10 @@ function clampCardFreeWidth(value) {
 }
 
 function syncCategoriesToolbar(home) {
-  home = home || loadHome();
-  const mode = getCardsLayoutMode(home);
+  home = ensureCardsSections(home || loadHome());
+  const sectionId = getActiveCardsSectionId();
+  const cfg = getCardsSectionConfig(home, sectionId);
+  const mode = getCardsLayoutMode(home, sectionId);
   const modeSelect = document.getElementById('cardsLayoutMode');
   const addBtn = document.getElementById('addCategoryBtn');
   const perRowControl = document.getElementById('cardsPerRowControl');
@@ -2040,56 +2166,57 @@ function syncCategoriesToolbar(home) {
   if (freeHeightControl) freeHeightControl.hidden = mode !== 'freeform';
   if (freeSizeControl) freeSizeControl.hidden = mode !== 'freeform';
 
-  const height = clampCardsFreeHeight(home.cardsFreeHeight);
-  const size = clampCardFreeWidth(home.cardsFreeSize);
+  const height = clampCardsFreeHeight(cfg.cardsFreeHeight);
+  const size = clampCardFreeWidth(cfg.cardsFreeSize);
   if (freeHeightInput) freeHeightInput.value = String(height);
   if (freeSizeInput) freeSizeInput.value = String(size);
   if (freeHeightValue) freeHeightValue.textContent = height + 'px';
   if (freeSizeValue) freeSizeValue.textContent = size + '%';
-
-  const searchCheck = document.getElementById('cardsSearchEnabled');
-  const searchBar = document.getElementById('cardsSearchBar');
-  const searchInput = document.getElementById('cardsSearchInput');
-  if (searchCheck) searchCheck.checked = !!home.cardsSearchEnabled;
-  if (searchBar) searchBar.hidden = !home.cardsSearchEnabled;
-  if (searchInput && document.activeElement !== searchInput) {
-    searchInput.value = cardsSearchQuery;
-  }
 }
 
-function removeCardFromCategories(cardId) {
+function removeCardFromCategories(cardId, sectionId) {
   const home = loadHome();
-  if (!Array.isArray(home.categories) || !home.categories.length) return;
+  sectionId = sectionId || getCardSectionById(cardId) || 'top';
+  const cfg = getCardsSectionConfig(home, sectionId);
+  if (!Array.isArray(cfg.categories) || !cfg.categories.length) return;
   let changed = false;
-  home.categories = home.categories.map(function (cat) {
+  const categories = cfg.categories.map(function (cat) {
     const nextIds = (cat.cardIds || []).filter(function (id) { return id !== cardId; });
     if (nextIds.length !== (cat.cardIds || []).length) changed = true;
     return Object.assign({}, cat, { cardIds: nextIds });
   });
-  if (changed) saveHome(home);
+  if (changed) {
+    saveHome(setCardsSectionConfig(home, sectionId, { categories: categories }));
+  }
 }
 
-function placeCardIdAfterSource(home, sourceId, newId) {
-  if (!home || !Array.isArray(home.categories)) return false;
-  for (let i = 0; i < home.categories.length; i++) {
-    const ids = home.categories[i].cardIds || [];
+function getCardSectionById(cardId) {
+  const card = loadCards().find(function (c) { return c.id === cardId; });
+  return card ? normalizeCardSection(card) : null;
+}
+
+function placeCardIdAfterSource(home, sourceId, newId, sectionId) {
+  sectionId = sectionId || getCardSectionById(sourceId) || 'top';
+  const cfg = getCardsSectionConfig(home, sectionId);
+  if (!Array.isArray(cfg.categories)) return null;
+  for (let i = 0; i < cfg.categories.length; i++) {
+    const ids = cfg.categories[i].cardIds || [];
     const idx = ids.indexOf(sourceId);
     if (idx === -1) continue;
     ids.splice(idx + 1, 0, newId);
-    home.categories[i].cardIds = ids;
-    return true;
+    cfg.categories[i].cardIds = ids;
+    return setCardsSectionConfig(home, sectionId, { categories: cfg.categories });
   }
-  return false;
+  return null;
 }
 
 function buildCardElementHtml(card, index, options) {
   options = options || {};
   const popClass = pendingCardPopId === card.id ? ' card-pop-in' : '';
-  const missClass = getCardSearchMissClass(card);
   const flatClass = getCardShellClass(card);
   if (editMode) {
     return (
-      '<div class="card card--editing' + popClass + missClass + flatClass + '" draggable="' + (options.draggable === false ? 'false' : 'true') + '" data-id="' + card.id + '" style="animation-delay: ' + (index % 3) * 0.08 + 's; ' + getCardThemeStyle(card) + '">' +
+      '<div class="card card--editing' + popClass + flatClass + '" draggable="' + (options.draggable === false ? 'false' : 'true') + '" data-id="' + card.id + '" style="animation-delay: ' + (index % 3) * 0.08 + 's; ' + getCardThemeStyle(card) + '">' +
         '<button type="button" class="card-edit" data-id="' + card.id + '" aria-label="עריכת כרטיס" title="עריכה">✎</button>' +
         '<button type="button" class="card-duplicate" data-id="' + card.id + '" aria-label="שיכפול כרטיס" title="שיכפול">⧉</button>' +
         '<button type="button" class="card-delete" data-id="' + card.id + '" aria-label="מחיקת כרטיס">×</button>' +
@@ -2098,20 +2225,24 @@ function buildCardElementHtml(card, index, options) {
     );
   }
   return (
-    '<div class="card card--clickable' + popClass + missClass + flatClass + '" data-id="' + card.id + '" role="button" tabindex="0" style="' + getCardThemeStyle(card) + '">' +
+    '<div class="card card--clickable' + popClass + flatClass + '" data-id="' + card.id + '" role="button" tabindex="0" style="' + getCardThemeStyle(card) + '">' +
       '<button type="button" class="card-edit card-edit--quiet" data-id="' + card.id + '" aria-label="עריכת כרטיס" title="עריכה">✎</button>' +
       buildCardInner(card) +
     '</div>'
   );
 }
 
-function getCardPositionMap(home) {
-  return home.cardPositions && typeof home.cardPositions === 'object' ? home.cardPositions : {};
+function getCardPositionMap(home, sectionId) {
+  const cfg = getCardsSectionConfig(home, sectionId || getActiveCardsSectionId());
+  return cfg.cardPositions && typeof cfg.cardPositions === 'object' ? cfg.cardPositions : {};
 }
 
-function ensureCardPositions(home, cards) {
-  const positions = Object.assign({}, getCardPositionMap(home));
-  const defaultW = clampCardFreeWidth(home.cardsFreeSize);
+function ensureCardPositions(home, cards, sectionId) {
+  sectionId = sectionId || getActiveCardsSectionId();
+  home = ensureCardsSections(home);
+  const cfg = getCardsSectionConfig(home, sectionId);
+  const positions = Object.assign({}, getCardPositionMap(home, sectionId));
+  const defaultW = clampCardFreeWidth(cfg.cardsFreeSize);
   const missing = cards.filter(function (card) { return !positions[card.id]; });
   if (missing.length) {
     const cols = Math.min(4, Math.max(2, Math.ceil(Math.sqrt(cards.length || 1))));
@@ -2126,7 +2257,8 @@ function ensureCardPositions(home, cards) {
       };
     });
   }
-  home.cardPositions = positions;
+  home = setCardsSectionConfig(home, sectionId, { cardPositions: positions });
+  saveHome(home);
   return positions;
 }
 
@@ -2141,7 +2273,6 @@ function normalizeCardPosition(pos, fallbackW) {
 
 function buildFreeformCardHtml(card, pos, index) {
   const popClass = pendingCardPopId === card.id ? ' card-pop-in' : '';
-  const missClass = getCardSearchMissClass(card);
   const flatClass = getCardShellClass(card);
   const style =
     '--cx:' + pos.x + '%;--cy:' + pos.y + '%;--cw:' + pos.w + '%;' +
@@ -2151,7 +2282,7 @@ function buildFreeformCardHtml(card, pos, index) {
     : '';
   const cardHtml = editMode
     ? (
-      '<div class="card card--editing' + popClass + missClass + flatClass + '" data-id="' + card.id + '" style="' + getCardThemeStyle(card) + '">' +
+      '<div class="card card--editing' + popClass + flatClass + '" data-id="' + card.id + '" style="' + getCardThemeStyle(card) + '">' +
         '<button type="button" class="card-edit" data-id="' + card.id + '" aria-label="עריכת כרטיס" title="עריכה">✎</button>' +
         '<button type="button" class="card-duplicate" data-id="' + card.id + '" aria-label="שיכפול כרטיס" title="שיכפול">⧉</button>' +
         '<button type="button" class="card-delete" data-id="' + card.id + '" aria-label="מחיקת כרטיס">×</button>' +
@@ -2159,24 +2290,38 @@ function buildFreeformCardHtml(card, pos, index) {
       '</div>'
     )
     : (
-      '<div class="card card--clickable' + popClass + missClass + flatClass + '" data-id="' + card.id + '" role="button" tabindex="0" style="' + getCardThemeStyle(card) + '">' +
+      '<div class="card card--clickable' + popClass + flatClass + '" data-id="' + card.id + '" role="button" tabindex="0" style="' + getCardThemeStyle(card) + '">' +
         '<button type="button" class="card-edit card-edit--quiet" data-id="' + card.id + '" aria-label="עריכת כרטיס" title="עריכה">✎</button>' +
         buildCardInner(card) +
       '</div>'
     );
 
   return (
-    '<div class="card-free-wrap' + (editMode ? ' is-editable' : '') + (missClass ? ' is-search-miss' : '') + '" data-id="' + card.id + '" style="' + style + '">' +
+    '<div class="card-free-wrap' + (editMode ? ' is-editable' : '') + '" data-id="' + card.id + '" style="' + style + '">' +
       cardHtml +
       resizeHandle +
     '</div>'
   );
 }
 
-function renderFreeformCards(cards, home) {
-  const height = clampCardsFreeHeight(home.cardsFreeHeight);
-  const defaultW = clampCardFreeWidth(home.cardsFreeSize);
-  let positions = ensureCardPositions(home, cards);
+function renderCardsSectionTitle(home, sectionId) {
+  const meta = getCardsSectionMeta(sectionId);
+  const titleEl = document.getElementById(meta.titleElId);
+  const cfg = getCardsSectionConfig(home, sectionId);
+  if (!titleEl) return;
+  titleEl.textContent = (cfg.title || meta.defaultTitle).trim() || meta.defaultTitle;
+}
+
+function renderFreeformCards(cards, home, sectionId, gridEl) {
+  sectionId = sectionId || getActiveCardsSectionId();
+  gridEl = gridEl || getCardsGridEl(sectionId);
+  if (!gridEl) return;
+
+  const cfg = getCardsSectionConfig(home, sectionId);
+  const height = clampCardsFreeHeight(cfg.cardsFreeHeight);
+  const defaultW = clampCardFreeWidth(cfg.cardsFreeSize);
+  let positions = ensureCardPositions(home, cards, sectionId);
+  home = loadHome();
   let changed = false;
   Object.keys(positions).forEach(function (id) {
     if (!cards.some(function (c) { return c.id === id; })) {
@@ -2190,24 +2335,111 @@ function renderFreeformCards(cards, home) {
     if (prev.x !== next.x || prev.y !== next.y || prev.w !== next.w) changed = true;
     positions[card.id] = next;
   });
-  home.cardPositions = positions;
-  home.cardsFreeHeight = height;
-  home.cardsFreeSize = defaultW;
-  if (changed) saveHome(home);
+  if (changed) {
+    saveHome(setCardsSectionConfig(home, sectionId, {
+      cardPositions: positions,
+      cardsFreeHeight: height,
+      cardsFreeSize: defaultW,
+    }));
+  }
 
   const cardsHtml = cards.map(function (card, index) {
     return buildFreeformCardHtml(card, positions[card.id], index);
   }).join('');
 
-  cardsGrid.innerHTML =
-    '<div class="cards-freeform-canvas" id="cardsFreeformCanvas" style="--cards-free-height:' + height + 'px;">' +
+  gridEl.innerHTML =
+    '<div class="cards-freeform-canvas" id="cardsFreeformCanvas-' + sectionId + '" data-cards-section="' + sectionId + '" style="--cards-free-height:' + height + 'px;">' +
       cardsHtml +
       (editMode
-        ? '<div class="home-resize-handle cards-free-resize-handle" id="cardsFreeResizeHandle" title="גררו לשינוי גובה המרחב">' +
+        ? '<div class="home-resize-handle cards-free-resize-handle" data-cards-section="' + sectionId + '" title="גררו לשינוי גובה המרחב">' +
             '<span class="home-resize-grip"></span>' +
           '</div>'
         : '') +
     '</div>';
+}
+
+function renderCardsIntoSection(cards, home, sectionId) {
+  const gridEl = getCardsGridEl(sectionId);
+  if (!gridEl) return;
+
+  const cfg = getCardsSectionConfig(home, sectionId);
+  const sectionCards = getCardsForSection(cards, sectionId);
+  const mode = getCardsLayoutMode(home, sectionId);
+  const perRow = Math.min(6, Math.max(2, Number(cfg.cardsPerRow) || DEFAULT_HOME.cardsPerRow));
+  const gap = Math.min(48, Math.max(4, Number(cfg.cardsGap) || DEFAULT_HOME.cardsGap));
+
+  gridEl.style.setProperty('--cards-per-row', String(perRow));
+  gridEl.style.setProperty('--cards-gap', gap + 'px');
+  gridEl.classList.toggle('has-categories', mode === 'categories');
+  gridEl.classList.toggle('is-freeform', mode === 'freeform');
+  gridEl.classList.toggle('edit-mode', editMode);
+  renderCardsSectionTitle(home, sectionId);
+
+  if (mode === 'freeform') {
+    renderFreeformCards(sectionCards, home, sectionId, gridEl);
+    return;
+  }
+
+  if (mode === 'categories') {
+    const categories = normalizeCategories(cfg.categories, sectionCards);
+    let html = '';
+    categories.forEach(function (cat) {
+      html += buildCategoryBlockHtml(cat, getCardsByIds(sectionCards, cat.cardIds), { isLoose: false });
+    });
+    const loose = getUncategorizedCards(sectionCards, categories);
+    if (editMode || loose.length) {
+      html += buildCategoryBlockHtml(
+        { id: '', title: 'ללא קטגוריה' },
+        loose,
+        { isLoose: true }
+      );
+    }
+    if (!html) {
+      gridEl.classList.remove('has-categories');
+      html = sectionCards.map(function (card, index) {
+        return buildCardElementHtml(card, index);
+      }).join('');
+    }
+    gridEl.innerHTML = html;
+    return;
+  }
+
+  gridEl.innerHTML = sectionCards.map(function (card, index) {
+    return buildCardElementHtml(card, index);
+  }).join('');
+}
+
+function renderCards(cards) {
+  const home = ensureCardsSections(loadHome());
+  syncCategoriesToolbar(home);
+
+  CARD_SECTIONS.forEach(function (row) {
+    renderCardsIntoSection(cards, home, row.id);
+  });
+
+  if (editMode) {
+    let needsFreeform = false;
+    let needsCategories = false;
+    let needsDrag = false;
+    CARD_SECTIONS.forEach(function (row) {
+      const mode = getCardsLayoutMode(home, row.id);
+      if (mode === 'freeform') needsFreeform = true;
+      else {
+        needsDrag = true;
+        if (mode === 'categories') needsCategories = true;
+      }
+    });
+    if (needsFreeform) setupFreeformCardInteractions();
+    if (needsDrag) setupDragAndDrop();
+    setupDeleteButtons();
+    setupEditButtons();
+    setupDuplicateButtons();
+    if (needsCategories) setupCategoryControls();
+  } else {
+    setupCardClicks();
+    setupEditButtons();
+  }
+  pendingCardPopId = null;
 }
 
 function buildCategoryBlockHtml(cat, cards, options) {
@@ -2215,9 +2447,11 @@ function buildCategoryBlockHtml(cat, cards, options) {
   const isLoose = !!options.isLoose;
   const catId = cat.id || '';
   const titleStyle = getCategoryTitleStyle(cat);
+  const subtitleStyle = getCategorySubtitleStyle(cat);
   const fontSize = clampFontSize(cat.fontSize, 22);
   const color = normalizeTextColor(cat.color, '#2a3a2f');
   const colorFieldId = 'catColor_' + catId;
+  const subtitle = String(cat.subtitle || '');
 
   if (!editMode && !cards.length) return '';
 
@@ -2225,7 +2459,10 @@ function buildCategoryBlockHtml(cat, cards, options) {
   if (editMode && !isLoose) {
     headerHtml =
       '<header class="category-header">' +
-        '<input type="text" class="category-title-input" data-category-id="' + escapeHtml(catId) + '" value="' + escapeHtml(cat.title || 'קטגוריה') + '" maxlength="40" aria-label="שם קטגוריה" style="' + titleStyle + '">' +
+        '<div class="category-header-texts">' +
+          '<input type="text" class="category-title-input" data-category-id="' + escapeHtml(catId) + '" value="' + escapeHtml(cat.title || 'קטגוריה') + '" maxlength="40" aria-label="שם קטגוריה" style="' + titleStyle + '">' +
+          '<input type="text" class="category-subtitle-input" data-category-id="' + escapeHtml(catId) + '" value="' + escapeHtml(subtitle) + '" maxlength="80" placeholder="תיאור קצר" aria-label="תיאור קטגוריה" style="' + subtitleStyle + '">' +
+        '</div>' +
         '<div class="category-style-controls">' +
           '<label class="category-size-control" title="גודל גופן">' +
             '<span>גודל</span>' +
@@ -2254,9 +2491,15 @@ function buildCategoryBlockHtml(cat, cards, options) {
       )
       : '<header class="category-header category-header--loose" aria-hidden="true"></header>';
   } else {
+    const subtitleHtml = subtitle.trim()
+      ? '<p class="category-subtitle" style="' + subtitleStyle + '">' + escapeHtml(subtitle) + '</p>'
+      : '';
     headerHtml =
       '<header class="category-header">' +
-        '<h3 class="category-title" style="' + titleStyle + '">' + escapeHtml(cat.title || 'קטגוריה') + '</h3>' +
+        '<div class="category-header-texts">' +
+          '<h3 class="category-title" style="' + titleStyle + '">' + escapeHtml(cat.title || 'קטגוריה') + '</h3>' +
+          subtitleHtml +
+        '</div>' +
       '</header>';
   }
 
@@ -2278,84 +2521,44 @@ function buildCategoryBlockHtml(cat, cards, options) {
   );
 }
 
-function renderCards(cards) {
-  const home = loadHome();
-  const mode = getCardsLayoutMode(home);
-  cardsGrid.classList.toggle('has-categories', mode === 'categories');
-  cardsGrid.classList.toggle('is-freeform', mode === 'freeform');
-  cardsGrid.classList.toggle('edit-mode', editMode);
-  syncCategoriesToolbar(home);
-
-  if (mode === 'freeform') {
-    renderFreeformCards(cards, home);
-  } else if (mode === 'categories') {
-    const categories = normalizeCategories(home.categories, cards);
-    let html = '';
-    categories.forEach(function (cat) {
-      html += buildCategoryBlockHtml(cat, getCardsByIds(cards, cat.cardIds), { isLoose: false });
-    });
-    const loose = getUncategorizedCards(cards, categories);
-    if (editMode || loose.length) {
-      html += buildCategoryBlockHtml(
-        { id: '', title: 'ללא קטגוריה' },
-        loose,
-        { isLoose: true }
-      );
-    }
-    if (!html) {
-      cardsGrid.classList.remove('has-categories');
-      html = cards.map(function (card, index) {
-        return buildCardElementHtml(card, index);
-      }).join('');
-    }
-    cardsGrid.innerHTML = html;
-  } else {
-    cardsGrid.innerHTML = cards.map(function (card, index) {
-      return buildCardElementHtml(card, index);
-    }).join('');
-  }
-
-  if (editMode) {
-    if (mode === 'freeform') {
-      setupFreeformCardInteractions();
-      setupDeleteButtons();
-      setupEditButtons();
-      setupDuplicateButtons();
-    } else {
-      setupDragAndDrop();
-      setupDeleteButtons();
-      setupEditButtons();
-      setupDuplicateButtons();
-      if (mode === 'categories') setupCategoryControls();
-    }
-  } else {
-    setupCardClicks();
-    setupEditButtons();
-  }
-  pendingCardPopId = null;
-}
 
 /* ===== מצב עריכה / גרירה / מחיקה ===== */
 
+function mergeSectionCardOrder(allCards, sectionId, orderedSectionCards) {
+  const otherCards = allCards.filter(function (card) {
+    return normalizeCardSection(card) !== sectionId;
+  });
+  if (sectionId === 'top') return orderedSectionCards.concat(otherCards);
+  const topCards = allCards.filter(function (card) { return normalizeCardSection(card) === 'top'; });
+  return topCards.concat(orderedSectionCards);
+}
+
 function saveOrderFromDom() {
-  const home = loadHome();
+  let home = ensureCardsSections(loadHome());
   const cards = loadCards();
   const cardMap = Object.fromEntries(cards.map(function (c) { return [c.id, c]; }));
-  const mode = getCardsLayoutMode(home);
+  const gridEl = draggedElement && draggedElement.closest('.cards-grid');
+  const sectionId = getCardsSectionIdFromGridEl(gridEl);
+  const mode = getCardsLayoutMode(home, sectionId);
+  const cfg = getCardsSectionConfig(home, sectionId);
 
   if (mode !== 'categories') {
     if (mode === 'freeform') return;
-    const ids = [...cardsGrid.querySelectorAll('.card')].map(function (el) {
+    const targetGrid = gridEl || getCardsGridEl(sectionId);
+    if (!targetGrid) return;
+    const ids = [...targetGrid.querySelectorAll('.card')].map(function (el) {
       return el.dataset.id;
     });
-    saveCards(ids.map(function (id) { return cardMap[id]; }).filter(Boolean));
+    const ordered = ids.map(function (id) { return cardMap[id]; }).filter(Boolean);
+    saveCards(mergeSectionCardOrder(cards, sectionId, ordered));
     return;
   }
 
+  if (!gridEl) return;
   const allIds = [];
   const categories = [];
 
-  cardsGrid.querySelectorAll('.category-block').forEach(function (block) {
+  gridEl.querySelectorAll('.category-block').forEach(function (block) {
     const catId = block.dataset.categoryId || '';
     const ids = [...block.querySelectorAll('.card')].map(function (el) {
       return el.dataset.id;
@@ -2363,30 +2566,37 @@ function saveOrderFromDom() {
     allIds.push.apply(allIds, ids);
     if (!catId) return;
     const titleInput = block.querySelector('.category-title-input');
+    const subtitleInput = block.querySelector('.category-subtitle-input');
     const title = titleInput
       ? String(titleInput.value || '').trim().slice(0, 40) || 'קטגוריה'
       : 'קטגוריה';
+    const subtitle = subtitleInput
+      ? String(subtitleInput.value || '').trim().slice(0, 80)
+      : '';
     const sizeEl = block.querySelector('.category-font-size');
     const colorEl = block.querySelector('.category-color-input');
     categories.push({
       id: catId,
       title: title,
+      subtitle: subtitle,
       cardIds: ids,
       fontSize: clampFontSize(sizeEl ? sizeEl.value : 22, 22),
       color: normalizeTextColor(colorEl ? colorEl.value : '#2a3a2f', '#2a3a2f'),
     });
   });
 
-  home.categories = categories;
+  home = setCardsSectionConfig(home, sectionId, { categories: categories });
   saveHome(home);
-  saveCards(allIds.map(function (id) { return cardMap[id]; }).filter(Boolean));
+  const ordered = allIds.map(function (id) { return cardMap[id]; }).filter(Boolean);
+  saveCards(mergeSectionCardOrder(cards, sectionId, ordered));
 }
 
 function getCardDropContainer(el) {
-  if (!el) return cardsGrid;
+  const gridEl = el && el.closest('.cards-grid');
+  if (!gridEl) return getCardsGridEl(getActiveCardsSectionId());
   const categoryCards = el.closest('.category-cards');
   if (categoryCards) return categoryCards;
-  return cardsGrid.classList.contains('has-categories') ? null : cardsGrid;
+  return gridEl.classList.contains('has-categories') ? null : gridEl;
 }
 
 function clearCategoryEmptyPlaceholders(container) {
@@ -2407,7 +2617,7 @@ function ensureCategoryEmptyPlaceholder(container) {
 }
 
 function setupDragAndDrop() {
-  const cardElements = cardsGrid.querySelectorAll('.card--editing');
+  const cardElements = document.querySelectorAll('.cards-grid .card--editing');
 
   cardElements.forEach(function (card) {
     card.addEventListener('dragstart', function (e) {
@@ -2419,10 +2629,10 @@ function setupDragAndDrop() {
 
     card.addEventListener('dragend', function () {
       card.classList.remove('dragging');
-      cardsGrid.querySelectorAll('.category-cards.is-drop-target').forEach(function (el) {
+      document.querySelectorAll('.cards-grid .category-cards.is-drop-target').forEach(function (el) {
         el.classList.remove('is-drop-target');
       });
-      cardsGrid.querySelectorAll('.category-cards').forEach(ensureCategoryEmptyPlaceholder);
+      document.querySelectorAll('.cards-grid .category-cards').forEach(ensureCategoryEmptyPlaceholder);
       draggedElement = null;
       saveOrderFromDom();
     });
@@ -2449,7 +2659,7 @@ function setupDragAndDrop() {
     });
   });
 
-  cardsGrid.querySelectorAll('.category-cards').forEach(function (container) {
+  document.querySelectorAll('.cards-grid .category-cards').forEach(function (container) {
     container.addEventListener('dragover', function (e) {
       e.preventDefault();
       if (!draggedElement) return;
@@ -2491,7 +2701,7 @@ function setupDragAndDrop() {
 }
 
 function setupCategoryControls() {
-  cardsGrid.querySelectorAll('.category-title-input').forEach(function (input) {
+  document.querySelectorAll('.cards-grid .category-title-input').forEach(function (input) {
     input.addEventListener('click', function (e) {
       e.stopPropagation();
     });
@@ -2506,30 +2716,48 @@ function setupCategoryControls() {
     });
   });
 
-  cardsGrid.querySelectorAll('.category-delete').forEach(function (btn) {
+  document.querySelectorAll('.cards-grid .category-subtitle-input').forEach(function (input) {
+    input.addEventListener('click', function (e) {
+      e.stopPropagation();
+    });
+    input.addEventListener('change', function () {
+      saveOrderFromDom();
+    });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        input.blur();
+      }
+    });
+  });
+
+  document.querySelectorAll('.cards-grid .category-delete').forEach(function (btn) {
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
       deleteCategory(btn.dataset.categoryId);
     });
   });
 
-  cardsGrid.querySelectorAll('.category-add').forEach(function (btn) {
+  document.querySelectorAll('.cards-grid .category-add').forEach(function (btn) {
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
       addCategoryAfter(btn.dataset.categoryId || '');
     });
   });
 
-  cardsGrid.querySelectorAll('.category-font-size').forEach(function (range) {
+  document.querySelectorAll('.cards-grid .category-font-size').forEach(function (range) {
     const block = range.closest('.category-block');
     const valueEl = block && block.querySelector('.category-font-size-value');
     const titleInput = block && block.querySelector('.category-title-input');
+    const subtitleInput = block && block.querySelector('.category-subtitle-input');
 
     function applySize(raw) {
       const size = clampFontSize(raw, 22);
+      const subtitleSize = Math.max(10, Math.round(size * 0.72));
       range.value = String(size);
       if (valueEl) valueEl.textContent = String(size);
       if (titleInput) titleInput.style.fontSize = size + 'px';
+      if (subtitleInput) subtitleInput.style.fontSize = subtitleSize + 'px';
       saveOrderFromDom();
     }
 
@@ -2541,12 +2769,15 @@ function setupCategoryControls() {
     });
   });
 
-  cardsGrid.querySelectorAll('.category-color-field').forEach(function (field) {
+  document.querySelectorAll('.cards-grid .category-color-field').forEach(function (field) {
     field.dataset.hslaReady = '';
     setupHslaField(field, function (hex) {
       const block = field.closest('.category-block');
       const titleInput = block && block.querySelector('.category-title-input');
-      if (titleInput) titleInput.style.color = colorToCss(hex);
+      const subtitleInput = block && block.querySelector('.category-subtitle-input');
+      const cssColor = colorToCss(hex);
+      if (titleInput) titleInput.style.color = cssColor;
+      if (subtitleInput) subtitleInput.style.color = cssColor;
       saveOrderFromDom();
     });
   });
@@ -2556,102 +2787,128 @@ function addCategory() {
   addCategoryAfter('');
 }
 
+function updateActiveCardsSectionConfig(patch) {
+  let home = loadHome();
+  const sectionId = getActiveCardsSectionId();
+  home = setCardsSectionConfig(home, sectionId, patch);
+  if (!saveHome(home)) {
+    alert('אין מספיק מקום לשמירה.');
+    return false;
+  }
+  applySiteTheme(home);
+  renderCards(loadCards());
+  return true;
+}
+
 function addCategoryAfter(afterCategoryId) {
-  const home = loadHome();
-  const cards = loadCards();
-  home.cardsLayoutMode = 'categories';
-  home.categoriesEnabled = true;
-  home.categories = normalizeCategories(home.categories, cards);
+  let home = loadHome();
+  const sectionId = getActiveCardsSectionId();
+  const cards = getCardsForSection(loadCards(), sectionId);
+  const cfg = getCardsSectionConfig(home, sectionId);
+  const categories = normalizeCategories(cfg.categories, cards);
   const newCat = {
     id: createCategoryId(),
     title: 'קטגוריה חדשה',
+    subtitle: '',
     cardIds: [],
     fontSize: 22,
     color: '#2a3a2f',
   };
   if (afterCategoryId) {
-    const idx = home.categories.findIndex(function (cat) { return cat.id === afterCategoryId; });
-    if (idx >= 0) home.categories.splice(idx + 1, 0, newCat);
-    else home.categories.push(newCat);
+    const idx = categories.findIndex(function (cat) { return cat.id === afterCategoryId; });
+    if (idx >= 0) categories.splice(idx + 1, 0, newCat);
+    else categories.push(newCat);
   } else {
-    home.categories.push(newCat);
+    categories.push(newCat);
   }
+  home = setCardsSectionConfig(home, sectionId, {
+    layoutMode: 'categories',
+    categories: categories,
+  });
   if (!saveHome(home)) {
     alert('אין מספיק מקום לשמירה.');
     return;
   }
   syncCategoriesToolbar(home);
-  renderCards(cards);
+  renderCards(loadCards());
 }
 
 function deleteCategory(categoryId) {
   if (!categoryId) return;
   if (!confirm('למחוק את הקטגוריה? הכרטיסים יישארו בלי קטגוריה.')) return;
-  const home = loadHome();
-  const cards = loadCards();
-  home.categories = normalizeCategories(home.categories, cards).filter(function (cat) {
+  let home = loadHome();
+  const sectionId = getActiveCardsSectionId();
+  const cards = getCardsForSection(loadCards(), sectionId);
+  const cfg = getCardsSectionConfig(home, sectionId);
+  const categories = normalizeCategories(cfg.categories, cards).filter(function (cat) {
     return cat.id !== categoryId;
   });
+  home = setCardsSectionConfig(home, sectionId, { categories: categories });
   saveHome(home);
-  renderCards(cards);
+  renderCards(loadCards());
 }
 
 function saveCardFreePosition(cardId, x, y, w) {
-  const home = loadHome();
-  const positions = Object.assign({}, getCardPositionMap(home));
-  const prev = normalizeCardPosition(positions[cardId], home.cardsFreeSize);
+  let home = loadHome();
+  const sectionId = getCardSectionById(cardId) || getActiveCardsSectionId();
+  const cfg = getCardsSectionConfig(home, sectionId);
+  const positions = Object.assign({}, getCardPositionMap(home, sectionId));
+  const prev = normalizeCardPosition(positions[cardId], cfg.cardsFreeSize);
   positions[cardId] = {
     x: clampPercent(x, prev.x),
     y: clampPercent(y, prev.y),
     w: typeof w === 'number' ? clampCardFreeWidth(w) : prev.w,
   };
-  home.cardPositions = positions;
-  saveHome(home);
+  saveHome(setCardsSectionConfig(home, sectionId, { cardPositions: positions }));
 }
 
 function removeCardPosition(cardId) {
-  const home = loadHome();
-  const positions = Object.assign({}, getCardPositionMap(home));
+  let home = loadHome();
+  const sectionId = getCardSectionById(cardId) || getActiveCardsSectionId();
+  const positions = Object.assign({}, getCardPositionMap(home, sectionId));
   if (!positions[cardId]) return;
   delete positions[cardId];
-  home.cardPositions = positions;
-  saveHome(home);
+  saveHome(setCardsSectionConfig(home, sectionId, { cardPositions: positions }));
 }
 
 function placeFreeformCopyNearSource(home, sourceId, newId) {
-  const positions = Object.assign({}, getCardPositionMap(home));
+  const sectionId = getCardSectionById(sourceId) || 'top';
+  const cfg = getCardsSectionConfig(home, sectionId);
+  const positions = Object.assign({}, getCardPositionMap(home, sectionId));
   const src = positions[sourceId];
   if (!src) return false;
   positions[newId] = {
     x: clampPercent(Number(src.x) + 4, src.x),
     y: clampPercent(Number(src.y) + 4, src.y),
-    w: clampCardFreeWidth(src.w != null ? src.w : home.cardsFreeSize),
+    w: clampCardFreeWidth(src.w != null ? src.w : cfg.cardsFreeSize),
   };
-  home.cardPositions = positions;
+  saveHome(setCardsSectionConfig(home, sectionId, { cardPositions: positions }));
   return true;
 }
 
-function applyCardsFreeHeight(height) {
-  const canvas = document.getElementById('cardsFreeformCanvas');
+function applyCardsFreeHeight(height, sectionId) {
+  sectionId = sectionId || getActiveCardsSectionId();
+  const canvas = document.getElementById('cardsFreeformCanvas-' + sectionId);
   if (canvas) canvas.style.setProperty('--cards-free-height', clampCardsFreeHeight(height) + 'px');
   const valueEl = document.getElementById('cardsFreeHeightValue');
   if (valueEl) valueEl.textContent = clampCardsFreeHeight(height) + 'px';
 }
 
-function applyCardsFreeSizeToDom(size) {
+function applyCardsFreeSizeToDom(size, sectionId) {
+  sectionId = sectionId || getActiveCardsSectionId();
   const w = clampCardFreeWidth(size);
-  cardsGrid.querySelectorAll('.card-free-wrap').forEach(function (wrap) {
-    wrap.style.setProperty('--cw', w + '%');
-  });
+  const grid = getCardsGridEl(sectionId);
+  if (grid) {
+    grid.querySelectorAll('.card-free-wrap').forEach(function (wrap) {
+      wrap.style.setProperty('--cw', w + '%');
+    });
+  }
   const valueEl = document.getElementById('cardsFreeSizeValue');
   if (valueEl) valueEl.textContent = w + '%';
 }
 
 function setupFreeformCardInteractions() {
-  const canvas = document.getElementById('cardsFreeformCanvas');
-  if (!canvas) return;
-
-  cardsGrid.querySelectorAll('.card-free-wrap.is-editable').forEach(function (wrap) {
+  document.querySelectorAll('.cards-grid .card-free-wrap.is-editable').forEach(function (wrap) {
     wrap.addEventListener('pointerdown', function (e) {
       if (!editMode) return;
       if (e.button != null && e.button !== 0) return;
@@ -2663,6 +2920,8 @@ function setupFreeformCardInteractions() {
       e.stopPropagation();
 
       const cardId = wrap.dataset.id;
+      const canvas = wrap.closest('.cards-freeform-canvas');
+      if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
 
@@ -2694,7 +2953,7 @@ function setupFreeformCardInteractions() {
     });
   });
 
-  cardsGrid.querySelectorAll('.card-free-resize').forEach(function (handle) {
+  document.querySelectorAll('.cards-grid .card-free-resize').forEach(function (handle) {
     handle.addEventListener('pointerdown', function (e) {
       if (!editMode) return;
       if (e.button != null && e.button !== 0) return;
@@ -2704,11 +2963,15 @@ function setupFreeformCardInteractions() {
       const wrap = handle.closest('.card-free-wrap');
       if (!wrap) return;
       const cardId = wrap.dataset.id;
+      const canvas = wrap.closest('.cards-freeform-canvas');
+      if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
       if (!rect.width) return;
 
+      const sectionId = canvas.dataset.cardsSection || getActiveCardsSectionId();
+      const cfg = getCardsSectionConfig(loadHome(), sectionId);
       const startX = e.clientX;
-      const startW = parseFloat(String(wrap.style.getPropertyValue('--cw'))) || clampCardFreeWidth(loadHome().cardsFreeSize);
+      const startW = parseFloat(String(wrap.style.getPropertyValue('--cw'))) || clampCardFreeWidth(cfg.cardsFreeSize);
       handle.classList.add('is-resizing');
       wrap.classList.add('is-resizing');
       handle.setPointerCapture(e.pointerId);
@@ -2740,22 +3003,25 @@ function setupFreeformCardInteractions() {
     });
   });
 
-  const heightHandle = document.getElementById('cardsFreeResizeHandle');
-  if (heightHandle && heightHandle.dataset.bound !== '1') {
+  const heightHandles = document.querySelectorAll('.cards-free-resize-handle');
+  heightHandles.forEach(function (heightHandle) {
+    if (heightHandle.dataset.bound === '1') return;
     heightHandle.dataset.bound = '1';
     heightHandle.addEventListener('pointerdown', function (e) {
       if (!editMode) return;
       e.preventDefault();
       e.stopPropagation();
 
+      const sectionId = heightHandle.dataset.cardsSection || getActiveCardsSectionId();
+      const cfg = getCardsSectionConfig(loadHome(), sectionId);
       const startY = e.clientY;
-      const startH = clampCardsFreeHeight(loadHome().cardsFreeHeight);
+      const startH = clampCardsFreeHeight(cfg.cardsFreeHeight);
       heightHandle.classList.add('is-dragging');
       heightHandle.setPointerCapture(e.pointerId);
 
       function onMove(ev) {
         const next = clampCardsFreeHeight(startH + (ev.clientY - startY));
-        applyCardsFreeHeight(next);
+        applyCardsFreeHeight(next, sectionId);
         const input = document.getElementById('cardsFreeHeight');
         if (input) input.value = String(next);
       }
@@ -2767,21 +3033,21 @@ function setupFreeformCardInteractions() {
         heightHandle.removeEventListener('pointerup', onUp);
         heightHandle.removeEventListener('pointercancel', onUp);
 
-        const canvasEl = document.getElementById('cardsFreeformCanvas');
+        const canvasEl = document.getElementById('cardsFreeformCanvas-' + sectionId);
         const fromCss = canvasEl ? parseFloat(canvasEl.style.getPropertyValue('--cards-free-height')) : NaN;
-        const height = clampCardsFreeHeight(Number.isFinite(fromCss) ? fromCss : loadHome().cardsFreeHeight);
-        updateHomeField({ cardsFreeHeight: height });
+        const height = clampCardsFreeHeight(Number.isFinite(fromCss) ? fromCss : cfg.cardsFreeHeight);
+        updateActiveCardsSectionConfig({ cardsFreeHeight: height });
       }
 
       heightHandle.addEventListener('pointermove', onMove);
       heightHandle.addEventListener('pointerup', onUp);
       heightHandle.addEventListener('pointercancel', onUp);
     });
-  }
+  });
 }
 
 function setupDeleteButtons() {
-  cardsGrid.querySelectorAll('.card-delete').forEach(function (btn) {
+  document.querySelectorAll('.cards-grid .card-delete').forEach(function (btn) {
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
       deleteCard(btn.dataset.id);
@@ -2790,7 +3056,7 @@ function setupDeleteButtons() {
 }
 
 function setupEditButtons() {
-  cardsGrid.querySelectorAll('.card-edit').forEach(function (btn) {
+  document.querySelectorAll('.cards-grid .card-edit').forEach(function (btn) {
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
       e.preventDefault();
@@ -2800,7 +3066,7 @@ function setupEditButtons() {
 }
 
 function setupDuplicateButtons() {
-  cardsGrid.querySelectorAll('.card-duplicate').forEach(function (btn) {
+  document.querySelectorAll('.cards-grid .card-duplicate').forEach(function (btn) {
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
       e.preventDefault();
@@ -2826,11 +3092,13 @@ function duplicateCard(id) {
     return;
   }
 
-  const home = loadHome();
-  if (getCardsLayoutMode(home) === 'categories' && placeCardIdAfterSource(home, id, copy.id)) {
-    saveHome(home);
-  } else if (getCardsLayoutMode(home) === 'freeform' && placeFreeformCopyNearSource(home, id, copy.id)) {
-    saveHome(home);
+  let nextHome = loadHome();
+  const sectionId = normalizeCardSection(source);
+  if (getCardsLayoutMode(nextHome, sectionId) === 'categories') {
+    const placedHome = placeCardIdAfterSource(nextHome, id, copy.id, sectionId);
+    if (placedHome) nextHome = placedHome;
+  } else if (getCardsLayoutMode(nextHome, sectionId) === 'freeform') {
+    placeFreeformCopyNearSource(nextHome, id, copy.id);
   }
 
   pendingCardPopId = copy.id;
@@ -2854,7 +3122,7 @@ async function animateElementOut(el) {
 }
 
 function setupCardClicks() {
-  cardsGrid.querySelectorAll('.card--clickable').forEach(function (cardEl) {
+  document.querySelectorAll('.cards-grid .card--clickable').forEach(function (cardEl) {
     cardEl.addEventListener('click', function (e) {
       if (
         e.target.closest('.btn-view') ||
@@ -2862,18 +3130,18 @@ function setupCardClicks() {
         e.target.closest('.card-edit') ||
         e.target.closest('.card-duplicate')
       ) return;
-      openCardDetail(cardEl.dataset.id, cardEl);
+      openCardDetail(cardEl.dataset.id);
     });
 
     cardEl.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        openCardDetail(cardEl.dataset.id, cardEl);
+        openCardDetail(cardEl.dataset.id);
       }
     });
   });
 
-  cardsGrid.querySelectorAll('.btn-view, .card-action-icon[data-link]').forEach(function (btn) {
+  document.querySelectorAll('.cards-grid .btn-view, .cards-grid .card-action-icon[data-link]').forEach(function (btn) {
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
       handleCardAction(btn.dataset.link, btn.dataset.action || 'צפייה');
@@ -2881,16 +3149,12 @@ function setupCardClicks() {
   });
 }
 
-/* ===== תצוגת פרטים עם אנימציה ===== */
+/* ===== תצוגת פרטים ===== */
 
 const detailOverlay = document.getElementById('detailOverlay');
 const detailFly = document.getElementById('detailFly');
-const detailFront = document.getElementById('detailFront');
 const detailContent = document.getElementById('detailContent');
 const detailClose = document.getElementById('detailClose');
-
-let detailOriginRect = null;
-let floatTimer = null;
 
 function buildDetailHtml(card) {
   const notes = card.notes || card.description || '—';
@@ -2964,19 +3228,12 @@ function getDetailTargetRect() {
   };
 }
 
-function openCardDetail(id, cardEl) {
+function openCardDetail(id) {
   const card = loadCards().find(function (c) { return c.id === id; });
   if (!card) return;
 
-  if (floatTimer) {
-    clearTimeout(floatTimer);
-    floatTimer = null;
-  }
-
-  detailOriginRect = cardEl.getBoundingClientRect();
   const target = getDetailTargetRect();
 
-  detailFront.innerHTML = '<div class="card' + getCardShellClass(card) + '" style="' + getCardThemeStyle(card) + '">' + buildCardInner(card) + '</div>';
   detailContent.innerHTML = buildDetailHtml(card);
   detailFly.style.setProperty('--card-outline', colorToCss(getCardOutlineColor(card)));
   detailFly.style.setProperty('--card-flat-bg', colorToCss(getCardFlatBgColor(card)));
@@ -2987,7 +3244,7 @@ function openCardDetail(id, cardEl) {
   if (detailEditBtn) {
     detailEditBtn.addEventListener('click', function () {
       const id = card.id;
-      closeCardDetail(true);
+      closeCardDetail();
       openWizardForEdit(id);
     });
   }
@@ -2999,77 +3256,21 @@ function openCardDetail(id, cardEl) {
     });
   });
 
+  detailFly.style.top = target.top + 'px';
+  detailFly.style.left = target.left + 'px';
+  detailFly.style.width = target.width + 'px';
+  detailFly.style.height = target.height + 'px';
   detailOverlay.hidden = false;
-  detailFly.classList.remove('is-flipped', 'is-closing', 'is-floating');
-
-  detailFly.style.transition = 'none';
-  detailFly.style.top = detailOriginRect.top + 'px';
-  detailFly.style.left = detailOriginRect.left + 'px';
-  detailFly.style.width = detailOriginRect.width + 'px';
-  detailFly.style.height = detailOriginRect.height + 'px';
-  detailFly.style.transform = 'none';
-
-  cardEl.classList.add('card--ghost');
-
-  requestAnimationFrame(function () {
-    requestAnimationFrame(function () {
-      detailFly.style.transition = '';
-      detailFly.style.top = target.top + 'px';
-      detailFly.style.left = target.left + 'px';
-      detailFly.style.width = target.width + 'px';
-      detailFly.style.height = target.height + 'px';
-      detailFly.classList.add('is-flipped');
-
-      floatTimer = setTimeout(function () {
-        detailFly.classList.add('is-floating');
-        floatTimer = null;
-      }, 880);
-    });
-  });
 }
 
-function closeCardDetail(instant) {
+function closeCardDetail() {
   if (detailOverlay.hidden) return;
 
-  if (floatTimer) {
-    clearTimeout(floatTimer);
-    floatTimer = null;
-  }
-
-  const ghost = document.querySelector('.card--ghost');
-
-  function resetDetail() {
-    detailOverlay.hidden = true;
-    detailFly.classList.remove('is-flipped', 'is-closing', 'is-floating');
-    detailFly.style.top = '';
-    detailFly.style.left = '';
-    detailFly.style.width = '';
-    detailFly.style.height = '';
-    detailFly.style.transform = '';
-    detailFly.style.transition = '';
-    if (ghost) ghost.classList.remove('card--ghost');
-    detailOriginRect = null;
-  }
-
-  if (instant) {
-    detailFly.style.transition = 'none';
-    resetDetail();
-    return;
-  }
-
-  detailFly.classList.remove('is-floating');
-  detailFly.style.transform = 'none';
-  detailFly.classList.add('is-closing');
-  detailFly.classList.remove('is-flipped');
-
-  if (detailOriginRect) {
-    detailFly.style.top = detailOriginRect.top + 'px';
-    detailFly.style.left = detailOriginRect.left + 'px';
-    detailFly.style.width = detailOriginRect.width + 'px';
-    detailFly.style.height = detailOriginRect.height + 'px';
-  }
-
-  setTimeout(resetDetail, 880);
+  detailOverlay.hidden = true;
+  detailFly.style.top = '';
+  detailFly.style.left = '';
+  detailFly.style.width = '';
+  detailFly.style.height = '';
 }
 
 async function deleteCard(id) {
@@ -3077,12 +3278,12 @@ async function deleteCard(id) {
   const name = card ? card.title : 'כרטיס זה';
   if (!confirm('למחוק את "' + name + '"?')) return;
 
-  const el = cardsGrid.querySelector('.card[data-id="' + id + '"]');
+  const el = document.querySelector('.cards-grid .card[data-id="' + id + '"]');
   await animateElementOut(el);
 
   const cards = loadCards().filter(function (c) { return c.id !== id; });
   saveCards(cards);
-  removeCardFromCategories(id);
+  removeCardFromCategories(id, getCardSectionById(id));
   removeCardPosition(id);
   renderCards(cards);
 }
@@ -3093,9 +3294,11 @@ function toggleEditMode() {
   editMode = !editMode;
   btnEdit.textContent = editMode ? 'סיום עריכה' : 'עריכה';
   btnEdit.classList.toggle('active', editMode);
-  cardsGrid.classList.toggle('edit-mode', editMode);
+  forEachCardsGrid(function (grid) {
+    grid.classList.toggle('edit-mode', editMode);
+  });
   document.body.classList.toggle('page-edit-mode', editMode);
-  if (!editMode && editingHomeSection === 'cards') {
+  if (!editMode && isCardsHomeSection(editingHomeSection)) {
     homeEditCommitted = true;
     closeHomeEditor();
   }
@@ -3126,7 +3329,7 @@ function buildPreviewCard() {
     primaryColor: wizardData.primaryColor || '#e87722',
     secondaryColor: wizardData.secondaryColor || '#4a7c3f',
     outlineColor: wizardData.outlineColor || '#e87722',
-    flatBgColor: wizardData.flatBgColor || '#f4f4f2',
+    flatBgColor: wizardData.flatBgColor || '#ffffff',
     outlineWidth: getCardOutlineWidth(wizardData),
     flatEdge: getCardFlatEdge(wizardData),
     actionStyle: getCardActionStyle(wizardData),
@@ -3142,7 +3345,7 @@ function buildPreviewCard() {
     mainImage: wizardData.mainImage,
     logo: wizardData.logo,
     fontFamily: wizardData.fontFamily,
-    bgMode: wizardData.bgMode || 'colors',
+    bgMode: wizardData.bgMode || DEFAULT_CARD_BG_MODE,
     useImageBg: wizardData.bgMode === 'image',
     enabledActions: wizardData.enabledActions.slice(),
     actionLinks: Object.assign({}, wizardData.actionLinks),
@@ -3538,7 +3741,7 @@ function syncFormToData() {
   wizardData.primaryColor = document.getElementById('primaryColor').value;
   wizardData.secondaryColor = document.getElementById('secondaryColor').value;
   wizardData.outlineColor = (document.getElementById('outlineColor') || {}).value || '#e87722';
-  wizardData.flatBgColor = (document.getElementById('flatBgColor') || {}).value || '#f4f4f2';
+  wizardData.flatBgColor = (document.getElementById('flatBgColor') || {}).value || '#ffffff';
   wizardData.flatEdge = getSelectedFlatEdge();
   wizardData.actionStyle = getSelectedActionStyle();
   wizardData.actionColor = (document.getElementById('actionColor') || {}).value || '#e87722';
@@ -3880,13 +4083,13 @@ function applyWizardDataToForm() {
   const outlineInput = document.getElementById('outlineColor');
   if (outlineInput) outlineInput.value = wizardData.outlineColor || '#e87722';
   const flatBgInput = document.getElementById('flatBgColor');
-  if (flatBgInput) flatBgInput.value = wizardData.flatBgColor || '#f4f4f2';
+  if (flatBgInput) flatBgInput.value = wizardData.flatBgColor || '#ffffff';
   const actionColorInput = document.getElementById('actionColor');
   if (actionColorInput) actionColorInput.value = wizardData.actionColor || '#e87722';
   setHslaFieldValue('primaryColor', wizardData.primaryColor || '#e87722');
   setHslaFieldValue('secondaryColor', wizardData.secondaryColor || '#4a7c3f');
   setHslaFieldValue('outlineColor', wizardData.outlineColor || '#e87722');
-  setHslaFieldValue('flatBgColor', wizardData.flatBgColor || '#f4f4f2');
+  setHslaFieldValue('flatBgColor', wizardData.flatBgColor || '#ffffff');
   setHslaFieldValue('actionColor', wizardData.actionColor || '#e87722');
   document.getElementById('primaryColorHex').textContent = colorToDisplayHex(wizardData.primaryColor || '#e87722');
   document.getElementById('secondaryColorHex').textContent = colorToDisplayHex(wizardData.secondaryColor || '#4a7c3f');
@@ -3896,7 +4099,7 @@ function applyWizardDataToForm() {
   }
   const flatBgHex = document.getElementById('flatBgColorHex');
   if (flatBgHex) {
-    flatBgHex.textContent = colorToDisplayHex(wizardData.flatBgColor || '#f4f4f2');
+    flatBgHex.textContent = colorToDisplayHex(wizardData.flatBgColor || '#ffffff');
   }
   const actionColorHex = document.getElementById('actionColorHex');
   if (actionColorHex) {
@@ -3933,7 +4136,7 @@ function applyWizardDataToForm() {
   if (flatImagePosXValue) flatImagePosXValue.textContent = posX + '%';
   const flatImagePosYValue = document.getElementById('flatImagePosYValue');
   if (flatImagePosYValue) flatImagePosYValue.textContent = posY + '%';
-  setCardBgModeInputs(wizardData.bgMode || 'colors');
+  setCardBgModeInputs(wizardData.bgMode || DEFAULT_CARD_BG_MODE);
 
   const enabled = wizardData.enabledActions || ['צפייה'];
   document.getElementById('actionView').checked = enabled.indexOf('צפייה') !== -1;
@@ -3972,7 +4175,7 @@ function buildCardFromWizard(id) {
     primaryColor: wizardData.primaryColor,
     secondaryColor: wizardData.secondaryColor,
     outlineColor: wizardData.outlineColor || '#e87722',
-    flatBgColor: wizardData.flatBgColor || '#f4f4f2',
+    flatBgColor: wizardData.flatBgColor || '#ffffff',
     outlineWidth: getCardOutlineWidth(wizardData),
     flatEdge: getCardFlatEdge(wizardData),
     actionStyle: getCardActionStyle(wizardData),
@@ -3986,7 +4189,7 @@ function buildCardFromWizard(id) {
     flatImagePosX: getFlatImagePosX(wizardData),
     flatImagePosY: getFlatImagePosY(wizardData),
     fontFamily: wizardData.fontFamily || "'Segoe UI', Tahoma, Arial, sans-serif",
-    bgMode: wizardData.bgMode || 'colors',
+    bgMode: wizardData.bgMode || DEFAULT_CARD_BG_MODE,
     useImageBg: wizardData.bgMode === 'image',
     gradient: getColorBlend(wizardData.primaryColor, wizardData.secondaryColor),
   };
@@ -4025,15 +4228,15 @@ function openWizard() {
 
   wizardData.date = '';
   wizardData.status = '';
-  wizardData.bgMode = 'colors';
+  wizardData.bgMode = DEFAULT_CARD_BG_MODE;
   wizardData.useImageBg = false;
   wizardData.enabledActions = ['צפייה'];
   wizardData.actionLinks = { 'צפייה': '', 'הורדה': '', 'הדפסה': '' };
   wizardData.primaryColor = '#e87722';
   wizardData.secondaryColor = '#4a7c3f';
-  wizardData.outlineColor = '#e87722';
-  wizardData.flatBgColor = '#f4f4f2';
-  wizardData.outlineWidth = 4;
+  wizardData.outlineColor = '#e31c23';
+  wizardData.flatBgColor = '#ffffff';
+  wizardData.outlineWidth = 2;
   wizardData.flatEdge = 'outline';
   wizardData.actionStyle = 'text';
   wizardData.actionColor = '#e87722';
@@ -4080,7 +4283,7 @@ function openWizardForEdit(cardId) {
   wizardData.primaryColor = card.primaryColor || '#e87722';
   wizardData.secondaryColor = card.secondaryColor || '#4a7c3f';
   wizardData.outlineColor = card.outlineColor || '#e87722';
-  wizardData.flatBgColor = card.flatBgColor || '#f4f4f2';
+  wizardData.flatBgColor = card.flatBgColor || '#ffffff';
   wizardData.outlineWidth = getCardOutlineWidth(card);
   wizardData.flatEdge = getCardFlatEdge(card);
   wizardData.actionStyle = getCardActionStyle(card);
@@ -4157,6 +4360,7 @@ function finishWizard() {
     }
   } else {
     const newCard = buildCardFromWizard(createCardId());
+    newCard.section = getActiveCardsSectionId();
     cards.push(newCard);
 
     if (!trySaveCards(cards, newCard, cards.length - 1)) {
@@ -4519,10 +4723,8 @@ function loadHome() {
       stripLegacyHeaderFields(home);
       if (!Object.prototype.hasOwnProperty.call(parsed, 'cardsLayoutMode') && parsed.categoriesEnabled) {
         home.cardsLayoutMode = 'categories';
-      } else {
-        home.cardsLayoutMode = getCardsLayoutMode(home);
       }
-      home.categoriesEnabled = home.cardsLayoutMode === 'categories';
+      home.categoriesEnabled = !!home.categoriesEnabled;
       home.categories = Array.isArray(home.categories) ? home.categories : [];
       home.cardsFreeHeight = clampCardsFreeHeight(home.cardsFreeHeight);
       home.cardsFreeSize = clampCardFreeWidth(home.cardsFreeSize);
@@ -4530,12 +4732,15 @@ function loadHome() {
         ? home.cardPositions
         : {};
       home.floatMenu = normalizeFloatMenu(home.floatMenu, home);
+      home = ensureCardsSections(home);
     } catch {
       home = Object.assign({}, DEFAULT_HOME);
       home.header = normalizeHeader(DEFAULT_HOME.header, DEFAULT_HOME.title);
       home.floatMenu = normalizeFloatMenu(home.floatMenu, home);
+      home = ensureCardsSections(home);
     }
   }
+  home = ensureCardsSections(home);
   return home;
 }
 
@@ -4858,12 +5063,8 @@ function clearSectionMedia(el) {
 
 const VIDEO_DB_NAME = 'hebet-media';
 const VIDEO_STORE = 'videos';
-const CARDS_BG_IDB_KEY = 'cards-bg';
-const CARDS_BG_MARKER = 'idb:cards-bg';
 const videoMemoryStore = Object.create(null);
 let videoDbProbe = null; /* null=unknown, true/false */
-let cardsBgImageCache = '';
-let cardsBgObjectUrl = '';
 
 function isFileProtocol() {
   return typeof location !== 'undefined' && location.protocol === 'file:';
@@ -4909,76 +5110,6 @@ function rememberVideoInMemory(key, fileOrRecord) {
       type: fileOrRecord.type || 'video/mp4',
     };
   }
-}
-
-function revokeCardsBgObjectUrl() {
-  if (cardsBgObjectUrl) {
-    URL.revokeObjectURL(cardsBgObjectUrl);
-    cardsBgObjectUrl = '';
-  }
-}
-
-function getResolvedCardsBgImage(home) {
-  const raw = home && home.cardsBgImage ? String(home.cardsBgImage) : '';
-  if (!raw) return '';
-  if (raw === CARDS_BG_MARKER) return cardsBgImageCache || '';
-  if (raw.indexOf('data:') === 0 || raw.indexOf('blob:') === 0) return raw;
-  return cardsBgImageCache || '';
-}
-
-async function persistCardsBgImage(dataUrl) {
-  if (!dataUrl) {
-    revokeCardsBgObjectUrl();
-    cardsBgImageCache = '';
-    try { await deleteHomeVideo(CARDS_BG_IDB_KEY); } catch (_) {}
-    return '';
-  }
-  cardsBgImageCache = dataUrl;
-  const res = await fetch(dataUrl);
-  const blob = await res.blob();
-  await putHomeVideo(
-    CARDS_BG_IDB_KEY,
-    new File([blob], 'cards-bg.jpg', { type: blob.type || 'image/jpeg' })
-  );
-  return CARDS_BG_MARKER;
-}
-
-async function hydrateCardsBgImage(home) {
-  home = home || loadHome();
-  const raw = home.cardsBgImage ? String(home.cardsBgImage) : '';
-  if (!raw) {
-    revokeCardsBgObjectUrl();
-    cardsBgImageCache = '';
-    return home;
-  }
-  if (raw.indexOf('data:') === 0) {
-    try {
-      home.cardsBgImage = await persistCardsBgImage(raw);
-      saveHome(home);
-    } catch (err) {
-      console.warn('cards bg migrate failed', err);
-      cardsBgImageCache = raw;
-    }
-    return home;
-  }
-  if (raw === CARDS_BG_MARKER) {
-    try {
-      const rec = await getHomeVideo(CARDS_BG_IDB_KEY);
-      revokeCardsBgObjectUrl();
-      if (rec && rec.blob) {
-        cardsBgObjectUrl = URL.createObjectURL(rec.blob);
-        cardsBgImageCache = cardsBgObjectUrl;
-      } else {
-        cardsBgImageCache = '';
-        home.cardsBgImage = '';
-        saveHome(home);
-      }
-    } catch (err) {
-      console.warn('cards bg load failed', err);
-      cardsBgImageCache = '';
-    }
-  }
-  return home;
 }
 
 function openFontsDb() {
@@ -6121,6 +6252,7 @@ function normalizeFloatMenuItem(item) {
   item = item && typeof item === 'object' ? item : {};
   const type = item.type === 'url' ? 'url' : 'section';
   let target = String(item.target == null ? '' : item.target).trim();
+  if (target === 'cards') target = 'cardsTop';
   if (type === 'section' && !getFloatMenuSectionMeta(target)) target = 'header';
   return {
     id: String(item.id || createFloatMenuId('fm')),
@@ -6221,13 +6353,18 @@ function syncFloatMenuAnchor() {
   }
 
   const toolbar = document.getElementById('siteToolbar');
-  let top = 16;
+  let minTop = 16;
   if (!IS_USER_MODE && toolbar && !toolbar.hidden) {
-    top = Math.max(top, Math.round(toolbar.getBoundingClientRect().height) + 8);
+    minTop = Math.max(minTop, Math.round(toolbar.getBoundingClientRect().height) + 8);
   }
-  document.body.style.setProperty('--float-menu-sticky-top', top + 'px');
+
+  const maxMenuHeight = Math.max(120, window.innerHeight - minTop - 16);
+  aside.style.maxHeight = maxMenuHeight + 'px';
+
+  const menuHeight = Math.min(aside.scrollHeight, maxMenuHeight);
+  const centeredTop = Math.max(minTop, Math.round((window.innerHeight - menuHeight) / 2));
+  document.body.style.setProperty('--float-menu-sticky-top', centeredTop + 'px');
   aside.style.top = '';
-  aside.style.maxHeight = '';
 }
 
 function syncFloatMenuFromViewport() {
@@ -6305,10 +6442,16 @@ function bindFloatMenuInteractions() {
     floatMenuSpyBound = true;
     window.addEventListener('scroll', syncFloatMenuFromViewport, { passive: true });
     window.addEventListener('resize', syncFloatMenuFromViewport);
-    const toolbar = document.getElementById('siteToolbar');
-    if (toolbar && typeof ResizeObserver === 'function') {
-      const observer = new ResizeObserver(function () { syncFloatMenuAnchor(); });
-      observer.observe(toolbar);
+    if (typeof ResizeObserver === 'function') {
+      const toolbar = document.getElementById('siteToolbar');
+      if (toolbar) {
+        const toolbarObserver = new ResizeObserver(function () { syncFloatMenuAnchor(); });
+        toolbarObserver.observe(toolbar);
+      }
+      if (aside) {
+        const menuObserver = new ResizeObserver(function () { syncFloatMenuAnchor(); });
+        menuObserver.observe(aside);
+      }
     }
   }
 }
@@ -6368,12 +6511,15 @@ function renderFloatMenu(home) {
 }
 
 function applySiteTheme(home) {
+  home = ensureCardsSections(home || loadHome());
   const bgColor = home.siteBgColor || DEFAULT_HOME.siteBgColor;
   const bgImage = home.siteBgImage || '';
   const secondary = home.siteSecondaryColor || DEFAULT_HOME.siteSecondaryColor;
   const font = home.siteFont || DEFAULT_HOME.siteFont;
-  const perRow = Math.min(6, Math.max(2, Number(home.cardsPerRow) || DEFAULT_HOME.cardsPerRow));
-  const gap = Math.min(48, Math.max(4, Number(home.cardsGap) || DEFAULT_HOME.cardsGap));
+  const sectionId = getActiveCardsSectionId();
+  const cfg = getCardsSectionConfig(home, sectionId);
+  const perRow = Math.min(6, Math.max(2, Number(cfg.cardsPerRow) || DEFAULT_HOME.cardsPerRow));
+  const gap = Math.min(48, Math.max(4, Number(cfg.cardsGap) || DEFAULT_HOME.cardsGap));
 
   document.body.style.setProperty('--site-bg-color', colorToCss(bgColor));
   document.body.style.setProperty(
@@ -6384,23 +6530,8 @@ function applySiteTheme(home) {
   document.body.style.setProperty('--site-font', font);
   document.body.classList.remove('cards-colored');
 
-  cardsGrid.style.setProperty('--cards-per-row', String(perRow));
-  cardsGrid.style.setProperty('--cards-gap', gap + 'px');
-
-  const cardsBgImage = getResolvedCardsBgImage(home);
-  const cardsBgUrl = cardsBgImage ? 'url(' + JSON.stringify(cardsBgImage) + ')' : 'none';
-  cardsGrid.style.setProperty('--cards-bg-image', cardsBgUrl);
-  cardsGrid.classList.toggle('has-cards-bg', !!cardsBgImage);
-  const cardsSection = document.getElementById('cardsSection');
-  if (cardsSection) {
-    cardsSection.style.setProperty('--cards-bg-image', cardsBgUrl);
-    cardsSection.classList.toggle('has-cards-bg', !!cardsBgImage);
-    cardsSection.classList.toggle('is-bg-full-bleed', !!cardsBgImage);
-  }
-
   const fontSelect = document.getElementById('siteFont');
   const clearBtn = document.getElementById('siteBgClear');
-  const cardsBgClear = document.getElementById('cardsBgClear');
   const perRowInput = document.getElementById('cardsPerRow');
   const gapInput = document.getElementById('cardsGap');
   const perRowValue = document.getElementById('cardsPerRowValue');
@@ -6410,7 +6541,6 @@ function applySiteTheme(home) {
   setHslaFieldValue('siteBgColor', bgColor);
   if (fontSelect) setFontSelectValue(fontSelect, font);
   if (clearBtn) clearBtn.hidden = !bgImage;
-  if (cardsBgClear) cardsBgClear.hidden = !home.cardsBgImage;
   if (perRowInput) perRowInput.value = String(perRow);
   if (gapInput) gapInput.value = String(gap);
   if (perRowValue) perRowValue.textContent = String(perRow);
@@ -7214,40 +7344,10 @@ const homeEditTitle = document.getElementById('homeEditTitle');
 function readHeaderDraftFromEditor() {
   if (!homeEditHeaderDraft) return normalizeHeader(DEFAULT_HOME.header, DEFAULT_HOME.title);
 
-  const heightEl = document.getElementById('homeFieldHeaderHeight');
-  const opacityEl = document.getElementById('homeFieldBgOpacity');
-  if (heightEl) homeEditHeaderDraft.height = clampHeaderHeight(heightEl.value);
-  if (opacityEl) homeEditHeaderDraft.bgOpacity = clampBgOpacity(opacityEl.value, DEFAULT_HOME.header.bgOpacity);
-  homeEditHeaderDraft.bgImage = homeEditImageData || '';
-
   homeEditHeaderDraft.artSide = 'left';
   homeEditHeaderDraft.artWidth = clampHeaderArtWidth(readHeaderField('homeHeaderArtWidth') || homeEditHeaderDraft.artWidth);
-  homeEditHeaderDraft.kickerSize = clampFontSize(readHeaderField('homeHeaderKickerSize') || homeEditHeaderDraft.kickerSize, 15, 32);
-  homeEditHeaderDraft.kickerColor = normalizeTextColor(
-    readHeaderField('homeHeaderKickerColor') || homeEditHeaderDraft.kickerColor,
-    HEADER_TEXT_COLOR
-  );
-  homeEditHeaderDraft.titleSize = clampFontSize(readHeaderField('homeHeaderTitleSize') || homeEditHeaderDraft.titleSize, 44, 72);
-  homeEditHeaderDraft.titleColor = normalizeTextColor(
-    readHeaderField('homeHeaderTitleColor') || homeEditHeaderDraft.titleColor,
-    HEADER_TEXT_COLOR
-  );
-  homeEditHeaderDraft.bodySize = clampFontSize(readHeaderField('homeHeaderBodySize') || homeEditHeaderDraft.bodySize, 17, 32);
-  homeEditHeaderDraft.bodyColor = normalizeTextColor(
-    readHeaderField('homeHeaderBodyColor') || homeEditHeaderDraft.bodyColor,
-    HEADER_TEXT_COLOR
-  );
-  homeEditHeaderDraft.bodyAccentColor = normalizeTextColor(
-    readHeaderField('homeHeaderAccentColor') || homeEditHeaderDraft.bodyAccentColor,
-    HEADER_ACCENT
-  );
   homeEditHeaderDraft.buttonHref = readHeaderField('homeHeaderButtonHref').trim();
-  homeEditHeaderDraft.buttonRadius = clampButtonRadius(readHeaderField('homeHeaderButtonRadius') || homeEditHeaderDraft.buttonRadius);
   homeEditHeaderDraft.linkHref = readHeaderField('homeHeaderLinkHref').trim();
-  homeEditHeaderDraft.linkColor = normalizeTextColor(
-    readHeaderField('homeHeaderLinkColor') || homeEditHeaderDraft.linkColor,
-    HEADER_ACCENT
-  );
 
   homeEditHeaderDraft = normalizeHeader(homeEditHeaderDraft, homeEditHeaderDraft.title);
   return homeEditHeaderDraft;
@@ -7340,7 +7440,6 @@ function getHomeSectionFocusEl(section) {
   if (section === 'intro2') return document.getElementById('homeIntro2Main');
   if (section === 'closing') return document.getElementById('homeClosing');
   if (section === 'closing2') return document.getElementById('homeClosing2');
-  if (section === 'cards') return document.getElementById('cardsSection');
   if (section === 'floatmenu') return document.getElementById('floatMenu');
   return document.querySelector('[data-home-section="' + section + '"]');
 }
@@ -7391,11 +7490,11 @@ function syncHomeSectionEditingFocus() {
 function scheduleHomeEditorPreview() {
   if (!editingHomeSection || !homeEditSnapshot) return;
   /* כרטיסי תוכן נשמרים ישירות — בלי preview שמוחק/מרנדר מחדש */
-  if (editingHomeSection === 'cards') return;
+  if (isCardsHomeSection(editingHomeSection)) return;
   clearTimeout(homeEditPreviewTimer);
   const sectionAtSchedule = editingHomeSection;
   homeEditPreviewTimer = setTimeout(function () {
-    if (editingHomeSection !== sectionAtSchedule || editingHomeSection === 'cards') return;
+    if (editingHomeSection !== sectionAtSchedule || isCardsHomeSection(editingHomeSection)) return;
     if (editingHomeSection === 'floatmenu') {
       const draft = buildHomeDraftFromEditor();
       renderFloatMenu(draft);
@@ -7418,11 +7517,11 @@ function bindHomeEditorLivePreview() {
   if (!homeEditFields || homeEditFields.dataset.livePreviewBound === '1') return;
   homeEditFields.dataset.livePreviewBound = '1';
   homeEditFields.addEventListener('input', function () {
-    if (editingHomeSection === 'cards') return;
+    if (isCardsHomeSection(editingHomeSection)) return;
     scheduleHomeEditorPreview();
   });
   homeEditFields.addEventListener('change', function () {
-    if (editingHomeSection === 'cards') return;
+    if (isCardsHomeSection(editingHomeSection)) return;
     scheduleHomeEditorPreview();
   });
 }
@@ -7565,7 +7664,7 @@ function bindFloatMenuEditor() {
     if (action === 'add-item') {
       draft.items.push(normalizeFloatMenuItem({ label: 'פריט חדש', type: 'section', target: 'header' }));
     } else if (action === 'add-tag') {
-      draft.tags.push(normalizeFloatMenuItem({ label: 'תג', type: 'section', target: 'cards' }));
+      draft.tags.push(normalizeFloatMenuItem({ label: 'תג', type: 'section', target: 'cardsTop' }));
     } else if (action === 'fill-sections') {
       draft.items = defaultFloatMenuSectionItems(loadHome());
     } else if (action === 'remove') {
@@ -7611,7 +7710,6 @@ function openHomeEditor(section) {
   if (section === 'header') {
     title = 'עריכת כותרת';
     homeEditHeaderDraft = normalizeHeader(home.header, home.title);
-    homeEditImageData = homeEditHeaderDraft.bgImage || '';
     fieldsHtml = homeHeaderFieldsHtml(homeEditHeaderDraft);
   }
 
@@ -7692,10 +7790,18 @@ function openHomeEditor(section) {
     fieldsHtml = floatMenuFieldsHtml(homeEditFloatMenuDraft);
   }
 
-  if (section === 'cards') {
-    title = 'עריכת כרטיסי תוכן';
+  if (isCardsHomeSection(section)) {
+    const sectionId = getCardsSectionIdFromEditKey(section);
+    const meta = getCardsSectionMeta(sectionId);
+    const cfg = getCardsSectionConfig(home, sectionId);
+    setActiveCardsSectionId(sectionId);
+    title = 'עריכת ' + meta.label;
     fieldsHtml =
-      '<p class="field-subhint">הגדרות פריסה, רקע וחיפוש לאזור הכרטיסים. השינויים נשמרים מיד.</p>';
+      '<div class="form-field form-field--full">' +
+        '<label for="cardsSectionTitleInput">כותרת הסקשן</label>' +
+        '<input type="text" id="cardsSectionTitleInput" maxlength="80" value="' + escapeHtml(cfg.title || meta.defaultTitle) + '">' +
+      '</div>' +
+      '<p class="field-subhint">הגדרות פריסה ל' + escapeHtml(meta.label) + '. השינויים נשמרים מיד.</p>';
   }
 
   homeEditTitle.textContent = title;
@@ -7708,7 +7814,8 @@ function openHomeEditor(section) {
   );
   homeEditOverlay.classList.toggle('is-editing-header', section === 'header');
 
-  if (section === 'cards') {
+  if (isCardsHomeSection(section)) {
+    bindCardsSectionTitleField(section);
     if (!mountCardsLayoutBarIntoEditor()) {
       alert('לא ניתן לפתוח את עורך הכרטיסים. רעננו את העמוד ונסו שוב.');
       closeHomeEditor();
@@ -7729,6 +7836,20 @@ function openHomeEditor(section) {
   bindFloatMenuEditor();
   bindHomeEditorLivePreview();
   syncHomeSectionEditingFocus();
+}
+
+function bindCardsSectionTitleField(section) {
+  const input = document.getElementById('cardsSectionTitleInput');
+  if (!input) return;
+  input.addEventListener('input', function () {
+    const sectionId = getCardsSectionIdFromEditKey(section);
+    let nextHome = loadHome();
+    nextHome = setCardsSectionConfig(nextHome, sectionId, {
+      title: String(input.value || '').trim(),
+    });
+    if (!saveHome(nextHome)) return;
+    renderCardsSectionTitle(nextHome, sectionId);
+  });
 }
 
 function homeHeaderItemEditorHtml(item) {
@@ -7759,7 +7880,7 @@ function homeHeaderItemEditorHtml(item) {
         '<label for="homeHeaderLink_' + escapeHtml(item.id) + '" style="margin-top:10px;display:block;">קישור (אופציונלי)</label>' +
         '<input type="text" id="homeHeaderLink_' + escapeHtml(item.id) + '" placeholder="https://..." value="' + escapeHtml(item.link || '') + '">' +
         '<label for="homeHeaderSize_' + escapeHtml(item.id) + '" style="margin-top:10px;display:block;">גודל לוגו: <strong id="homeHeaderSizeValue_' + escapeHtml(item.id) + '">' + item.w + '%</strong></label>' +
-        '<input type="range" id="homeHeaderSize_' + escapeHtml(item.id) + '" min="6" max="40" step="1" value="' + item.w + '" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">' +
+        '<input type="range" id="homeHeaderSize_' + escapeHtml(item.id) + '" min="6" max="40" step="1" value="' + item.w + '" style="width:100%; accent-color: var(--site-secondary, #e31c23);">' +
       '</div>'
     );
   }
@@ -7804,9 +7925,8 @@ function homeHeaderItemEditorHtml(item) {
 
 function homeHeaderFieldsHtml(header) {
   const artWidth = clampHeaderArtWidth(header.artWidth);
-  const radius = clampButtonRadius(header.buttonRadius);
   return (
-    '<p class="field-subhint">את הטקסט עורכים ישירות על הכותרת: לוחצים על השדה, מסמנים עם העכבר ומקלידים. החלונית הזו מיועדת לאיור, קישורים ועיצוב בלבד.</p>' +
+    '<p class="field-subhint">את הטקסט עורכים ישירות על הכותרת. כאן מגדירים איור וקישורים בלבד.</p>' +
     '<div class="home-header-editor-item">' +
       '<div class="home-header-editor-item-head"><strong>איור</strong></div>' +
       '<label class="edit-upload-btn edit-upload-btn--wide" for="homeHeaderArtFile">' +
@@ -7821,74 +7941,22 @@ function homeHeaderFieldsHtml(header) {
       }) +
     '</div>' +
     '<div class="home-header-editor-item">' +
-      '<div class="home-header-editor-item-head"><strong>תווית עליונה</strong></div>' +
-      homeStyleRowHtml(
-        homeTextSizeHtml('homeHeaderKickerSize', header.kickerSize, 15, 'גודל תווית', 32),
-        homeColorChipHtml('homeHeaderKickerColor', header.kickerColor, {
-          label: 'צבע תווית', shortLabel: 'תווית', ico: 'text',
-        })
-      ) +
-    '</div>' +
-    '<div class="home-header-editor-item">' +
-      '<div class="home-header-editor-item-head"><strong>כותרת</strong></div>' +
-      homeStyleRowHtml(
-        homeTextSizeHtml('homeHeaderTitleSize', header.titleSize, 44, 'גודל כותרת', 72),
-        homeColorChipHtml('homeHeaderTitleColor', header.titleColor, {
-          label: 'צבע כותרת', shortLabel: 'כותרת', ico: 'text',
-        })
-      ) +
-    '</div>' +
-    '<div class="home-header-editor-item">' +
-      '<div class="home-header-editor-item-head"><strong>פסקה</strong></div>' +
-      homeStyleRowHtml(
-        homeTextSizeHtml('homeHeaderBodySize', header.bodySize, 17, 'גודל פסקה', 32),
-        homeColorChipHtml('homeHeaderBodyColor', header.bodyColor, {
-          label: 'צבע פסקה', shortLabel: 'פסקה', ico: 'text',
-        }) +
-        homeColorChipHtml('homeHeaderAccentColor', header.bodyAccentColor, {
-          label: 'צבע הדגשה לטקסט מסומן', shortLabel: 'הדגשה', ico: 'text',
-        })
-      ) +
-      '<p class="field-subhint">לצביעת מילים: סמנו אותן בכותרת ובחרו צבע בסרגל העליון.</p>' +
-    '</div>' +
-    '<div class="home-header-editor-item">' +
       '<div class="home-header-editor-item-head"><strong>כפתור</strong></div>' +
       '<label for="homeHeaderButtonHref">קישור (אופציונלי)</label>' +
       '<input type="text" id="homeHeaderButtonHref" placeholder="https://..." value="' + escapeHtml(header.buttonHref || '') + '">' +
-      homeSizeControlHtml('homeHeaderButtonRadius', radius, {
-        min: 0, max: 48, step: 1, unit: 'px', label: 'חדות פינות', ico: 'size',
-      }) +
-      '<p class="field-subhint">0 = פינות חדות, 48 = עגול לחלוטין. את טקסט הכפתור עורכים ישירות על הכותרת.</p>' +
     '</div>' +
     '<div class="home-header-editor-item">' +
       '<div class="home-header-editor-item-head"><strong>קישור משני</strong></div>' +
-      '<label for="homeHeaderLinkHref">כתובת (אופציונלי)</label>' +
+      '<label for="homeHeaderLinkHref">קישור (אופציונלי)</label>' +
       '<input type="text" id="homeHeaderLinkHref" placeholder="https://..." value="' + escapeHtml(header.linkHref || '') + '">' +
-      homeStyleRowHtml(
-        '',
-        homeColorChipHtml('homeHeaderLinkColor', header.linkColor, {
-          label: 'צבע קישור', shortLabel: 'קישור', ico: 'text',
-        })
-      ) +
-      '<p class="field-subhint">את טקסט הקישור עורכים ישירות על הכותרת.</p>' +
-    '</div>' +
-    '<div class="form-field form-field--full">' +
-      '<label for="homeFieldHeaderHeight">גובה מסגרת: <strong id="homeFieldHeaderHeightValue">' + header.height + 'px</strong></label>' +
-      '<input type="range" id="homeFieldHeaderHeight" min="220" max="720" step="4" value="' + header.height + '" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">' +
-      '<p class="field-subhint">אפשר גם לגרור את הידית בתחתית המסגרת במצב עריכה</p>' +
-    '</div>' +
-    homeBgOpacityHtml(header.bgOpacity) +
-    homeImageFieldHtml(header.bgImage, 'תמונת רקע לכותרת (אופציונלי)')
+    '</div>'
   );
 }
 
 function refreshHomeHeaderEditorFields() {
   if (!homeEditHeaderDraft || !homeEditFields) return;
   readHeaderDraftFromEditor();
-  homeEditImageData = homeEditHeaderDraft.bgImage || '';
   homeEditFields.innerHTML = homeHeaderFieldsHtml(homeEditHeaderDraft);
-  bindHomeBgOpacityField();
-  bindHomeEditorMediaInputs();
   bindHomeHeaderEditor();
   scheduleHomeEditorPreview();
 }
@@ -7896,33 +7964,11 @@ function refreshHomeHeaderEditorFields() {
 function bindHomeHeaderEditor() {
   if (editingHomeSection !== 'header' || !homeEditHeaderDraft) return;
 
-  const heightEl = document.getElementById('homeFieldHeaderHeight');
-  const heightValue = document.getElementById('homeFieldHeaderHeightValue');
-  if (heightEl && heightValue) {
-    heightEl.addEventListener('input', function () {
-      heightValue.textContent = clampHeaderHeight(heightEl.value) + 'px';
-      scheduleHomeEditorPreview();
-    });
-  }
-
-  bindHomeTextSizeField('homeHeaderKickerSize', 32);
-  bindHomeTextSizeField('homeHeaderTitleSize', 72);
-  bindHomeTextSizeField('homeHeaderBodySize', 32);
-  bindHomeTextColorField('homeHeaderKickerColor');
-  bindHomeTextColorField('homeHeaderTitleColor');
-  bindHomeTextColorField('homeHeaderBodyColor');
-  bindHomeTextColorField('homeHeaderAccentColor');
-  bindHomeTextColorField('homeHeaderLinkColor');
-
-  ['homeHeaderArtWidth', 'homeHeaderButtonRadius'].forEach(function (id) {
-    const range = document.getElementById(id);
-    const num = document.getElementById(id + 'Num');
-    if (!range || !num) return;
+  const range = document.getElementById('homeHeaderArtWidth');
+  const num = document.getElementById('homeHeaderArtWidthNum');
+  if (range && num) {
     function sync(from) {
-      const raw = from === 'num' ? num.value : range.value;
-      const value = id === 'homeHeaderArtWidth'
-        ? clampHeaderArtWidth(raw)
-        : clampButtonRadius(raw);
+      const value = clampHeaderArtWidth(from === 'num' ? num.value : range.value);
       range.value = String(value);
       num.value = String(value);
       scheduleHomeEditorPreview();
@@ -7933,7 +7979,7 @@ function bindHomeHeaderEditor() {
       sync('num');
     });
     num.addEventListener('change', function () { sync('num'); });
-  });
+  }
 
   const artFile = document.getElementById('homeHeaderArtFile');
   if (artFile) {
@@ -8028,7 +8074,7 @@ function bindHomeEditorMediaInputs() {
 
 function closeHomeEditor() {
   clearTimeout(homeEditPreviewTimer);
-  const shouldRevert = !homeEditCommitted && !!homeEditSnapshot && editingHomeSection !== 'cards';
+  const shouldRevert = !homeEditCommitted && !!homeEditSnapshot && !isCardsHomeSection(editingHomeSection);
   unmountCardsLayoutBarFromEditor();
   homeEditOverlay.hidden = true;
   homeEditOverlay.classList.remove('home-edit-live');
@@ -8056,7 +8102,7 @@ async function saveHomeEditor(e) {
   if (!editingHomeSection) return;
   if (activeInlineEdit) commitInlineEdit();
 
-  if (editingHomeSection === 'cards') {
+  if (isCardsHomeSection(editingHomeSection)) {
     homeEditCommitted = true;
     closeHomeEditor();
     return;
@@ -8483,7 +8529,9 @@ function applyAppModeShell() {
   if (toolbar) toolbar.hidden = true;
   editMode = false;
   document.body.classList.remove('page-edit-mode');
-  if (cardsGrid) cardsGrid.classList.remove('edit-mode');
+  forEachCardsGrid(function (grid) {
+    grid.classList.remove('edit-mode');
+  });
   if (btnEdit) {
     btnEdit.classList.remove('active');
     btnEdit.textContent = 'עריכה';
@@ -8512,11 +8560,6 @@ async function resetSiteToDefaults() {
     });
   } catch (err) {}
 
-  if (cardsBgObjectUrl) {
-    try { URL.revokeObjectURL(cardsBgObjectUrl); } catch (err) {}
-    cardsBgObjectUrl = '';
-  }
-  cardsBgImageCache = '';
   customFontsCache = [];
 
   await Promise.all([
@@ -8593,30 +8636,6 @@ document.getElementById('siteBgClear').addEventListener('click', function () {
   updateHomeField({ siteBgImage: '' });
 });
 
-document.getElementById('cardsBgImage').addEventListener('change', async function (e) {
-  const file = e.target.files && e.target.files[0];
-  if (!file) return;
-  try {
-    const dataUrl = await readFileAsDataURL(file, 1400, 16 / 9);
-    const marker = await persistCardsBgImage(dataUrl);
-    if (!updateHomeField({ cardsBgImage: marker })) {
-      await persistCardsBgImage('');
-      alert('אין מספיק מקום לשמירה. נסו תמונה קטנה יותר.');
-    }
-  } catch (err) {
-    console.error(err);
-    alert('לא הצלחנו לשמור את תמונת הרקע. נסו קובץ אחר.');
-  }
-  e.target.value = '';
-});
-
-document.getElementById('cardsBgClear').addEventListener('click', async function () {
-  try {
-    await persistCardsBgImage('');
-  } catch (_) {}
-  updateHomeField({ cardsBgImage: '' });
-});
-
 const floatMenuEnabledEl = document.getElementById('floatMenuEnabled');
 if (floatMenuEnabledEl) {
   floatMenuEnabledEl.addEventListener('change', function (e) {
@@ -8638,90 +8657,66 @@ if (floatMenuEnabledEl) {
   });
 }
 
-document.getElementById('cardsSearchEnabled').addEventListener('change', function (e) {
-  const enabled = !!e.target.checked;
-  if (!updateHomeField({ cardsSearchEnabled: enabled })) {
-    e.target.checked = !enabled;
-    return;
-  }
-  if (!enabled) {
-    cardsSearchQuery = '';
-    const input = document.getElementById('cardsSearchInput');
-    if (input) input.value = '';
-  }
-  syncCategoriesToolbar(loadHome());
-  renderCards(loadCards());
-  if (enabled) {
-    const input = document.getElementById('cardsSearchInput');
-    if (input) input.focus();
-  }
-});
-
-document.getElementById('cardsSearchInput').addEventListener('input', function (e) {
-  cardsSearchQuery = e.target.value;
-  const start = e.target.selectionStart;
-  const end = e.target.selectionEnd;
-  renderCards(loadCards());
-  const input = document.getElementById('cardsSearchInput');
-  if (input) {
-    input.focus();
-    try {
-      input.setSelectionRange(start, end);
-    } catch (_) {}
-  }
-});
-
 document.getElementById('cardsPerRow').addEventListener('input', function (e) {
   const value = Number(e.target.value);
   document.getElementById('cardsPerRowValue').textContent = String(value);
-  updateHomeField({ cardsPerRow: value });
+  updateActiveCardsSectionConfig({ cardsPerRow: value });
 });
 
 document.getElementById('cardsGap').addEventListener('input', function (e) {
   const value = Number(e.target.value);
   document.getElementById('cardsGapValue').textContent = value + 'px';
-  updateHomeField({ cardsGap: value });
+  updateActiveCardsSectionConfig({ cardsGap: value });
 });
 
 document.getElementById('cardsLayoutMode').addEventListener('change', function (e) {
   const mode = e.target.value;
   if (mode !== 'matrix' && mode !== 'categories' && mode !== 'freeform') return;
-  const home = loadHome();
-  home.cardsLayoutMode = mode;
-  home.categoriesEnabled = mode === 'categories';
+  let home = loadHome();
+  const sectionId = getActiveCardsSectionId();
+  const cfg = getCardsSectionConfig(home, sectionId);
+  const patch = { layoutMode: mode };
   if (mode === 'categories') {
-    home.categories = normalizeCategories(home.categories, loadCards());
+    patch.categories = normalizeCategories(cfg.categories, getCardsForSection(loadCards(), sectionId));
   }
   if (mode === 'freeform') {
-    home.cardsFreeHeight = clampCardsFreeHeight(home.cardsFreeHeight);
-    home.cardsFreeSize = clampCardFreeWidth(home.cardsFreeSize);
-    ensureCardPositions(home, loadCards());
-  }
-  if (!saveHome(home)) {
-    e.target.value = getCardsLayoutMode(loadHome());
-    alert('אין מספיק מקום לשמירה.');
+    patch.cardsFreeHeight = clampCardsFreeHeight(cfg.cardsFreeHeight);
+    patch.cardsFreeSize = clampCardFreeWidth(cfg.cardsFreeSize);
+    home = setCardsSectionConfig(home, sectionId, patch);
+    ensureCardPositions(home, getCardsForSection(loadCards(), sectionId), sectionId);
+    if (!saveHome(home)) {
+      e.target.value = getCardsLayoutMode(loadHome(), sectionId);
+      alert('אין מספיק מקום לשמירה.');
+      return;
+    }
+    syncCategoriesToolbar(home);
+    renderCards(loadCards());
     return;
   }
-  syncCategoriesToolbar(home);
-  renderCards(loadCards());
+  if (!updateActiveCardsSectionConfig(patch)) {
+    e.target.value = getCardsLayoutMode(loadHome(), sectionId);
+  }
 });
 
 document.getElementById('cardsFreeHeight').addEventListener('input', function (e) {
   const value = clampCardsFreeHeight(e.target.value);
   applyCardsFreeHeight(value);
-  updateHomeField({ cardsFreeHeight: value });
+  updateActiveCardsSectionConfig({ cardsFreeHeight: value });
 });
 
 document.getElementById('cardsFreeSize').addEventListener('input', function (e) {
   const value = clampCardFreeWidth(e.target.value);
   applyCardsFreeSizeToDom(value);
-  const home = loadHome();
-  const positions = Object.assign({}, getCardPositionMap(home));
+  let home = loadHome();
+  const sectionId = getActiveCardsSectionId();
+  const positions = Object.assign({}, getCardPositionMap(home, sectionId));
   Object.keys(positions).forEach(function (id) {
     positions[id] = normalizeCardPosition(Object.assign({}, positions[id], { w: value }), value);
   });
-  home.cardsFreeSize = value;
-  home.cardPositions = positions;
+  home = setCardsSectionConfig(home, sectionId, {
+    cardsFreeSize: value,
+    cardPositions: positions,
+  });
   if (!saveHome(home)) {
     alert('אין מספיק מקום לשמירה.');
     return;
@@ -8877,11 +8872,6 @@ async function initApp() {
     console.warn('Custom fonts unavailable', err);
   }
   populateFontSelects();
-  try {
-    await hydrateCardsBgImage(loadHome());
-  } catch (err) {
-    console.warn('Cards background unavailable', err);
-  }
   await renderHome();
   renderCards(loadCards());
   playPageEntrance();
@@ -8894,7 +8884,8 @@ function preparePageEntrance() {
     '#homeHeader',
     '#homeIntro',
     '#homeIntro2',
-    '#cardsGrid .card',
+    '#cardsGridTop .card',
+    '#cardsGridBottom .card',
     '#homeClosing',
     '#homeClosing2',
   ];
