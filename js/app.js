@@ -175,7 +175,7 @@ const DEFAULT_HOME = {
   siteSecondaryColor: '#e31c23',
   colorCards: false,
   siteFont: "'Segoe UI', Tahoma, Arial, sans-serif",
-  cardsPerRow: 5,
+  cardsPerRow: 4,
   cardsGap: 16,
   cardsLayoutMode: 'categories',
   categories: [],
@@ -206,21 +206,23 @@ const GRADIENTS = [
 
 const DEFAULT_CARD_BG_MODE = 'squareImage';
 const DEFAULT_CARD_TITLE_COLOR = '#e31c23';
-const DEFAULT_CARD_NOTES_COLOR = '#333333';
-const DEFAULT_CARD_TITLE_SIZE = 34;
-const DEFAULT_CARD_NOTES_SIZE = 15;
+const DEFAULT_CARD_NOTES_COLOR = '#1a1a1a';
+const DEFAULT_CARD_TITLE_SIZE = 44;
+const DEFAULT_CARD_NOTES_SIZE = 17;
+const DEFAULT_CATEGORY_COLOR = '#1a1a1a';
+const DEFAULT_CATEGORY_FONT_SIZE = 28;
 
 const DEFAULT_CARDS = [
-  { id: 'card-1', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page1.html', gradient: GRADIENTS[0], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
-  { id: 'card-2', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page2.html', gradient: GRADIENTS[1], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
-  { id: 'card-3', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page3.html', gradient: GRADIENTS[2], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
-  { id: 'card-4', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page4.html', gradient: GRADIENTS[3], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
-  { id: 'card-5', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page5.html', gradient: GRADIENTS[4], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
-  { id: 'card-6', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page6.html', gradient: GRADIENTS[5], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
-  { id: 'card-7', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page7.html', gradient: GRADIENTS[6], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
-  { id: 'card-8', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page8.html', gradient: GRADIENTS[7], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
-  { id: 'card-9', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page9.html', gradient: GRADIENTS[8], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
-  { id: 'card-10', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page10.html', gradient: GRADIENTS[9], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
+  { id: 'card-1', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page1.html', gradient: GRADIENTS[0], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: DEFAULT_CARD_TITLE_COLOR, notesColor: DEFAULT_CARD_NOTES_COLOR, titleSize: DEFAULT_CARD_TITLE_SIZE, notesSize: DEFAULT_CARD_NOTES_SIZE },
+  { id: 'card-2', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page2.html', gradient: GRADIENTS[1], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: DEFAULT_CARD_TITLE_COLOR, notesColor: DEFAULT_CARD_NOTES_COLOR, titleSize: DEFAULT_CARD_TITLE_SIZE, notesSize: DEFAULT_CARD_NOTES_SIZE },
+  { id: 'card-3', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page3.html', gradient: GRADIENTS[2], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: DEFAULT_CARD_TITLE_COLOR, notesColor: DEFAULT_CARD_NOTES_COLOR, titleSize: DEFAULT_CARD_TITLE_SIZE, notesSize: DEFAULT_CARD_NOTES_SIZE },
+  { id: 'card-4', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page4.html', gradient: GRADIENTS[3], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: DEFAULT_CARD_TITLE_COLOR, notesColor: DEFAULT_CARD_NOTES_COLOR, titleSize: DEFAULT_CARD_TITLE_SIZE, notesSize: DEFAULT_CARD_NOTES_SIZE },
+  { id: 'card-5', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page5.html', gradient: GRADIENTS[4], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: DEFAULT_CARD_TITLE_COLOR, notesColor: DEFAULT_CARD_NOTES_COLOR, titleSize: DEFAULT_CARD_TITLE_SIZE, notesSize: DEFAULT_CARD_NOTES_SIZE },
+  { id: 'card-6', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page6.html', gradient: GRADIENTS[5], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: DEFAULT_CARD_TITLE_COLOR, notesColor: DEFAULT_CARD_NOTES_COLOR, titleSize: DEFAULT_CARD_TITLE_SIZE, notesSize: DEFAULT_CARD_NOTES_SIZE },
+  { id: 'card-7', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page7.html', gradient: GRADIENTS[6], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: DEFAULT_CARD_TITLE_COLOR, notesColor: DEFAULT_CARD_NOTES_COLOR, titleSize: DEFAULT_CARD_TITLE_SIZE, notesSize: DEFAULT_CARD_NOTES_SIZE },
+  { id: 'card-8', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page8.html', gradient: GRADIENTS[7], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: DEFAULT_CARD_TITLE_COLOR, notesColor: DEFAULT_CARD_NOTES_COLOR, titleSize: DEFAULT_CARD_TITLE_SIZE, notesSize: DEFAULT_CARD_NOTES_SIZE },
+  { id: 'card-9', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page9.html', gradient: GRADIENTS[8], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: DEFAULT_CARD_TITLE_COLOR, notesColor: DEFAULT_CARD_NOTES_COLOR, titleSize: DEFAULT_CARD_TITLE_SIZE, notesSize: DEFAULT_CARD_NOTES_SIZE },
+  { id: 'card-10', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page10.html', gradient: GRADIENTS[9], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: DEFAULT_CARD_TITLE_COLOR, notesColor: DEFAULT_CARD_NOTES_COLOR, titleSize: DEFAULT_CARD_TITLE_SIZE, notesSize: DEFAULT_CARD_NOTES_SIZE },
 ];
 
 const cardsGridTop = document.getElementById('cardsGridTop');
@@ -414,7 +416,7 @@ function defaultCardsSectionConfig(overrides) {
   return Object.assign({
     title: '',
     layoutMode: 'categories',
-    cardsPerRow: 5,
+    cardsPerRow: 4,
     cardsGap: 16,
     categories: [],
     cardPositions: {},
@@ -2323,8 +2325,8 @@ function createDefaultCategory(cardIds) {
     title: 'קטגוריה',
     subtitle: 'תיאור קצר',
     cardIds: Array.isArray(cardIds) ? cardIds.slice() : [],
-    fontSize: 22,
-    color: '#2a3a2f',
+    fontSize: DEFAULT_CATEGORY_FONT_SIZE,
+    color: DEFAULT_CATEGORY_COLOR,
   };
 }
 
@@ -2343,8 +2345,8 @@ function normalizeCategories(categories, cards) {
       title: String(cat.title || 'קטגוריה').slice(0, 40),
       subtitle: String(cat.subtitle || 'תיאור קצר').slice(0, 80),
       cardIds: ids,
-      fontSize: clampFontSize(cat.fontSize, 22),
-      color: normalizeTextColor(cat.color, '#2a3a2f'),
+      fontSize: clampFontSize(cat.fontSize, DEFAULT_CATEGORY_FONT_SIZE),
+      color: normalizeTextColor(cat.color, DEFAULT_CATEGORY_COLOR),
     };
   });
 
@@ -2361,15 +2363,14 @@ function normalizeCategories(categories, cards) {
 }
 
 function getCategoryTitleStyle(cat) {
-  const size = clampFontSize(cat && cat.fontSize, 22);
-  const color = colorToCss(normalizeTextColor(cat && cat.color, '#2a3a2f'));
+  const size = clampFontSize(cat && cat.fontSize, DEFAULT_CATEGORY_FONT_SIZE);
+  const color = colorToCss(normalizeTextColor(cat && cat.color, DEFAULT_CATEGORY_COLOR));
   return 'font-size:' + size + 'px;color:' + color + ';';
 }
 
 function getCategorySubtitleStyle(cat) {
-  const size = Math.max(10, Math.round(clampFontSize(cat && cat.fontSize, 22) * 0.72));
-  const color = colorToCss(normalizeTextColor(cat && cat.color, '#2a3a2f'));
-  return 'font-size:' + size + 'px;color:' + color + ';';
+  const size = Math.max(10, Math.round(clampFontSize(cat && cat.fontSize, DEFAULT_CATEGORY_FONT_SIZE) * 0.72));
+  return 'font-size:' + size + 'px;color:var(--site-secondary,#e31c23);';
 }
 
 function getCardsByIds(cards, ids) {
@@ -2693,7 +2694,7 @@ function buildCategoryBlockHtml(cat, cards) {
   const catId = cat.id || '';
   const titleStyle = getCategoryTitleStyle(cat);
   const subtitleStyle = getCategorySubtitleStyle(cat);
-  const fontSize = clampFontSize(cat.fontSize, 22);
+  const fontSize = clampFontSize(cat.fontSize, DEFAULT_CATEGORY_FONT_SIZE);
   const color = normalizeTextColor(cat.color, '#2a3a2f');
   const colorFieldId = 'catColor_' + catId;
   const subtitle = String(cat.subtitle || 'תיאור קצר');
@@ -2825,8 +2826,8 @@ function saveOrderFromDom(contextEl) {
       title: title,
       subtitle: subtitle,
       cardIds: ids,
-      fontSize: clampFontSize(sizeEl ? sizeEl.value : 22, 22),
-      color: normalizeTextColor(colorEl ? colorEl.value : '#2a3a2f', '#2a3a2f'),
+      fontSize: clampFontSize(sizeEl ? sizeEl.value : DEFAULT_CATEGORY_FONT_SIZE, DEFAULT_CATEGORY_FONT_SIZE),
+      color: normalizeTextColor(colorEl ? colorEl.value : DEFAULT_CATEGORY_COLOR, DEFAULT_CATEGORY_COLOR),
     });
   });
 
@@ -3008,7 +3009,7 @@ function setupCategoryControls() {
     const subtitleInput = block && block.querySelector('.category-subtitle-input');
 
     function applySize(raw) {
-      const size = clampFontSize(raw, 22);
+      const size = clampFontSize(raw, DEFAULT_CATEGORY_FONT_SIZE);
       const subtitleSize = Math.max(10, Math.round(size * 0.72));
       range.value = String(size);
       if (valueEl) valueEl.textContent = String(size);
@@ -3033,7 +3034,7 @@ function setupCategoryControls() {
       const subtitleInput = block && block.querySelector('.category-subtitle-input');
       const cssColor = colorToCss(hex);
       if (titleInput) titleInput.style.color = cssColor;
-      if (subtitleInput) subtitleInput.style.color = cssColor;
+      if (subtitleInput) subtitleInput.style.color = 'var(--site-secondary,#e31c23)';
       saveOrderFromDom(field);
     });
   });
@@ -3067,8 +3068,8 @@ function addCategoryAfter(afterCategoryId, sectionId) {
     title: 'קטגוריה חדשה',
     subtitle: 'תיאור קצר',
     cardIds: [],
-    fontSize: 22,
-    color: '#2a3a2f',
+    fontSize: DEFAULT_CATEGORY_FONT_SIZE,
+    color: DEFAULT_CATEGORY_COLOR,
   };
   if (afterCategoryId) {
     const idx = categories.findIndex(function (cat) { return cat.id === afterCategoryId; });

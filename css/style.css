@@ -2281,7 +2281,7 @@ body.page-edit-mode .cards-layout-bar:not(.is-in-editor) {
 
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(var(--cards-per-row, 5), minmax(0, 1fr));
+  grid-template-columns: repeat(var(--cards-per-row, 4), minmax(0, 1fr));
   gap: var(--cards-gap, 16px);
   padding: 0 20px 40px;
   max-width: 1400px;
@@ -2295,7 +2295,7 @@ body.page-edit-mode .cards-layout-bar:not(.is-in-editor) {
 .cards-grid.has-categories {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 48px;
 }
 
 .cards-grid.is-freeform {
@@ -2409,7 +2409,7 @@ body.page-edit-mode .cards-freeform-canvas:not(.has-image-bg)::before {
 .category-block {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 28px;
 }
 
 .category-header {
@@ -2431,16 +2431,16 @@ body.page-edit-mode .cards-freeform-canvas:not(.has-image-bg)::before {
 
 .category-title {
   margin: 0;
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 800;
-  color: #2a3a2f;
+  color: #1a1a1a;
 }
 
 .category-subtitle {
   margin: 0;
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 600;
-  color: #2a3a2f;
+  color: var(--site-secondary, #e31c23);
   line-height: 1.35;
 }
 
@@ -2588,13 +2588,20 @@ body.page-edit-mode .cards-freeform-canvas:not(.has-image-bg)::before {
 
 .category-cards {
   display: grid;
-  grid-template-columns: repeat(var(--cards-per-row, 5), minmax(0, 1fr));
+  grid-template-columns: repeat(var(--cards-per-row, 4), minmax(0, 1fr));
   gap: var(--cards-gap, 16px);
   min-height: 56px;
   padding: 8px;
   border-radius: 12px;
   border: 2px dashed transparent;
   transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+body:not(.page-edit-mode) .category-cards {
+  padding: 0;
+  border: none;
+  background: transparent;
+  min-height: 0;
 }
 
 body.page-edit-mode .category-cards {
@@ -3004,14 +3011,14 @@ body.cards-colored .card.card--flat .card-footer {
 .cards-grid .card.card--flat,
 .wizard-preview .card--preview.card--flat {
   background: var(--card-flat-bg, #fff);
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow: none;
-  min-height: 168px;
+  min-height: 148px;
 }
 
 .cards-grid .card.card--flat.card--edge-outline,
 .wizard-preview .card--preview.card--flat.card--edge-outline {
-  border: var(--card-outline-width, 2px) solid var(--card-outline, #e31c23);
+  border: 1px solid var(--card-outline, #e31c23);
 }
 
 .cards-grid .card.card--flat.card--edge-glow,
@@ -3036,15 +3043,15 @@ body.cards-colored .card.card--flat .card-footer {
 
 .cards-grid .card.card--flat .card-flat-body,
 .wizard-preview .card--preview.card--flat .card-flat-body {
-  padding: 28px 18px;
-  gap: 10px;
+  padding: 22px 16px 14px;
+  gap: 8px;
 }
 
 .cards-grid .card.card--flat .card-title,
 .wizard-preview .card--preview.card--flat .card-title {
-  font-size: var(--card-title-size, 34px);
+  font-size: var(--card-title-size, 44px);
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1.05;
   color: var(--card-title-color, #e31c23);
 }
 
@@ -3057,10 +3064,10 @@ body.cards-colored .card.card--flat .card-footer {
 
 .cards-grid .card.card--flat .card-notes,
 .wizard-preview .card--preview.card--flat .card-notes {
-  font-size: var(--card-notes-size, 15px);
-  font-weight: 400;
-  line-height: 1.45;
-  color: var(--card-notes-color, #333);
+  font-size: var(--card-notes-size, 17px);
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--card-notes-color, #1a1a1a);
   max-width: 100%;
 }
 
@@ -3083,7 +3090,7 @@ body.cards-colored .wizard-preview .card--preview.card--flat .card-title {
 
 body.cards-colored .cards-grid .card.card--flat .card-notes,
 body.cards-colored .wizard-preview .card--preview.card--flat .card-notes {
-  color: var(--card-notes-color, #333);
+  color: var(--card-notes-color, #1a1a1a);
   text-shadow: none;
 }
 
