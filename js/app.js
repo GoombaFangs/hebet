@@ -610,17 +610,36 @@ function renderStoredInlineText(value, plainFallback) {
 
 let savedInlineTextSelection = null;
 
+const WIZARD_PREVIEW_SIZE = { min: 12, max: 48, fallback: 28 };
+
+function isWizardPreviewTextEditing() {
+  return !!(wizardPreviewTextEdit && wizardPreviewTextEdit.el);
+}
+
+function getInlineFormattingTargetEl() {
+  if (isWizardPreviewTextEditing()) return wizardPreviewTextEdit.el;
+  return activeInlineEdit ? activeInlineEdit.el : null;
+}
+
+function canUseInlineFormattingToolbar() {
+  if (isWizardPreviewTextEditing()) return true;
+  if (!editMode || !activeInlineEdit) return false;
+  const spec = getInlineEditSpec(activeInlineEdit.el);
+  return supportsInlineToolbarTools(spec);
+}
+
 function saveInlineTextSelection() {
-  if (!activeInlineEdit) return;
+  const el = getInlineFormattingTargetEl();
+  if (!el) return;
   const sel = window.getSelection();
   if (!sel || !sel.rangeCount || sel.isCollapsed) return;
   const range = sel.getRangeAt(0);
-  if (!activeInlineEdit.el.contains(range.commonAncestorContainer)) return;
+  if (!el.contains(range.commonAncestorContainer)) return;
   savedInlineTextSelection = range.cloneRange();
 }
 
 function restoreInlineTextSelection() {
-  if (!savedInlineTextSelection || !activeInlineEdit) return false;
+  if (!savedInlineTextSelection || !getInlineFormattingTargetEl()) return false;
   try {
     const sel = window.getSelection();
     sel.removeAllRanges();
@@ -651,17 +670,71 @@ function wrapRangeWithColor(range, color) {
 }
 
 function hasActiveInlineTextSelection() {
-  if (!activeInlineEdit) return false;
+  const el = getInlineFormattingTargetEl();
+  if (!el) return false;
   const sel = window.getSelection();
   if (!sel || !sel.rangeCount || sel.isCollapsed) return false;
   const range = sel.getRangeAt(0);
-  return activeInlineEdit.el.contains(range.commonAncestorContainer);
+  return el.contains(range.commonAncestorContainer);
+}
+
+function applyWizardPreviewTextColor(hex) {
+  if (!isWizardPreviewTextEditing()) return;
+  const el = wizardPreviewTextEdit.el;
+  const spec = wizardPreviewTextEdit.spec;
+  const color = colorToCss(hex);
+
+  if (spec.field === 'pageName') {
+    wizardData.outlineColor = color;
+    const outlineInput = document.getElementById('outlineColor');
+    if (outlineInput) outlineInput.value = color;
+    setHslaFieldValue('outlineColor', color);
+    const outlineHex = document.getElementById('outlineColorHex');
+    if (outlineHex) outlineHex.textContent = colorToDisplayHex(color);
+    patchWizardPreviewCardTheme();
+    return;
+  }
+
+  el.focus();
+  if (!hasActiveInlineTextSelection() && !restoreInlineTextSelection()) {
+    selectElementContents(el);
+  }
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  if (!el.contains(range.commonAncestorContainer) || range.collapsed) return;
+
+  const workingRange = range.cloneRange();
+  sel.removeAllRanges();
+  sel.addRange(workingRange);
+  try {
+    document.execCommand('styleWithCSS', false, true);
+    if (!document.execCommand('foreColor', false, color)) {
+      wrapRangeWithColor(workingRange.cloneRange(), color);
+    }
+  } catch (_) {
+    wrapRangeWithColor(workingRange.cloneRange(), color);
+  }
+}
+
+function applyWizardPreviewTextSize(rawSize) {
+  if (!isWizardPreviewTextEditing()) return;
+  const size = clampFontSize(rawSize, WIZARD_PREVIEW_SIZE.fallback, WIZARD_PREVIEW_SIZE.max);
+  wizardPreviewTextEdit.el.style.fontSize = size + 'px';
+  const range = document.getElementById('inlineTextSize');
+  const valueEl = document.getElementById('inlineTextSizeValue');
+  if (range) range.value = String(size);
+  if (valueEl) valueEl.textContent = String(size);
 }
 
 function applyInlineTextColor(hex) {
+  if (isWizardPreviewTextEditing()) {
+    applyWizardPreviewTextColor(hex);
+    return;
+  }
   if (!activeInlineEdit) return;
   const spec = getInlineEditSpec(activeInlineEdit.el);
-  if (!spec || !spec.richText) return;
+  if (!supportsInlineToolbarTools(spec)) return;
   if (!hasActiveInlineTextSelection() && !restoreInlineTextSelection()) return;
   const el = activeInlineEdit.el;
   const sel = window.getSelection();
@@ -684,6 +757,30 @@ function applyInlineTextColor(hex) {
   }
   activeInlineEdit.lastGoodHtml = el.innerHTML;
   saveInlineTextSelection();
+}
+
+function supportsInlineToolbarTools(spec) {
+  return !!(spec && spec.richText && String(spec.key || '').indexOf('card.') !== 0);
+}
+
+function stripPlainInlineFormatting(el) {
+  if (!el) return;
+  el.style.removeProperty('font-size');
+  el.style.removeProperty('color');
+  el.style.removeProperty('font-weight');
+  el.style.removeProperty('line-height');
+  el.querySelectorAll('span, font, b, i, u').forEach(function (node) {
+    if (node.parentNode) node.replaceWith(document.createTextNode(node.textContent || ''));
+  });
+}
+
+function preservePlainInlineEditValue(el, spec) {
+  if (!el || !spec || supportsInlineToolbarTools(spec)) return;
+  const plain = readInlineEditValue(el);
+  const maxLen = spec.maxLen || plain.length;
+  const next = plain.slice(0, maxLen);
+  if (el.textContent !== next) el.textContent = next;
+  stripPlainInlineFormatting(el);
 }
 
 const INLINE_EDIT_SIZE_FIELDS = {
@@ -729,9 +826,34 @@ function syncInlineTextSizeControl() {
   const valueEl = document.getElementById('inlineTextSizeValue');
   if (!control || !range || !valueEl) return;
 
-  if (!editMode || !activeInlineEdit) {
+  const enabled = canUseInlineFormattingToolbar();
+
+  if (!enabled) {
     control.classList.add('is-disabled');
     range.disabled = true;
+    syncInlineTextColorControl();
+    return;
+  }
+
+  if (isWizardPreviewTextEditing()) {
+    control.classList.remove('is-disabled');
+    range.disabled = false;
+    range.min = String(WIZARD_PREVIEW_SIZE.min);
+    range.max = String(WIZARD_PREVIEW_SIZE.max);
+    const el = wizardPreviewTextEdit.el;
+    const inlinePx = parseFloat(el.style.fontSize);
+    let size = Number.isFinite(inlinePx)
+      ? clampFontSize(inlinePx, WIZARD_PREVIEW_SIZE.fallback, WIZARD_PREVIEW_SIZE.max)
+      : WIZARD_PREVIEW_SIZE.fallback;
+    if (!Number.isFinite(inlinePx)) {
+      const computed = parseFloat(window.getComputedStyle(el).fontSize);
+      if (Number.isFinite(computed)) {
+        size = clampFontSize(Math.round(computed), WIZARD_PREVIEW_SIZE.fallback, WIZARD_PREVIEW_SIZE.max);
+      }
+    }
+    range.value = String(size);
+    valueEl.textContent = String(size);
+    syncInlineTextColorControl();
     return;
   }
 
@@ -739,6 +861,7 @@ function syncInlineTextSizeControl() {
   if (!cfg) {
     control.classList.add('is-disabled');
     range.disabled = true;
+    syncInlineTextColorControl();
     return;
   }
 
@@ -748,10 +871,26 @@ function syncInlineTextSizeControl() {
   const size = getInlineEditFontSize(loadHome(), activeInlineEdit.key);
   range.value = String(size);
   valueEl.textContent = String(size);
+  syncInlineTextColorControl();
+}
+
+function syncInlineTextColorControl() {
+  const field = document.getElementById('inlineTextColorPicker');
+  if (!field) return;
+  const enabled = canUseInlineFormattingToolbar();
+  field.classList.toggle('is-disabled', !enabled);
+  const swatch = field.querySelector('.hsla-swatch');
+  if (swatch) swatch.setAttribute('aria-disabled', enabled ? 'false' : 'true');
 }
 
 function applyInlineTextSize(rawSize) {
+  if (isWizardPreviewTextEditing()) {
+    applyWizardPreviewTextSize(rawSize);
+    return;
+  }
   if (!activeInlineEdit) return;
+  const spec = getInlineEditSpec(activeInlineEdit.el);
+  if (!supportsInlineToolbarTools(spec)) return;
   const key = activeInlineEdit.key;
   const cfg = INLINE_EDIT_SIZE_FIELDS[key];
   if (!cfg) return;
@@ -1266,6 +1405,7 @@ function openHslaPopover(field, onChange) {
   if (!input || !swatch || !els.popover) return;
 
   if (field.id === 'inlineTextColorPicker') {
+    if (!canUseInlineFormattingToolbar()) return;
     saveInlineTextSelection();
     applyInlineTextColor(input.value);
   }
@@ -1393,6 +1533,7 @@ function setupHslaField(field, onChange) {
   swatch.addEventListener('click', function (e) {
     e.preventDefault();
     e.stopPropagation();
+    if (field.id === 'inlineTextColorPicker' && !canUseInlineFormattingToolbar()) return;
     const pop = getHslaPopoverEls();
     if (!pop.popover.hidden && activeHslaTarget && activeHslaTarget.field === field) {
       closeHslaPopover();
@@ -1531,7 +1672,12 @@ function syncCardBgModeUi() {
   if (wrap) wrap.hidden = !needsMainImage;
 
   const flatImagePosWrap = document.getElementById('flatImagePosWrap');
-  if (flatImagePosWrap) flatImagePosWrap.hidden = mode !== 'squareImage';
+  if (flatImagePosWrap) {
+    flatImagePosWrap.hidden = mode !== 'squareImage' || !wizardData.mainImage;
+  }
+
+  const mediaExtrasWrap = document.getElementById('cardMediaExtrasWrap');
+  if (mediaExtrasWrap) mediaExtrasWrap.hidden = isFlat;
 
   const mainImageLabel = document.getElementById('mainImageFieldLabel');
   const mainImageHint = document.getElementById('mainImageFieldHint');
@@ -1587,8 +1733,8 @@ function syncCardBgModeUi() {
 }
 
 function getCardOutlineColor(card) {
-  if (!card) return '#e87722';
-  return card.outlineColor || '#e87722';
+  if (!card) return '#e31c23';
+  return card.outlineColor || '#e31c23';
 }
 
 function getCardFlatBgColor(card) {
@@ -1598,7 +1744,7 @@ function getCardFlatBgColor(card) {
 
 function getCardOutlineWidth(card) {
   const n = Number(card && card.outlineWidth);
-  if (!Number.isFinite(n)) return 4;
+  if (!Number.isFinite(n)) return 2;
   return Math.max(1, Math.min(20, Math.round(n)));
 }
 
@@ -2040,9 +2186,9 @@ function buildCardInner(card, options) {
       '<div class="card-flat-body">' +
         tagsHtml +
         (logoHtml ? '<div class="card-flat-logo">' + logoHtml + '</div>' : '') +
-        '<span class="card-title">' + escapeHtml(titleRaw) + '</span>' +
+        buildCardEditableTitle(card, titleRaw) +
         unitLine +
-        '<p class="card-notes">' + formatNotesHtml(desc) + '</p>' +
+        buildCardEditableNotes(card, desc) +
       '</div>' +
       footerHtml +
       freeLogoHtml +
@@ -2057,11 +2203,11 @@ function buildCardInner(card, options) {
       getCardBgPhotoHtml(card) +
       logoHtml +
       tagsHtml +
-      '<span class="card-title">' + escapeHtml(titleRaw) + '</span>' +
+      buildCardEditableTitle(card, titleRaw) +
     '</div>' +
     '<div class="card-body">' +
       unitLine +
-      '<p class="card-notes">' + formatNotesHtml(desc) + '</p>' +
+      buildCardEditableNotes(card, desc) +
     '</div>' +
     footerHtml +
     freeLogoHtml +
@@ -2410,6 +2556,7 @@ function renderCardsIntoSection(cards, home, sectionId) {
 }
 
 function renderCards(cards) {
+  if (isInlineEditPrefixActive('card.')) return;
   const home = ensureCardsSections(loadHome());
   syncCategoriesToolbar(home);
 
@@ -2440,6 +2587,7 @@ function renderCards(cards) {
     setupEditButtons();
   }
   pendingCardPopId = null;
+  if (editMode) syncInlineEditableHosts();
 }
 
 function buildCategoryBlockHtml(cat, cards, options) {
@@ -2621,6 +2769,10 @@ function setupDragAndDrop() {
 
   cardElements.forEach(function (card) {
     card.addEventListener('dragstart', function (e) {
+      if (activeInlineEdit || (e.target.closest && e.target.closest('[data-inline-edit]'))) {
+        e.preventDefault();
+        return;
+      }
       draggedElement = card;
       card.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
@@ -3318,7 +3470,7 @@ function toggleEditMode() {
 
 /* ===== תצוגה מקדימה חיה ===== */
 
-function buildPreviewCard() {
+function getWizardPreviewCardData() {
   const previewCard = {
     title: wizardData.pageName || 'שם הדף',
     unitName: wizardData.unitName,
@@ -3351,12 +3503,24 @@ function buildPreviewCard() {
     actionLinks: Object.assign({}, wizardData.actionLinks),
   };
 
-  // בתצוגה המקדימה מציגים כפתורים גם בלי קישורים מלאים
   const previewLinks = {};
   wizardData.enabledActions.forEach(function (action) {
     previewLinks[action] = wizardData.actionLinks[action] || '#';
   });
   previewCard.actionLinks = previewLinks;
+  return previewCard;
+}
+
+function patchWizardPreviewCardTheme() {
+  const cardEl = livePreview && livePreview.querySelector('.card--preview');
+  if (!cardEl) return;
+  const previewCard = getWizardPreviewCardData();
+  cardEl.className = 'card card--preview' + getCardShellClass(previewCard);
+  cardEl.setAttribute('style', getCardThemeStyle(previewCard));
+}
+
+function buildPreviewCard() {
+  const previewCard = getWizardPreviewCardData();
 
   const metaBits = [];
   const metaHtml = metaBits.length
@@ -3499,6 +3663,7 @@ function commitWizardPreviewTextEdit() {
   applyPreviewTextToWizard(spec, value);
   finishWizardPreviewTextDom(el);
   wizardPreviewTextEdit = null;
+  syncInlineTextSizeControl();
 }
 
 function cancelWizardPreviewTextEdit() {
@@ -3507,6 +3672,7 @@ function cancelWizardPreviewTextEdit() {
   finishWizardPreviewTextDom(wizardPreviewTextEdit.el);
   wizardPreviewTextEdit = null;
   updateLivePreview();
+  syncInlineTextSizeControl();
 }
 
 function startWizardPreviewTextEdit(el) {
@@ -3522,6 +3688,7 @@ function startWizardPreviewTextEdit(el) {
   wizardPreviewTextEdit = { el: el, spec: spec, original: original };
   el.focus();
   selectElementContents(el);
+  syncInlineTextSizeControl();
 }
 
 function markWizardPreviewTextFields() {
@@ -4004,6 +4171,7 @@ function bindLiveInputs() {
     const preview = document.getElementById('mainImagePreview');
     preview.src = wizardData.mainImage;
     preview.hidden = false;
+    syncCardBgModeUi();
     updateLivePreview();
   });
 
@@ -4254,7 +4422,9 @@ function openWizard() {
   updateWizardChrome();
 
   modalOverlay.hidden = false;
+  syncSiteToolbarHeight();
   updateStepUI();
+  syncInlineTextSizeControl();
 }
 
 function openWizardForEdit(cardId) {
@@ -4319,7 +4489,9 @@ function openWizardForEdit(cardId) {
   updateWizardChrome();
 
   modalOverlay.hidden = false;
+  syncSiteToolbarHeight();
   updateStepUI();
+  syncInlineTextSizeControl();
 }
 
 function closeWizard() {
@@ -4327,6 +4499,7 @@ function closeWizard() {
   modalOverlay.hidden = true;
   editingCardId = null;
   showError('');
+  syncInlineTextSizeControl();
 }
 
 function finishWizard() {
@@ -6342,6 +6515,12 @@ function isFloatMenuCompactViewport() {
   return window.matchMedia('(max-width: 900px)').matches;
 }
 
+function syncSiteToolbarHeight() {
+  const shell = document.getElementById('siteToolbar');
+  const height = shell && !shell.hidden ? Math.ceil(shell.getBoundingClientRect().height) : 0;
+  document.documentElement.style.setProperty('--site-toolbar-height', Math.max(0, height) + 'px');
+}
+
 function syncFloatMenuAnchor() {
   const aside = document.getElementById('floatMenu');
   if (!aside) return;
@@ -6368,6 +6547,7 @@ function syncFloatMenuAnchor() {
 }
 
 function syncFloatMenuFromViewport() {
+  syncSiteToolbarHeight();
   syncFloatMenuAnchor();
   syncFloatMenuActiveFromScroll();
 }
@@ -6445,7 +6625,10 @@ function bindFloatMenuInteractions() {
     if (typeof ResizeObserver === 'function') {
       const toolbar = document.getElementById('siteToolbar');
       if (toolbar) {
-        const toolbarObserver = new ResizeObserver(function () { syncFloatMenuAnchor(); });
+        const toolbarObserver = new ResizeObserver(function () {
+          syncSiteToolbarHeight();
+          syncFloatMenuAnchor();
+        });
         toolbarObserver.observe(toolbar);
       }
       if (aside) {
@@ -6776,6 +6959,53 @@ function inlineEditAttr(key, placeholder) {
     ' contenteditable="true" spellcheck="false" role="textbox" tabindex="0"';
 }
 
+function cardInlineEditAttrs(cardId, key, placeholder) {
+  if (!editMode || IS_USER_MODE || !cardId) return '';
+  return (
+    ' data-inline-edit="' + escapeHtml(key) + '"' +
+    ' data-card-id="' + escapeHtml(cardId) + '"' +
+    (placeholder ? ' data-inline-placeholder="' + escapeHtml(placeholder) + '"' : '') +
+    ' contenteditable="true" spellcheck="false" role="textbox" tabindex="0"'
+  );
+}
+
+function buildCardEditableTitle(card, titleRaw) {
+  if (!editMode || IS_USER_MODE) {
+    return '<span class="card-title">' + escapeHtml(titleRaw) + '</span>';
+  }
+  return (
+    '<span class="card-title' + (!titleRaw ? ' is-inline-placeholder' : '') + '"' +
+      cardInlineEditAttrs(card.id, 'card.title', 'כותרת') +
+      ' aria-label="עריכת כותרת">' +
+      escapeHtml(titleRaw || 'כותרת') +
+    '</span>'
+  );
+}
+
+function buildCardEditableNotes(card, desc) {
+  const text = String(desc || '').trim();
+  if (!editMode || IS_USER_MODE) {
+    return '<p class="card-notes">' + formatNotesHtml(desc) + '</p>';
+  }
+  return (
+    '<p class="card-notes' + (!text ? ' is-inline-placeholder' : '') + '"' +
+      cardInlineEditAttrs(card.id, 'card.notes', 'תיאור קצר') +
+      ' aria-label="עריכת תיאור">' +
+      escapeHtml(text || 'תיאור קצר') +
+    '</p>'
+  );
+}
+
+function getCardNotesText(card) {
+  if (!card) return '';
+  return String(card.notes || card.description || '').trim();
+}
+
+function refreshCardsAfterInlineEdit() {
+  renderCards(loadCards());
+  syncInlineEditableHosts();
+}
+
 function renderHomeHeader(home) {
   if (isInlineEditPrefixActive('header.')) return;
   const section = document.getElementById('homeHeader');
@@ -6887,6 +7117,36 @@ function getInlineEditSpec(el) {
     };
   }
 
+  if (key === 'card.title' || key === 'card.notes') {
+    const cardId = el.getAttribute('data-card-id');
+    const isNotes = key === 'card.notes';
+    return {
+      key: key,
+      maxLen: isNotes ? 30 : 10,
+      multiline: isNotes,
+      richText: false,
+      placeholder: isNotes ? 'תיאור קצר' : 'כותרת',
+      get: function () {
+        const card = loadCards().find(function (c) { return c.id === cardId; });
+        if (!card) return '';
+        return isNotes ? getCardNotesText(card) : String(card.title || '');
+      },
+      set: function (_home, value) {
+        const cards = loadCards();
+        const card = cards.find(function (c) { return c.id === cardId; });
+        if (!card) return;
+        if (isNotes) {
+          const next = String(value || '').slice(0, 30);
+          card.notes = next;
+          card.description = next;
+        } else {
+          card.title = String(value || '').slice(0, 10);
+        }
+        saveCards(cards);
+      },
+    };
+  }
+
   const headerFields = {
     'header.kicker': { field: 'kicker', maxLen: 80, richText: true },
     'header.title': { field: 'title', maxLen: 80, richText: true },
@@ -6979,8 +7239,15 @@ function readInlineEditStoredValue(el, richText) {
 
 function finishInlineEditDom(el) {
   if (!el) return;
+  const cardEl = el.closest ? el.closest('.card--editing') : null;
   el.classList.remove('is-inline-editing');
   savedInlineTextSelection = null;
+  if (cardEl) {
+    cardEl.classList.remove('is-inline-editing-card');
+    if (editMode && !IS_USER_MODE && cardEl.hasAttribute('data-id')) {
+      cardEl.setAttribute('draggable', 'true');
+    }
+  }
   if (!editMode || IS_USER_MODE) {
     el.removeAttribute('contenteditable');
     el.removeAttribute('role');
@@ -7011,6 +7278,7 @@ function cancelInlineEdit() {
   const home = loadHome();
   if (String(spec.key || '').indexOf('header.') === 0) renderHomeHeader(home);
   else if (String(spec.key || '').indexOf('floatMenu.') === 0) renderFloatMenu(home);
+  else if (String(spec.key || '').indexOf('card.') === 0) refreshCardsAfterInlineEdit();
   else renderHome();
   syncInlineEditableHosts();
 }
@@ -7042,6 +7310,11 @@ function commitInlineEdit(options) {
     value = spec.richText && isRichTextValue(value) ? plain.slice(0, spec.maxLen) : value.slice(0, spec.maxLen);
   }
 
+  if (String(spec.key || '').indexOf('card.') === 0) {
+    value = String(value || '').slice(0, spec.maxLen);
+    plain = value.trim();
+  }
+
   const home = loadHome();
   spec.set(home, value);
   saveHome(home);
@@ -7066,6 +7339,8 @@ function commitInlineEdit(options) {
     document.title = getHeaderTitleText(home).trim() || 'פורטל תוכן';
   } else if (String(spec.key || '').indexOf('floatMenu.') === 0) {
     renderFloatMenu(home);
+  } else if (String(spec.key || '').indexOf('card.') === 0) {
+    refreshCardsAfterInlineEdit();
   } else {
     renderHome();
   }
@@ -7086,6 +7361,12 @@ function startInlineEdit(el) {
   el.classList.add('is-inline-editing');
   el.hidden = false;
   syncInlineEditableHost(el, spec);
+  preservePlainInlineEditValue(el, spec);
+  const cardEl = el.closest ? el.closest('.card--editing') : null;
+  if (cardEl) {
+    cardEl.classList.add('is-inline-editing-card');
+    cardEl.setAttribute('draggable', 'false');
+  }
   activeInlineEdit = {
     el: el,
     key: spec.key,
@@ -7111,6 +7392,7 @@ function bindInlineEditing() {
       if (activeInlineEdit && activeInlineEdit.el !== next) {
         commitInlineEdit({ silent: true });
       }
+      e.stopPropagation();
       startInlineEdit(next);
       return;
     }
@@ -7203,6 +7485,9 @@ function bindInlineEditing() {
     if (!activeInlineEdit) return;
     const spec = getInlineEditSpec(activeInlineEdit.el);
     if (!spec || !spec.maxLen) return;
+    if (!supportsInlineToolbarTools(spec)) {
+      preservePlainInlineEditValue(activeInlineEdit.el, spec);
+    }
     const raw = spec.richText
       ? plainTextFromHtml(activeInlineEdit.el.innerHTML)
       : readInlineEditValue(activeInlineEdit.el);
@@ -8872,6 +9157,7 @@ async function initApp() {
     console.warn('Custom fonts unavailable', err);
   }
   populateFontSelects();
+  syncSiteToolbarHeight();
   await renderHome();
   renderCards(loadCards());
   playPageEntrance();
