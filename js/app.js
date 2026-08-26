@@ -41,15 +41,38 @@ const FONT_FILE_RE = /\.(ttf|otf|woff2?)$/i;
 let pageEntranceDone = false;
 let pendingCardPopId = null;
 
+const HEADER_ACCENT = '#E31C24';
+const HEADER_INK = '#1A1A1A';
+
 const DEFAULT_HOME = {
-  title: 'פורטל תוכן',
+  title: 'רצינו לבקש סליחה',
   header: {
-    height: 180,
-    bgOpacity: 100,
+    layout: 'hero',
+    height: 400,
+    bgOpacity: 0,
     bgImage: '',
-    items: [
-      { id: 'hdr-title', type: 'title', text: 'פורטל תוכן', x: 50, y: 45, align: 'center' },
-    ],
+    artSrc: '',
+    artSide: 'left',
+    artWidth: 46,
+    kicker: 'מהדורת ראש השנה התשפ״ז - 2026',
+    kickerColor: HEADER_ACCENT,
+    kickerSize: 15,
+    title: 'רצינו לבקש סליחה',
+    titleColor: HEADER_INK,
+    titleSize: 44,
+    body: 'סליחה שהפכנו עוד מצגת למשהו שנהנים להסתכל עליו,\nשנה טובה, מיחידת הבט',
+    bodyColor: HEADER_INK,
+    bodySize: 17,
+    bodyAccentColor: HEADER_ACCENT,
+    bodyAccents: 'סליחה\nמיחידת הבט',
+    buttonText: 'תצוגת יכולת הבט',
+    buttonHref: '',
+    buttonBg: HEADER_ACCENT,
+    buttonColor: '#ffffff',
+    buttonRadius: 40,
+    linkText: 'צרו איתנו קשר',
+    linkHref: '',
+    linkColor: HEADER_ACCENT,
   },
   subtitle: 'צפייה מהנה',
   subtitleSize: 20,
@@ -160,6 +183,13 @@ const DEFAULT_HOME = {
   cardsBgImage: '',
   cardsBgFullBleed: true,
   cardsSearchEnabled: false,
+  floatMenu: {
+    enabled: false,
+    side: 'start',
+    title: 'ניווט באתר',
+    items: [],
+    tags: [],
+  },
 };
 
 const GRADIENTS = [
@@ -204,6 +234,7 @@ const livePreview = document.getElementById('livePreview');
 const wizardError = document.getElementById('wizardError');
 
 let editMode = false;
+let activeInlineEdit = null;
 let draggedElement = null;
 let currentStep = 1;
 let editingCardId = null;
@@ -327,6 +358,24 @@ function normalizeProjectLink(link) {
 
 function createCardId() {
   return 'card-' + Date.now();
+}
+
+const FLOAT_MENU_SECTIONS = [
+  { id: 'header', label: 'כותרת', el: 'homeHeader' },
+  { id: 'intro', label: 'פתיח', el: 'homeIntro' },
+  { id: 'intro2', label: 'פתיח 2', el: 'homeIntro2' },
+  { id: 'cards', label: 'כרטיסי תוכן', el: 'cardsSection' },
+  { id: 'closing', label: 'סגירה', el: 'homeClosing' },
+  { id: 'closing2', label: 'סגירה 2', el: 'homeClosing2' },
+];
+
+let floatMenuIdSeq = 0;
+let floatMenuSpyBound = false;
+let floatMenuActiveId = '';
+
+function createFloatMenuId(prefix) {
+  floatMenuIdSeq += 1;
+  return (prefix || 'fm') + '-' + Date.now().toString(36) + '-' + floatMenuIdSeq;
 }
 
 function escapeHtml(text) {
@@ -2679,6 +2728,7 @@ async function deleteCard(id) {
 
 function toggleEditMode() {
   if (IS_USER_MODE) return;
+  if (activeInlineEdit) commitInlineEdit();
   editMode = !editMode;
   btnEdit.textContent = editMode ? 'סיום עריכה' : 'עריכה';
   btnEdit.classList.toggle('active', editMode);
@@ -2694,6 +2744,7 @@ function toggleEditMode() {
   syncCategoriesToolbar(home);
   syncResizeHandlesVisibility();
   renderHomeHeader(home);
+  renderFloatMenu(home);
   renderCards(loadCards());
   renderClosingDevTeam('closing', home);
   if (home.hasClosing2) renderClosingDevTeam('closing2', home);
@@ -3586,10 +3637,6 @@ function finishWizard() {
 
 /* ===== דף בית ===== */
 
-function createHeaderItemId() {
-  return 'hdr-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
-}
-
 function clampPercent(value, fallback) {
   const num = Number(value);
   if (!Number.isFinite(num)) return fallback;
@@ -3598,28 +3645,40 @@ function clampPercent(value, fallback) {
 
 function clampHeaderHeight(value) {
   const num = Number(value);
-  if (!Number.isFinite(num)) return 180;
-  return Math.min(560, Math.max(100, Math.round(num)));
+  if (!Number.isFinite(num)) return 400;
+  return Math.min(720, Math.max(220, Math.round(num)));
 }
 
-function clampLogoWidth(value) {
+function clampHeaderArtWidth(value) {
   const num = Number(value);
-  if (!Number.isFinite(num)) return 14;
-  return Math.min(40, Math.max(6, Math.round(num)));
+  if (!Number.isFinite(num)) return 46;
+  return Math.min(70, Math.max(20, Math.round(num)));
 }
 
-function defaultHeaderFontSize(type) {
-  if (type === 'title') return 36;
-  if (type === 'subtitle') return 20;
-  if (type === 'badge') return 16;
-  if (type === 'logo') return 12;
-  return 16;
-}
-
-function clampFontSize(value, fallback) {
+function clampButtonRadius(value) {
   const num = Number(value);
+  if (!Number.isFinite(num)) return 40;
+  return Math.min(48, Math.max(0, Math.round(num)));
+}
+
+function clampFontSize(value, fallback, max) {
+  const num = Number(value);
+  const cap = max != null ? max : 72;
   if (!Number.isFinite(num)) return fallback || 16;
-  return Math.min(56, Math.max(10, Math.round(num)));
+  return Math.min(cap, Math.max(10, Math.round(num)));
+}
+
+function normalizeAccentList(value) {
+  if (Array.isArray(value)) {
+    return value.map(function (item) { return String(item || '').trim(); }).filter(Boolean).join('\n');
+  }
+  return String(value == null ? '' : value);
+}
+
+function parseAccentList(value) {
+  return normalizeAccentList(value).split(/\r?\n|,/).map(function (item) {
+    return item.trim();
+  }).filter(Boolean);
 }
 
 /** אייקון קטן לשדות עריכה — התווית המלאה ב-title/aria */
@@ -3648,10 +3707,11 @@ function homeSizeControlHtml(id, value, options) {
   );
 }
 
-function homeTextSizeHtml(id, value, fallback, labelText) {
-  return homeSizeControlHtml(id, clampFontSize(value, fallback || 16), {
+function homeTextSizeHtml(id, value, fallback, labelText, max) {
+  const cap = max || 56;
+  return homeSizeControlHtml(id, clampFontSize(value, fallback || 16, cap), {
     min: 10,
-    max: 56,
+    max: cap,
     step: 1,
     unit: 'px',
     label: labelText || 'גודל גופן',
@@ -3715,13 +3775,14 @@ function bindHomeTextColorField(id) {
   });
 }
 
-function bindHomeTextSizeField(id) {
+function bindHomeTextSizeField(id, max) {
   const range = document.getElementById(id);
   const num = document.getElementById(id + 'Num');
   if (!range || !num) return;
+  const cap = max || Number(range.max) || 56;
 
   function apply(raw, from) {
-    const size = clampFontSize(raw, 16);
+    const size = clampFontSize(raw, 16, cap);
     if (from !== 'range') range.value = String(size);
     if (from !== 'num') num.value = String(size);
     scheduleHomeEditorPreview();
@@ -3746,115 +3807,110 @@ function bindHomeTextSizeField(id) {
   });
 }
 
-function normalizeHeaderItem(item) {
-  if (!item || typeof item !== 'object') return null;
-  const type = item.type;
-  if (type !== 'logo' && type !== 'title' && type !== 'subtitle' && type !== 'badge') return null;
-
-  const base = {
-    id: item.id || createHeaderItemId(),
-    type: type,
-    x: clampPercent(item.x, 50),
-    y: clampPercent(item.y, 50),
-  };
-
-  if (type === 'logo') {
-    return Object.assign(base, {
-      src: item.src || '',
-      link: item.link || '',
-      caption: item.caption || '',
-      w: clampLogoWidth(item.w),
-      fontSize: clampFontSize(item.fontSize, defaultHeaderFontSize('logo')),
-      color: normalizeTextColor(item.color, '#ffffff'),
-    });
-  }
-
-  const maxLen = type === 'badge' ? 20 : 40;
-  return Object.assign(base, {
-    text: type === 'badge'
-      ? normalizeHeaderBadgeText(item.text)
-      : (item.text == null ? '' : String(item.text).slice(0, maxLen)),
-    align: item.align === 'left' || item.align === 'right' ? item.align : 'center',
-    fontSize: clampFontSize(item.fontSize, defaultHeaderFontSize(type)),
-    color: normalizeTextColor(item.color, '#ffffff'),
-  });
+function pickHeaderText(source, key, fallback) {
+  if (source && source[key] != null) return String(source[key]);
+  return fallback == null ? '' : String(fallback);
 }
 
 function normalizeHeader(header, fallbackTitle) {
   const source = header && typeof header === 'object' ? header : {};
-  const items = Array.isArray(source.items)
-    ? source.items.map(normalizeHeaderItem).filter(Boolean)
-    : [];
-
-  if (!items.some(function (item) { return item.type === 'title'; })) {
-    items.push({
-      id: createHeaderItemId(),
-      type: 'title',
-      text: String(fallbackTitle || 'פורטל תוכן').slice(0, 40),
-      x: 50,
-      y: 45,
-      align: 'center',
-    });
-  }
+  const defaults = DEFAULT_HOME.header;
+  const titleFallback = fallbackTitle != null && String(fallbackTitle).trim()
+    ? String(fallbackTitle)
+    : defaults.title;
 
   return {
-    height: clampHeaderHeight(source.height),
-    bgOpacity: clampBgOpacity(source.bgOpacity),
+    layout: 'hero',
+    height: clampHeaderHeight(source.height != null ? source.height : defaults.height),
+    bgOpacity: clampBgOpacity(source.bgOpacity != null ? source.bgOpacity : defaults.bgOpacity),
     bgImage: source.bgImage || '',
-    items: items,
+    artSrc: source.artSrc || '',
+    artSide: 'left',
+    artWidth: clampHeaderArtWidth(source.artWidth != null ? source.artWidth : defaults.artWidth),
+    kicker: pickHeaderText(source, 'kicker', defaults.kicker).slice(0, 80),
+    kickerColor: normalizeTextColor(source.kickerColor, defaults.kickerColor),
+    kickerSize: clampFontSize(source.kickerSize, defaults.kickerSize, 32),
+    title: pickHeaderText(source, 'title', titleFallback).slice(0, 80),
+    titleColor: normalizeTextColor(source.titleColor, defaults.titleColor),
+    titleSize: clampFontSize(source.titleSize, defaults.titleSize, 72),
+    body: pickHeaderText(source, 'body', defaults.body).slice(0, 400),
+    bodyColor: normalizeTextColor(source.bodyColor, defaults.bodyColor),
+    bodySize: clampFontSize(source.bodySize, defaults.bodySize, 32),
+    bodyAccentColor: normalizeTextColor(source.bodyAccentColor, defaults.bodyAccentColor),
+    bodyAccents: normalizeAccentList(source.bodyAccents != null ? source.bodyAccents : defaults.bodyAccents),
+    buttonText: pickHeaderText(source, 'buttonText', defaults.buttonText).slice(0, 40),
+    buttonHref: String(source.buttonHref || '').trim(),
+    buttonBg: normalizeTextColor(source.buttonBg, defaults.buttonBg),
+    buttonColor: normalizeTextColor(source.buttonColor, defaults.buttonColor),
+    buttonRadius: clampButtonRadius(source.buttonRadius != null ? source.buttonRadius : defaults.buttonRadius),
+    linkText: pickHeaderText(source, 'linkText', defaults.linkText).slice(0, 40),
+    linkHref: String(source.linkHref || '').trim(),
+    linkColor: normalizeTextColor(source.linkColor, defaults.linkColor),
   };
 }
 
-function migrateLegacyHeader(parsed) {
-  const items = [];
-  const logos = Array.isArray(parsed.titleLogos) ? parsed.titleLogos : null;
+function findLegacyHeaderItem(items, type) {
+  if (!Array.isArray(items)) return null;
+  return items.find(function (item) { return item && item.type === type; }) || null;
+}
 
-  if (logos && logos.length) {
-    logos.forEach(function (logo, idx) {
-      if (!logo || !logo.src) return;
-      const align = logo.align === 'left' ? 'left' : 'right';
-      items.push(normalizeHeaderItem({
-        type: 'logo',
-        src: logo.src,
-        link: logo.link || '',
-        caption: logo.caption || '',
-        x: align === 'left' ? 12 : (88 - idx * 16),
-        y: 18,
-        w: logo.w || 14,
-      }));
-    });
-  } else if (parsed.titleLogoEnabled && parsed.titleLogo) {
-    const align = parsed.titleLogoAlign === 'left' ? 'left' : 'right';
-    items.push(normalizeHeaderItem({
-      type: 'logo',
-      src: parsed.titleLogo,
-      link: parsed.titleLogoLink || '',
-      caption: '',
-      x: align === 'left' ? 12 : 88,
-      y: 18,
-      w: 14,
-    }));
+function migrateItemsToHero(header, fallbackTitle) {
+  const source = header && typeof header === 'object' ? header : {};
+  const items = Array.isArray(source.items) ? source.items : [];
+  const titleItem = findLegacyHeaderItem(items, 'title');
+  const subtitleItem = findLegacyHeaderItem(items, 'subtitle');
+  const logoItem = items.find(function (item) { return item && item.type === 'logo' && item.src; });
+  const isPlainDefault = items.length <= 1
+    && titleItem
+    && (!titleItem.text || titleItem.text === 'פורטל תוכן')
+    && !logoItem
+    && !subtitleItem;
+
+  if (isPlainDefault) {
+    return normalizeHeader(DEFAULT_HOME.header, DEFAULT_HOME.title);
   }
 
-  items.push(normalizeHeaderItem({
-    type: 'title',
-    text: (parsed.title || DEFAULT_HOME.title || 'פורטל תוכן').slice(0, 40),
-    x: 50,
-    y: 48,
-    align: 'center',
-  }));
-
   return normalizeHeader({
-    height: 180,
+    height: source.height,
+    bgOpacity: source.bgOpacity,
+    bgImage: source.bgImage || '',
+    artSrc: logoItem ? logoItem.src : '',
+    artSide: 'left',
+    title: titleItem && titleItem.text ? titleItem.text : fallbackTitle,
+    titleColor: titleItem && titleItem.color ? titleItem.color : HEADER_INK,
+    titleSize: titleItem && titleItem.fontSize ? titleItem.fontSize : 44,
+    kicker: subtitleItem && subtitleItem.text ? subtitleItem.text : '',
+    kickerColor: subtitleItem && subtitleItem.color ? subtitleItem.color : HEADER_ACCENT,
+    kickerSize: subtitleItem && subtitleItem.fontSize ? subtitleItem.fontSize : 15,
+    body: '',
+    bodyAccents: '',
+    buttonText: '',
+    linkText: '',
+  }, fallbackTitle);
+}
+
+function migrateLegacyHeader(parsed) {
+  const logos = Array.isArray(parsed.titleLogos) ? parsed.titleLogos : [];
+  const firstLogo = logos.find(function (logo) { return logo && logo.src; })
+    || (parsed.titleLogoEnabled && parsed.titleLogo ? { src: parsed.titleLogo } : null);
+
+  return migrateItemsToHero({
+    height: 400,
     bgOpacity: migrateBgOpacity(parsed, 'title'),
     bgImage: parsed.titleImage || '',
-    items: items,
+    items: [
+      firstLogo ? { type: 'logo', src: firstLogo.src } : null,
+      { type: 'title', text: parsed.title || DEFAULT_HOME.title },
+    ].filter(Boolean),
   }, parsed.title);
 }
 
 function buildHomeHeader(parsed) {
-  if (parsed && parsed.header && Array.isArray(parsed.header.items)) {
+  if (parsed && parsed.header && parsed.header.layout === 'hero') {
     return normalizeHeader(parsed.header, parsed.title);
+  }
+  if (parsed && parsed.header && Array.isArray(parsed.header.items)) {
+    return migrateItemsToHero(parsed.header, parsed.title);
   }
   if (parsed && (
     Object.prototype.hasOwnProperty.call(parsed, 'title') ||
@@ -3868,19 +3924,17 @@ function buildHomeHeader(parsed) {
 }
 
 function syncTitleFromHeader(home) {
-  const titleItem = (home.header && home.header.items || []).find(function (item) {
-    return item.type === 'title';
-  });
-  home.title = titleItem ? String(titleItem.text || '').slice(0, 40) : '';
+  home.title = home.header && home.header.title != null
+    ? String(home.header.title).slice(0, 80)
+    : '';
   return home.title;
 }
 
 function getHeaderTitleText(home) {
-  const titleItem = (home.header && home.header.items || []).find(function (item) {
-    return item.type === 'title';
-  });
-  if (titleItem) return String(titleItem.text || '');
-  return home.title == null ? DEFAULT_HOME.title : String(home.title);
+  if (home && home.header && home.header.title != null) {
+    return String(home.header.title);
+  }
+  return home && home.title != null ? String(home.title) : DEFAULT_HOME.title;
 }
 
 function formatClassificationBadge(text) {
@@ -3931,6 +3985,7 @@ function loadHome() {
       home.cardPositions = home.cardPositions && typeof home.cardPositions === 'object'
         ? home.cardPositions
         : {};
+      home.floatMenu = normalizeFloatMenu(home.floatMenu, home);
     } catch {
       home = Object.assign({}, DEFAULT_HOME);
       home.header = normalizeHeader(DEFAULT_HOME.header, DEFAULT_HOME.title);
@@ -4094,6 +4149,8 @@ function syncHomeSectionControls(home) {
       btn.hidden = !editMode || !home.hasIntro2;
     } else if (section === 'closing2') {
       btn.hidden = !editMode || !home.hasClosing2;
+    } else if (section === 'floatmenu') {
+      btn.hidden = !editMode || !normalizeFloatMenu(home.floatMenu, home).enabled;
     } else {
       btn.hidden = !editMode;
     }
@@ -4877,11 +4934,11 @@ function readHomeLayoutFields(home, kind) {
 
 function getSectionMediaHeight(kind) {
   const el = getSectionHeightEl(kind);
-  if (!el) return kind === 'header' ? 180 : 280;
+  if (!el) return kind === 'header' ? 400 : 280;
   const prop = kind === 'header' ? '--header-height' : '--section-media-height';
   const raw = getComputedStyle(el).getPropertyValue(prop).trim();
   const num = parseInt(raw, 10);
-  return Number.isFinite(num) ? num : (el.getBoundingClientRect().height || (kind === 'header' ? 180 : 280));
+  return Number.isFinite(num) ? num : (el.getBoundingClientRect().height || (kind === 'header' ? 400 : 280));
 }
 
 function syncResizeHandlesVisibility() {
@@ -4907,8 +4964,8 @@ function bindSectionResizeHandles() {
       handle.setPointerCapture(e.pointerId);
 
       function onMove(ev) {
-        const minH = kind === 'header' ? 100 : 120;
-        const next = Math.min(560, Math.max(minH, Math.round(startH + (ev.clientY - startY))));
+        const minH = kind === 'header' ? 220 : 120;
+        const next = Math.min(kind === 'header' ? 720 : 560, Math.max(minH, Math.round(startH + (ev.clientY - startY))));
         applySectionMediaHeight(kind, next);
       }
 
@@ -4944,8 +5001,16 @@ function bindSectionResizeHandles() {
 
 function setOptionalText(el, text, maxLen) {
   if (!el) return;
+  if (activeInlineEdit && activeInlineEdit.el === el) return;
   let value = text == null ? '' : String(text);
   if (maxLen) value = value.slice(0, maxLen);
+  if (editMode && !value.trim()) {
+    el.textContent = el.getAttribute('data-inline-placeholder') || '';
+    el.classList.add('is-inline-placeholder');
+    el.hidden = false;
+    return;
+  }
+  el.classList.remove('is-inline-placeholder');
   el.textContent = value;
   el.hidden = !value.trim();
 }
@@ -5425,6 +5490,277 @@ function getSelectedHomeMediaType() {
   return normalizeHomeMediaType(checked ? checked.value : 'bg');
 }
 
+function isSafeFloatMenuUrl(url) {
+  const value = String(url || '').trim();
+  if (!value) return false;
+  const lower = value.toLowerCase();
+  return lower.indexOf('javascript:') !== 0 && lower.indexOf('data:') !== 0;
+}
+
+function getFloatMenuSectionMeta(id) {
+  return FLOAT_MENU_SECTIONS.find(function (row) { return row.id === id; }) || null;
+}
+
+function getFloatMenuSectionEl(sectionId) {
+  const meta = getFloatMenuSectionMeta(sectionId);
+  return meta ? document.getElementById(meta.el) : null;
+}
+
+function isFloatMenuSectionAvailable(sectionId, home) {
+  home = home || loadHome();
+  const el = getFloatMenuSectionEl(sectionId);
+  if (!el || el.hidden) return false;
+  if (sectionId === 'intro2' && !home.hasIntro2) return false;
+  if (sectionId === 'closing2' && !home.hasClosing2) return false;
+  return true;
+}
+
+function normalizeFloatMenuItem(item) {
+  item = item && typeof item === 'object' ? item : {};
+  const type = item.type === 'url' ? 'url' : 'section';
+  let target = String(item.target == null ? '' : item.target).trim();
+  if (type === 'section' && !getFloatMenuSectionMeta(target)) target = 'header';
+  return {
+    id: String(item.id || createFloatMenuId('fm')),
+    label: String(item.label || '').trim().slice(0, 40),
+    type: type,
+    target: target.slice(0, 300),
+  };
+}
+
+function defaultFloatMenuSectionItems(home) {
+  return FLOAT_MENU_SECTIONS.filter(function (row) {
+    return isFloatMenuSectionAvailable(row.id, home);
+  }).map(function (row) {
+    return normalizeFloatMenuItem({
+      label: row.label,
+      type: 'section',
+      target: row.id,
+    });
+  });
+}
+
+function normalizeFloatMenu(raw, home) {
+  const defaults = DEFAULT_HOME.floatMenu;
+  const src = raw && typeof raw === 'object' ? raw : defaults;
+  const items = Array.isArray(src.items)
+    ? src.items.map(normalizeFloatMenuItem).filter(function (item) { return item.label; })
+    : [];
+  const tags = Array.isArray(src.tags)
+    ? src.tags.map(normalizeFloatMenuItem).filter(function (item) { return item.label; })
+    : [];
+  return {
+    enabled: !!src.enabled,
+    side: src.side === 'end' ? 'end' : 'start',
+    title: String(src.title == null ? defaults.title : src.title).trim().slice(0, 40),
+    items: items,
+    tags: tags,
+  };
+}
+
+function visibleFloatMenuItems(items, home) {
+  return (items || []).filter(function (item) {
+    if (item.type === 'url') return isSafeFloatMenuUrl(item.target);
+    return isFloatMenuSectionAvailable(item.target, home);
+  });
+}
+
+function floatMenuItemButtonHtml(item, extraClass) {
+  const label = escapeHtml(item.label || '');
+  const idAttr = ' data-fm-id="' + escapeHtml(item.id) + '"';
+  const inlineAttr = editMode
+    ? ' data-inline-edit="floatMenu.item" data-inline-placeholder="תווית"'
+    : '';
+  if (item.type === 'url' && !editMode) {
+    const href = escapeHtml(item.target || '#');
+    return (
+      '<a class="' + extraClass + '" href="' + href + '" target="_blank" rel="noopener noreferrer"' +
+        idAttr + '>' + label + '</a>'
+    );
+  }
+  return (
+    '<button type="button" class="' + extraClass + '"' + idAttr + inlineAttr +
+      ' data-fm-type="' + escapeHtml(item.type) + '"' +
+      ' data-fm-target="' + escapeHtml(item.target) + '">' +
+      label +
+    '</button>'
+  );
+}
+
+function applyFloatMenuLayout(menu) {
+  const enabled = !!(menu && menu.enabled);
+  document.body.classList.toggle('has-float-menu', enabled);
+  if (enabled) {
+    document.body.setAttribute('data-float-menu-side', menu.side === 'end' ? 'end' : 'start');
+  } else {
+    document.body.removeAttribute('data-float-menu-side');
+  }
+  const check = document.getElementById('floatMenuEnabled');
+  if (check) check.checked = enabled;
+}
+
+function isFloatMenuCompactViewport() {
+  return window.matchMedia('(max-width: 900px)').matches;
+}
+
+function syncFloatMenuAnchor() {
+  const aside = document.getElementById('floatMenu');
+  if (!aside) return;
+  if (aside.hidden || isFloatMenuCompactViewport()) {
+    aside.style.top = '';
+    aside.style.maxHeight = '';
+    return;
+  }
+
+  const header = document.getElementById('homeHeader');
+  const toolbar = document.getElementById('siteToolbar');
+  const headerBottom = (header && !header.hidden)
+    ? header.getBoundingClientRect().bottom
+    : 0;
+  let minTop = 16;
+  if (!IS_USER_MODE && toolbar && !toolbar.hidden) {
+    minTop = Math.max(minTop, Math.round(toolbar.getBoundingClientRect().bottom) + 8);
+  }
+  const top = Math.max(minTop, Math.round(headerBottom) + 12);
+  aside.style.top = top + 'px';
+  aside.style.maxHeight = 'calc(100vh - ' + (top + 16) + 'px)';
+}
+
+function syncFloatMenuFromViewport() {
+  syncFloatMenuAnchor();
+  syncFloatMenuActiveFromScroll();
+}
+
+function scrollToFloatMenuItem(item) {
+  if (!item) return;
+  if (item.type === 'url') {
+    if (isSafeFloatMenuUrl(item.target)) {
+      window.open(item.target, '_blank', 'noopener,noreferrer');
+    }
+    return;
+  }
+  const el = getFloatMenuSectionEl(item.target);
+  if (!el || el.hidden) return;
+  const toolbar = document.getElementById('siteToolbar');
+  const toolbarH = (!IS_USER_MODE && toolbar && !toolbar.hidden) ? toolbar.getBoundingClientRect().height : 0;
+  const top = el.getBoundingClientRect().top + window.scrollY - Math.max(12, toolbarH + 8);
+  window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+}
+
+function setFloatMenuActiveId(id) {
+  floatMenuActiveId = id || '';
+  document.querySelectorAll('#floatMenu [data-fm-id]').forEach(function (el) {
+    el.classList.toggle('is-active', el.getAttribute('data-fm-id') === floatMenuActiveId);
+  });
+}
+
+function syncFloatMenuActiveFromScroll() {
+  const aside = document.getElementById('floatMenu');
+  if (!aside || aside.hidden) return;
+  const home = loadHome();
+  const menu = normalizeFloatMenu(home.floatMenu, home);
+  const items = visibleFloatMenuItems(menu.items, home);
+  if (!items.length) {
+    setFloatMenuActiveId('');
+    return;
+  }
+
+  const marker = window.scrollY + Math.max(80, window.innerHeight * 0.22);
+  let current = items[0];
+  items.forEach(function (item) {
+    if (item.type !== 'section') return;
+    const el = getFloatMenuSectionEl(item.target);
+    if (!el || el.hidden) return;
+    const top = el.getBoundingClientRect().top + window.scrollY;
+    if (top <= marker) current = item;
+  });
+  setFloatMenuActiveId(current && current.id);
+}
+
+function bindFloatMenuInteractions() {
+  const aside = document.getElementById('floatMenu');
+  if (!aside || aside.dataset.bound === '1') return;
+  aside.dataset.bound = '1';
+
+  aside.addEventListener('click', function (e) {
+    if (editMode) return;
+    const btn = e.target.closest('[data-fm-id]');
+    if (!btn || !aside.contains(btn)) return;
+    if (btn.tagName === 'A') return;
+    e.preventDefault();
+    const home = loadHome();
+    const menu = normalizeFloatMenu(home.floatMenu, home);
+    const all = [].concat(menu.items || [], menu.tags || []);
+    const item = all.find(function (row) { return row.id === btn.getAttribute('data-fm-id'); });
+    if (!item) return;
+    setFloatMenuActiveId(item.id);
+    scrollToFloatMenuItem(item);
+  });
+
+  if (!floatMenuSpyBound) {
+    floatMenuSpyBound = true;
+    window.addEventListener('scroll', syncFloatMenuFromViewport, { passive: true });
+    window.addEventListener('resize', syncFloatMenuFromViewport);
+    const header = document.getElementById('homeHeader');
+    if (header && typeof ResizeObserver === 'function') {
+      const observer = new ResizeObserver(function () { syncFloatMenuAnchor(); });
+      observer.observe(header);
+    }
+  }
+}
+
+function renderFloatMenu(home) {
+  if (activeInlineEdit && String(activeInlineEdit.key || '').indexOf('floatMenu.') === 0) return;
+  home = home || loadHome();
+  const menu = normalizeFloatMenu(home.floatMenu, home);
+  const aside = document.getElementById('floatMenu');
+  const titleEl = document.getElementById('floatMenuTitle');
+  const navEl = document.getElementById('floatMenuNav');
+  const tagsEl = document.getElementById('floatMenuTags');
+  const editBtn = aside ? aside.querySelector('.float-menu-edit') : null;
+
+  applyFloatMenuLayout(menu);
+
+  if (!aside || !navEl || !tagsEl) return;
+
+  aside.hidden = !menu.enabled;
+  if (editBtn) editBtn.hidden = !editMode || !menu.enabled || IS_USER_MODE;
+
+  if (!menu.enabled) {
+    navEl.innerHTML = '';
+    tagsEl.innerHTML = '';
+    tagsEl.hidden = true;
+    syncFloatMenuAnchor();
+    return;
+  }
+
+  if (titleEl) {
+    if (editMode && !String(menu.title || '').trim()) {
+      titleEl.textContent = titleEl.getAttribute('data-inline-placeholder') || 'כותרת תפריט';
+      titleEl.classList.add('is-inline-placeholder');
+      titleEl.hidden = false;
+    } else {
+      titleEl.classList.remove('is-inline-placeholder');
+      titleEl.textContent = menu.title || '';
+      titleEl.hidden = !menu.title;
+    }
+  }
+
+  const items = visibleFloatMenuItems(menu.items, home);
+  navEl.innerHTML = items.map(function (item) {
+    return floatMenuItemButtonHtml(item, 'float-menu-link');
+  }).join('');
+
+  const tags = visibleFloatMenuItems(menu.tags, home);
+  tagsEl.innerHTML = tags.map(function (item) {
+    return floatMenuItemButtonHtml(item, 'float-menu-tag');
+  }).join('');
+  tagsEl.hidden = !tags.length;
+
+  bindFloatMenuInteractions();
+  requestAnimationFrame(syncFloatMenuFromViewport);
+}
+
 function applySiteTheme(home) {
   const bgColor = DEFAULT_HOME.siteBgColor;
   const bgImage = home.siteBgImage || '';
@@ -5465,6 +5801,7 @@ function applySiteTheme(home) {
   const gapValue = document.getElementById('cardsGapValue');
 
   setHslaFieldValue('siteSecondaryColor', secondary);
+  setHslaFieldValue('siteBgColor', bgColor);
   if (fontSelect) setFontSelectValue(fontSelect, font);
   if (clearBtn) clearBtn.hidden = !bgImage;
   if (cardsBgClear) cardsBgClear.hidden = !home.cardsBgImage;
@@ -5490,7 +5827,7 @@ async function renderHome(homeOverride, previewOptions) {
   previewOptions = previewOptions || {};
   home.header = normalizeHeader(home.header, home.title);
 
-  const title = getHeaderTitleText(home).slice(0, 40);
+  const title = getHeaderTitleText(home).slice(0, 80);
   const subtitle = (home.subtitle == null ? DEFAULT_HOME.subtitle : String(home.subtitle)).slice(0, 10);
   const introText = home.introText == null ? DEFAULT_HOME.introText : String(home.introText);
   const closingText = home.closingText == null ? DEFAULT_HOME.closingText : String(home.closingText);
@@ -5598,10 +5935,60 @@ async function renderHome(homeOverride, previewOptions) {
   renderHomeHeader(home);
   syncHomeSectionControls(home);
   applySiteTheme(home);
+  renderFloatMenu(home);
   document.title = title.trim() || 'פורטל תוכן';
 }
 
+function renderAccentedText(text, accents, accentColor) {
+  const raw = String(text || '');
+  if (!raw) return '';
+  const phrases = parseAccentList(accents).sort(function (a, b) { return b.length - a.length; });
+  if (!phrases.length) return escapeHtml(raw);
+
+  const ranges = [];
+  phrases.forEach(function (phrase) {
+    let from = 0;
+    while (from < raw.length) {
+      const idx = raw.indexOf(phrase, from);
+      if (idx === -1) break;
+      const end = idx + phrase.length;
+      const overlaps = ranges.some(function (range) {
+        return idx < range.end && end > range.start;
+      });
+      if (!overlaps) ranges.push({ start: idx, end: end });
+      from = idx + phrase.length;
+    }
+  });
+  ranges.sort(function (a, b) { return a.start - b.start; });
+
+  let html = '';
+  let cursor = 0;
+  const accentCss = colorToCss(accentColor || HEADER_ACCENT);
+  ranges.forEach(function (range) {
+    if (cursor < range.start) html += escapeHtml(raw.slice(cursor, range.start));
+    html += '<span class="home-header-accent" style="color:' + accentCss + ';">' +
+      escapeHtml(raw.slice(range.start, range.end)) + '</span>';
+    cursor = range.end;
+  });
+  if (cursor < raw.length) html += escapeHtml(raw.slice(cursor));
+  return html;
+}
+
+function headerActionHref(href) {
+  const value = String(href || '').trim();
+  if (!value) return '';
+  if (/^(https?:|mailto:|tel:|#|\/)/i.test(value)) return value;
+  return 'https://' + value;
+}
+
+function inlineEditAttr(key, placeholder) {
+  if (!editMode) return '';
+  return ' data-inline-edit="' + escapeHtml(key) + '"' +
+    (placeholder ? ' data-inline-placeholder="' + escapeHtml(placeholder) + '"' : '');
+}
+
 function renderHomeHeader(home) {
+  if (activeInlineEdit && String(activeInlineEdit.key || '').indexOf('header.') === 0) return;
   const section = document.getElementById('homeHeader');
   const canvas = document.getElementById('homeHeaderCanvas');
   const itemsEl = document.getElementById('homeHeaderItems');
@@ -5613,60 +6000,334 @@ function renderHomeHeader(home) {
   setSectionBackground(bgEl, header.bgImage || '');
   setSectionBgOpacity(section, header.bgOpacity);
 
-  const html = header.items.map(function (item) {
-    if (item.type === 'logo') {
-      if (!item.src && !editMode) return '';
-      const tag = item.link && !editMode ? 'a' : 'div';
-      const linkAttrs = item.link && !editMode
-        ? ' href="' + escapeHtml(item.link) + '" target="_blank" rel="noopener noreferrer"'
-        : '';
-      const linkClass = item.link ? ' is-link' : '';
-      const caption = item.caption
-        ? '<span class="home-header-caption" style="font-size:' + clampFontSize(item.fontSize, 12) + 'px;color:' + colorToCss(item.color || '#ffffff') + ';">' + escapeHtml(item.caption) + '</span>'
-        : '';
-      const img = item.src
-        ? '<img class="home-header-logo-img" src="' + item.src + '" alt="' + escapeHtml(item.caption || 'לוגו') + '">'
-        : '<span class="home-header-caption">לוגו</span>';
-      return (
-        '<' + tag + ' class="home-header-item home-header-item--logo' + linkClass + '"' +
-          ' data-header-id="' + escapeHtml(item.id) + '"' +
-          ' data-header-type="logo"' +
-          ' style="--hx:' + item.x + '%;--hy:' + item.y + '%;--hw:' + item.w + '%;"' +
-          linkAttrs + '>' +
-          img + caption +
-        '</' + tag + '>'
-      );
-    }
+  const kicker = String(header.kicker || '').trim();
+  const title = String(header.title || '').trim();
+  const body = String(header.body || '').trim();
+  const buttonText = String(header.buttonText || '').trim();
+  const linkText = String(header.linkText || '').trim();
+  const buttonHref = headerActionHref(header.buttonHref);
+  const linkHref = headerActionHref(header.linkHref);
 
-    const text = String(item.text || '').trim();
-    if (!text && !editMode) return '';
-    const tagName = item.type === 'title' ? 'h1' : 'div';
-    let display = text || (item.type === 'title' ? 'כותרת' : item.type === 'subtitle' ? 'כותרת משנה' : 'תג');
-    if (item.type === 'badge') {
-      display = formatClassificationBadge(display);
-    }
-    const fontSize = clampFontSize(item.fontSize, defaultHeaderFontSize(item.type));
-    const textColor = colorToCss(item.color || '#ffffff');
-    return (
-      '<' + tagName + ' class="home-header-item home-header-item--' + item.type + '"' +
-        ' data-header-id="' + escapeHtml(item.id) + '"' +
-        ' data-header-type="' + item.type + '"' +
-        ' data-align="' + (item.align || 'center') + '"' +
-        ' style="--hx:' + item.x + '%;--hy:' + item.y + '%;font-size:' + fontSize + 'px;color:' + textColor + ';">' +
-        escapeHtml(display) +
-      '</' + tagName + '>'
-    );
-  }).join('');
+  const kickerHtml = (kicker || editMode)
+    ? '<p class="home-header-kicker' + (!kicker && editMode ? ' is-inline-placeholder' : '') + '"' +
+        inlineEditAttr('header.kicker', 'תווית עליונה') +
+        ' style="font-size:' + header.kickerSize + 'px;color:' + colorToCss(header.kickerColor) + ';">' +
+        escapeHtml(kicker || 'תווית עליונה') + '</p>'
+    : '';
+  const titleHtml = (title || editMode)
+    ? '<h1 class="home-header-title' + (!title && editMode ? ' is-inline-placeholder' : '') + '"' +
+        inlineEditAttr('header.title', 'כותרת') +
+        ' style="font-size:' + header.titleSize + 'px;color:' + colorToCss(header.titleColor) + ';">' +
+        escapeHtml(title || 'כותרת') + '</h1>'
+    : '';
+  const bodyHtml = (body || editMode)
+    ? '<p class="home-header-body' + (!body && editMode ? ' is-inline-placeholder' : '') + '"' +
+        inlineEditAttr('header.body', 'פסקת טקסט') +
+        ' style="font-size:' + header.bodySize + 'px;color:' + colorToCss(header.bodyColor) + ';">' +
+        (body
+          ? renderAccentedText(body, header.bodyAccents, header.bodyAccentColor)
+          : escapeHtml('פסקת טקסט')) +
+      '</p>'
+    : '';
 
-  itemsEl.innerHTML = html;
-  bindHeaderItemInteractions();
+  const buttonHtml = (buttonText || editMode)
+    ? (buttonHref && !editMode
+        ? '<a class="home-header-btn" href="' + escapeHtml(buttonHref) + '" target="_blank" rel="noopener noreferrer"'
+        : '<span class="home-header-btn"') +
+      inlineEditAttr('header.buttonText', 'כפתור') +
+      ' style="background:' + colorToCss(header.buttonBg) + ';color:' + colorToCss(header.buttonColor) +
+        ';border-radius:' + header.buttonRadius + 'px;">' +
+      escapeHtml(buttonText || 'כפתור') +
+      (buttonHref && !editMode ? '</a>' : '</span>')
+    : '';
+  const linkHtml = (linkText || editMode)
+    ? (linkHref && !editMode
+        ? '<a class="home-header-link" href="' + escapeHtml(linkHref) + '" target="_blank" rel="noopener noreferrer"'
+        : '<span class="home-header-link"') +
+      ' style="color:' + colorToCss(header.linkColor) + ';">' +
+      '<span' + inlineEditAttr('header.linkText', 'קישור') + '>' +
+        escapeHtml(linkText || 'קישור') +
+      '</span>' +
+      '<span class="home-header-link-arrow" aria-hidden="true">←</span>' +
+      (linkHref && !editMode ? '</a>' : '</span>')
+    : '';
+  const actionsHtml = (buttonHtml || linkHtml)
+    ? '<div class="home-header-actions">' + buttonHtml + linkHtml + '</div>'
+    : '';
+
+  const artHtml = header.artSrc
+    ? '<div class="home-header-art"><img class="home-header-art-img" src="' + header.artSrc + '" alt=""></div>'
+    : '';
+
+  itemsEl.innerHTML =
+    '<div class="home-header-hero' + (header.artSrc ? '' : ' home-header-hero--no-art') + '"' +
+      ' data-art-side="left"' +
+      ' style="--header-art-width:' + header.artWidth + '%;">' +
+      '<div class="home-header-copy">' + kickerHtml + titleHtml + bodyHtml + actionsHtml + '</div>' +
+      artHtml +
+    '</div>';
 }
 
-function applyHeaderPreset(header, preset) {
-  const logos = header.items.filter(function (item) { return item.type === 'logo'; });
-  const title = header.items.find(function (item) { return item.type === 'title'; });
-  const subtitle = header.items.find(function (item) { return item.type === 'subtitle'; });
-  const badge = header.items.find(function (item) { return item.type === 'badge'; });
+function getInlineEditSpec(el) {
+  const key = el.getAttribute('data-inline-edit');
+  if (!key) return null;
+
+  if (key === 'floatMenu.item') {
+    const id = el.getAttribute('data-fm-id');
+    return {
+      key: key,
+      maxLen: 40,
+      multiline: false,
+      placeholder: 'תווית',
+      get: function (home) {
+        const menu = normalizeFloatMenu(home.floatMenu, home);
+        const all = [].concat(menu.items || [], menu.tags || []);
+        const item = all.find(function (row) { return row.id === id; });
+        return item ? String(item.label || '') : '';
+      },
+      set: function (home, value) {
+        const menu = normalizeFloatMenu(home.floatMenu, home);
+        [].concat(menu.items || [], menu.tags || []).forEach(function (item) {
+          if (item.id === id) item.label = value.slice(0, 40);
+        });
+        home.floatMenu = menu;
+      },
+    };
+  }
+
+  const headerFields = {
+    'header.kicker': { field: 'kicker', maxLen: 80, input: 'homeHeaderKicker' },
+    'header.title': { field: 'title', maxLen: 80, input: 'homeHeaderTitle' },
+    'header.body': { field: 'body', maxLen: 400, input: 'homeHeaderBody', multiline: true },
+    'header.buttonText': { field: 'buttonText', maxLen: 40, input: 'homeHeaderButtonText' },
+    'header.linkText': { field: 'linkText', maxLen: 40, input: 'homeHeaderLinkText' },
+  };
+  if (headerFields[key]) {
+    const spec = headerFields[key];
+    return {
+      key: key,
+      maxLen: spec.maxLen,
+      multiline: !!spec.multiline,
+      inputId: spec.input,
+      get: function (home) {
+        const header = normalizeHeader(home.header, home.title);
+        return String(header[spec.field] || '');
+      },
+      set: function (home, value) {
+        const next = Object.assign({}, normalizeHeader(home.header, home.title));
+        next[spec.field] = value.slice(0, spec.maxLen);
+        home.header = normalizeHeader(next, next.title);
+        if (spec.field === 'title') syncTitleFromHeader(home);
+        if (homeEditHeaderDraft) homeEditHeaderDraft[spec.field] = next[spec.field];
+      },
+    };
+  }
+
+  const homeFields = {
+    subtitle: { maxLen: 10, input: 'homeFieldSubtitle' },
+    introText: { maxLen: 2000, input: 'homeFieldIntro', multiline: true },
+    intro2Subtitle: { maxLen: 10, input: 'homeFieldSubtitle' },
+    intro2Text: { maxLen: 2000, input: 'homeFieldIntro', multiline: true },
+    closingText: { maxLen: 2000, input: 'homeFieldClosing', multiline: true },
+    closing2Text: { maxLen: 2000, input: 'homeFieldClosing', multiline: true },
+    'floatMenu.title': { maxLen: 40, input: 'floatMenuTitleField', homeKey: 'floatMenu' },
+  };
+  const field = homeFields[key];
+  if (!field) return null;
+
+  if (key === 'floatMenu.title') {
+    return {
+      key: key,
+      maxLen: 40,
+      multiline: false,
+      inputId: 'floatMenuTitleField',
+      get: function (home) {
+        return String(normalizeFloatMenu(home.floatMenu, home).title || '');
+      },
+      set: function (home, value) {
+        const menu = normalizeFloatMenu(home.floatMenu, home);
+        menu.title = value.slice(0, 40);
+        home.floatMenu = menu;
+        if (homeEditFloatMenuDraft) homeEditFloatMenuDraft.title = menu.title;
+      },
+    };
+  }
+
+  return {
+    key: key,
+    maxLen: field.maxLen,
+    multiline: !!field.multiline,
+    inputId: field.input,
+    get: function (home) {
+      return home[key] == null ? '' : String(home[key]);
+    },
+    set: function (home, value) {
+      home[key] = value.slice(0, field.maxLen);
+    },
+  };
+}
+
+function readInlineEditValue(el) {
+  return String(el.innerText || el.textContent || '').replace(/\u00a0/g, ' ').replace(/\r\n/g, '\n');
+}
+
+function finishInlineEditDom(el) {
+  if (!el) return;
+  el.removeAttribute('contenteditable');
+  el.classList.remove('is-inline-editing');
+  el.blur();
+}
+
+function cancelInlineEdit() {
+  if (!activeInlineEdit) return;
+  const spec = activeInlineEdit;
+  finishInlineEditDom(spec.el);
+  activeInlineEdit = null;
+  const home = loadHome();
+  if (String(spec.key || '').indexOf('header.') === 0) renderHomeHeader(home);
+  else if (String(spec.key || '').indexOf('floatMenu.') === 0) renderFloatMenu(home);
+  else renderHome();
+}
+
+function commitInlineEdit() {
+  if (!activeInlineEdit) return;
+  const spec = activeInlineEdit;
+  let value = readInlineEditValue(spec.el).trim();
+  const placeholder = spec.el.getAttribute('data-inline-placeholder') || '';
+  if (value === placeholder && spec.get(loadHome()) === '') value = '';
+  if (spec.maxLen) value = value.slice(0, spec.maxLen);
+
+  const home = loadHome();
+  spec.set(home, value);
+  saveHome(home);
+
+  if (spec.inputId && editingHomeSection) {
+    const input = document.getElementById(spec.inputId);
+    if (input) input.value = value;
+  }
+
+  finishInlineEditDom(spec.el);
+  activeInlineEdit = null;
+
+  if (String(spec.key || '').indexOf('header.') === 0) {
+    renderHomeHeader(home);
+    document.title = getHeaderTitleText(home).trim() || 'פורטל תוכן';
+  } else if (String(spec.key || '').indexOf('floatMenu.') === 0) {
+    renderFloatMenu(home);
+  } else {
+    renderHome();
+  }
+}
+
+function startInlineEdit(el) {
+  if (!editMode || IS_USER_MODE || !el) return;
+  const spec = getInlineEditSpec(el);
+  if (!spec) return;
+  if (activeInlineEdit && activeInlineEdit.el === el) return;
+  if (activeInlineEdit) commitInlineEdit();
+
+  const current = spec.get(loadHome());
+  el.textContent = current;
+  el.classList.remove('is-inline-placeholder');
+  el.classList.add('is-inline-editing');
+  el.setAttribute('contenteditable', 'true');
+  el.hidden = false;
+  activeInlineEdit = { el: el, key: spec.key, original: current };
+
+  el.focus();
+  try {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch (_) {}
+}
+
+function bindInlineEditing() {
+  if (IS_USER_MODE || document.body.dataset.inlineEditBound === '1') return;
+  document.body.dataset.inlineEditBound = '1';
+
+  document.addEventListener('pointerdown', function (e) {
+    if (!editMode || !activeInlineEdit) return;
+    if (activeInlineEdit.el.contains(e.target)) return;
+    const next = e.target.closest('[data-inline-edit]');
+    const nextKey = next ? next.getAttribute('data-inline-edit') : '';
+    const nextFmId = next ? next.getAttribute('data-fm-id') : '';
+    commitInlineEdit();
+    if (!nextKey) return;
+    e.preventDefault();
+    const selector = nextFmId
+      ? '[data-inline-edit="' + nextKey + '"][data-fm-id="' + nextFmId + '"]'
+      : '[data-inline-edit="' + nextKey + '"]';
+    const fresh = document.querySelector(selector);
+    if (fresh) startInlineEdit(fresh);
+  }, true);
+
+  document.addEventListener('click', function (e) {
+    if (!editMode || IS_USER_MODE) return;
+    if (e.target.closest('.home-section-edit, .home-section-dup, .home-section-delete, .home-resize-handle, .site-toolbar, .home-edit-modal, .wizard, .settings-menu, .detail-overlay')) {
+      return;
+    }
+    const el = e.target.closest('[data-inline-edit]');
+    if (!el) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (activeInlineEdit && activeInlineEdit.el === el) return;
+    startInlineEdit(el);
+  }, true);
+
+  document.addEventListener('keydown', function (e) {
+    if (!activeInlineEdit) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      cancelInlineEdit();
+      return;
+    }
+    if (e.key === 'Enter') {
+      const spec = getInlineEditSpec(activeInlineEdit.el);
+      if (spec && spec.multiline) {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          commitInlineEdit();
+        }
+        return;
+      }
+      e.preventDefault();
+      commitInlineEdit();
+    }
+  }, true);
+
+  document.addEventListener('input', function () {
+    if (!activeInlineEdit) return;
+    const spec = getInlineEditSpec(activeInlineEdit.el);
+    if (!spec || !spec.maxLen) return;
+    const raw = readInlineEditValue(activeInlineEdit.el);
+    if (raw.length > spec.maxLen) {
+      activeInlineEdit.el.textContent = raw.slice(0, spec.maxLen);
+      try {
+        const range = document.createRange();
+        range.selectNodeContents(activeInlineEdit.el);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } catch (_) {}
+    }
+  });
+}
+
+function readHeaderField(id) {
+  const el = document.getElementById(id);
+  return el ? el.value : '';
+}
+
+function _removedHeaderPreset(header, preset) {
+  const logos = header.items ? header.items.filter(function (item) { return item.type === 'logo'; }) : [];
+  const title = null;
+  const subtitle = header.items && header.items.find(function (item) { return item.type === 'subtitle'; });
+  const badge = header.items && header.items.find(function (item) { return item.type === 'badge'; });
 
   if (preset === 'logo-right-title-center') {
     if (logos[0]) { logos[0].x = 88; logos[0].y = 22; logos[0].w = 14; }
@@ -5762,6 +6423,7 @@ let homeEditDevTeamImageData = '';
 let homeEditVideoFile = null;
 let homeEditVideoRemoved = false;
 let homeEditHeaderDraft = null;
+let homeEditFloatMenuDraft = null;
 let homeEditSnapshot = null;
 let homeEditCommitted = false;
 let homeEditPreviewTimer = null;
@@ -5780,34 +6442,29 @@ function readHeaderDraftFromEditor() {
   if (opacityEl) homeEditHeaderDraft.bgOpacity = clampBgOpacity(opacityEl.value);
   homeEditHeaderDraft.bgImage = homeEditImageData || '';
 
-  homeEditHeaderDraft.items.forEach(function (item) {
-    if (item.type === 'logo') {
-      const captionEl = document.getElementById('homeHeaderCaption_' + item.id);
-      const linkEl = document.getElementById('homeHeaderLink_' + item.id);
-      const sizeEl = document.getElementById('homeHeaderSize_' + item.id);
-      const fontEl = document.getElementById('homeHeaderFont_' + item.id);
-      const colorEl = document.getElementById('homeHeaderColor_' + item.id);
-      if (captionEl) item.caption = captionEl.value.trim().slice(0, 40);
-      if (linkEl) item.link = linkEl.value.trim();
-      if (sizeEl) item.w = clampLogoWidth(sizeEl.value);
-      if (fontEl) item.fontSize = clampFontSize(fontEl.value, defaultHeaderFontSize('logo'));
-      if (colorEl) item.color = normalizeTextColor(colorEl.value, '#ffffff');
-    } else {
-      const textEl = document.getElementById('homeHeaderText_' + item.id);
-      const fontEl = document.getElementById('homeHeaderFont_' + item.id);
-      const colorEl = document.getElementById('homeHeaderColor_' + item.id);
-      if (textEl) {
-        item.text = item.type === 'badge'
-          ? normalizeHeaderBadgeText(textEl.value)
-          : textEl.value.trim().slice(0, 40);
-      }
-      item.align = 'center';
-      if (fontEl) item.fontSize = clampFontSize(fontEl.value, defaultHeaderFontSize(item.type));
-      if (colorEl) item.color = normalizeTextColor(colorEl.value, '#ffffff');
-    }
-  });
+  homeEditHeaderDraft.artSide = 'left';
+  homeEditHeaderDraft.artWidth = clampHeaderArtWidth(readHeaderField('homeHeaderArtWidth') || homeEditHeaderDraft.artWidth);
+  homeEditHeaderDraft.kicker = readHeaderField('homeHeaderKicker').trim().slice(0, 80);
+  homeEditHeaderDraft.kickerSize = clampFontSize(readHeaderField('homeHeaderKickerSize'), 15, 32);
+  homeEditHeaderDraft.kickerColor = normalizeTextColor(readHeaderField('homeHeaderKickerColor'), HEADER_ACCENT);
+  homeEditHeaderDraft.title = readHeaderField('homeHeaderTitle').trim().slice(0, 80);
+  homeEditHeaderDraft.titleSize = clampFontSize(readHeaderField('homeHeaderTitleSize'), 44, 72);
+  homeEditHeaderDraft.titleColor = normalizeTextColor(readHeaderField('homeHeaderTitleColor'), HEADER_INK);
+  homeEditHeaderDraft.body = readHeaderField('homeHeaderBody').slice(0, 400);
+  homeEditHeaderDraft.bodySize = clampFontSize(readHeaderField('homeHeaderBodySize'), 17, 32);
+  homeEditHeaderDraft.bodyColor = normalizeTextColor(readHeaderField('homeHeaderBodyColor'), HEADER_INK);
+  homeEditHeaderDraft.bodyAccentColor = normalizeTextColor(readHeaderField('homeHeaderAccentColor'), HEADER_ACCENT);
+  homeEditHeaderDraft.bodyAccents = normalizeAccentList(readHeaderField('homeHeaderAccents'));
+  homeEditHeaderDraft.buttonText = readHeaderField('homeHeaderButtonText').trim().slice(0, 40);
+  homeEditHeaderDraft.buttonHref = readHeaderField('homeHeaderButtonHref').trim();
+  homeEditHeaderDraft.buttonBg = normalizeTextColor(readHeaderField('homeHeaderButtonBg'), HEADER_ACCENT);
+  homeEditHeaderDraft.buttonColor = normalizeTextColor(readHeaderField('homeHeaderButtonColor'), '#ffffff');
+  homeEditHeaderDraft.buttonRadius = clampButtonRadius(readHeaderField('homeHeaderButtonRadius') || homeEditHeaderDraft.buttonRadius);
+  homeEditHeaderDraft.linkText = readHeaderField('homeHeaderLinkText').trim().slice(0, 40);
+  homeEditHeaderDraft.linkHref = readHeaderField('homeHeaderLinkHref').trim();
+  homeEditHeaderDraft.linkColor = normalizeTextColor(readHeaderField('homeHeaderLinkColor'), HEADER_ACCENT);
 
-  homeEditHeaderDraft = normalizeHeader(homeEditHeaderDraft, getHeaderTitleText({ header: homeEditHeaderDraft, title: '' }));
+  homeEditHeaderDraft = normalizeHeader(homeEditHeaderDraft, homeEditHeaderDraft.title);
   return homeEditHeaderDraft;
 }
 
@@ -5870,6 +6527,10 @@ function buildHomeDraftFromEditor() {
     }
   }
 
+  if (editingHomeSection === 'floatmenu') {
+    home.floatMenu = readFloatMenuDraftFromEditor();
+  }
+
   return home;
 }
 
@@ -5895,6 +6556,7 @@ function getHomeSectionFocusEl(section) {
   if (section === 'closing') return document.getElementById('homeClosing');
   if (section === 'closing2') return document.getElementById('homeClosing2');
   if (section === 'cards') return document.getElementById('cardsSection');
+  if (section === 'floatmenu') return document.getElementById('floatMenu');
   return document.querySelector('[data-home-section="' + section + '"]');
 }
 
@@ -5949,6 +6611,18 @@ function scheduleHomeEditorPreview() {
   const sectionAtSchedule = editingHomeSection;
   homeEditPreviewTimer = setTimeout(function () {
     if (editingHomeSection !== sectionAtSchedule || editingHomeSection === 'cards') return;
+    if (editingHomeSection === 'floatmenu') {
+      const draft = buildHomeDraftFromEditor();
+      renderFloatMenu(draft);
+      if (homeEditOverlay) {
+        homeEditOverlay.classList.toggle(
+          'is-editing-float-menu',
+          !!(draft.floatMenu && draft.floatMenu.side !== 'end')
+        );
+      }
+      syncHomeSectionEditingFocus();
+      return;
+    }
     renderHome(buildHomeDraftFromEditor(), getHomeEditorPreviewOptions()).then(function () {
       syncHomeSectionEditingFocus();
     });
@@ -5968,6 +6642,167 @@ function bindHomeEditorLivePreview() {
   });
 }
 
+function floatMenuSectionOptionsHtml(selected) {
+  return FLOAT_MENU_SECTIONS.map(function (row) {
+    return '<option value="' + escapeHtml(row.id) + '"' +
+      (row.id === selected ? ' selected' : '') + '>' +
+      escapeHtml(row.label) + '</option>';
+  }).join('');
+}
+
+function floatMenuEditorRowHtml(item, kind, index) {
+  const isUrl = item.type === 'url';
+  return (
+    '<div class="float-menu-editor-row" data-fm-row="' + escapeHtml(item.id) + '" data-fm-kind="' + kind + '">' +
+      '<div class="float-menu-editor-row-head">' +
+        '<strong>' + (kind === 'tags' ? 'תג ' : 'פריט ') + (index + 1) + '</strong>' +
+        '<button type="button" class="home-header-remove-item" data-fm-editor="remove" data-fm-kind="' + kind + '" data-fm-id="' + escapeHtml(item.id) + '" title="מחיקה" aria-label="מחיקה">×</button>' +
+      '</div>' +
+      '<label>תווית' +
+        '<input type="text" data-fm-field="label" maxlength="40" value="' + escapeHtml(item.label || '') + '">' +
+      '</label>' +
+      '<div class="float-menu-editor-grid">' +
+        '<label>סוג' +
+          '<select data-fm-field="type">' +
+            '<option value="section"' + (isUrl ? '' : ' selected') + '>מקטע באתר</option>' +
+            '<option value="url"' + (isUrl ? ' selected' : '') + '>קישור</option>' +
+          '</select>' +
+        '</label>' +
+        (isUrl
+          ? '<label>כתובת' +
+              '<input type="text" data-fm-field="target" dir="ltr" placeholder="https://..." value="' + escapeHtml(item.target || '') + '">' +
+            '</label>'
+          : '<label>מקטע' +
+              '<select data-fm-field="target">' + floatMenuSectionOptionsHtml(item.target) + '</select>' +
+            '</label>') +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function floatMenuFieldsHtml(menu) {
+  const itemsHtml = (menu.items || []).map(function (item, i) {
+    return floatMenuEditorRowHtml(item, 'items', i);
+  }).join('');
+  const tagsHtml = (menu.tags || []).map(function (item, i) {
+    return floatMenuEditorRowHtml(item, 'tags', i);
+  }).join('');
+
+  return (
+    '<p class="field-subhint">התפריט נשאר במסך בזמן גלילה, ושאר האתר נדחק הצידה כדי לפנות לו מקום.</p>' +
+    '<div class="form-field form-field--full">' +
+      '<label for="floatMenuTitleField">כותרת התפריט</label>' +
+      '<input type="text" id="floatMenuTitleField" maxlength="40" value="' + escapeHtml(menu.title || '') + '">' +
+    '</div>' +
+    '<div class="form-field form-field--full">' +
+      '<span class="field-label">צד</span>' +
+      '<div class="edit-seg" role="radiogroup" aria-label="צד התפריט">' +
+        '<label class="edit-seg-btn" for="floatMenuSideStart">' +
+          '<input type="radio" name="floatMenuSide" id="floatMenuSideStart" value="start"' + (menu.side === 'end' ? '' : ' checked') + '>' +
+          '<span>ימין</span>' +
+        '</label>' +
+        '<label class="edit-seg-btn" for="floatMenuSideEnd">' +
+          '<input type="radio" name="floatMenuSide" id="floatMenuSideEnd" value="end"' + (menu.side === 'end' ? ' checked' : '') + '>' +
+          '<span>שמאל</span>' +
+        '</label>' +
+      '</div>' +
+    '</div>' +
+    '<div class="form-field form-field--full">' +
+      '<span class="field-label">פריטי ניווט</span>' +
+      '<div class="float-menu-editor-list" id="floatMenuItemsEditor">' +
+        (itemsHtml || '<p class="field-subhint">אין פריטים עדיין. הוסיפו פריט או מלאו ממקטעי האתר.</p>') +
+      '</div>' +
+      '<div class="home-header-choice-grid home-header-choice-grid--add" style="margin-top:10px;">' +
+        '<button type="button" class="home-header-choice-btn home-header-choice-btn--add" data-fm-editor="add-item">+ פריט</button>' +
+        '<button type="button" class="home-header-choice-btn" data-fm-editor="fill-sections">מילוי ממקטעים</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="form-field form-field--full">' +
+      '<span class="field-label">תגיות (אופציונלי)</span>' +
+      '<div class="float-menu-editor-list" id="floatMenuTagsEditor">' +
+        (tagsHtml || '<p class="field-subhint">תגיות מופיעות מתחת לתפריט, כמו כפתורים קטנים.</p>') +
+      '</div>' +
+      '<div class="home-header-choice-grid home-header-choice-grid--add" style="margin-top:10px;">' +
+        '<button type="button" class="home-header-choice-btn home-header-choice-btn--add" data-fm-editor="add-tag">+ תג</button>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function readFloatMenuDraftFromEditor() {
+  const base = homeEditFloatMenuDraft || normalizeFloatMenu(null, loadHome());
+  const titleEl = document.getElementById('floatMenuTitleField');
+  const sideEl = document.querySelector('input[name="floatMenuSide"]:checked');
+  const next = {
+    enabled: true,
+    side: sideEl && sideEl.value === 'end' ? 'end' : 'start',
+    title: titleEl ? titleEl.value.trim().slice(0, 40) : base.title,
+    items: [],
+    tags: [],
+  };
+
+  document.querySelectorAll('.float-menu-editor-row').forEach(function (row) {
+    const kind = row.getAttribute('data-fm-kind') === 'tags' ? 'tags' : 'items';
+    const labelEl = row.querySelector('[data-fm-field="label"]');
+    const typeEl = row.querySelector('[data-fm-field="type"]');
+    const targetEl = row.querySelector('[data-fm-field="target"]');
+    const item = normalizeFloatMenuItem({
+      id: row.getAttribute('data-fm-row'),
+      label: labelEl ? labelEl.value : '',
+      type: typeEl ? typeEl.value : 'section',
+      target: targetEl ? targetEl.value : '',
+    });
+    next[kind].push(item);
+  });
+
+  homeEditFloatMenuDraft = normalizeFloatMenu(next, loadHome());
+  homeEditFloatMenuDraft.enabled = true;
+  return homeEditFloatMenuDraft;
+}
+
+function refreshFloatMenuEditorFields() {
+  if (!homeEditFields || editingHomeSection !== 'floatmenu') return;
+  readFloatMenuDraftFromEditor();
+  homeEditFields.innerHTML = floatMenuFieldsHtml(homeEditFloatMenuDraft);
+  scheduleHomeEditorPreview();
+}
+
+function bindFloatMenuEditor() {
+  if (!homeEditFields || homeEditFields.dataset.floatMenuBound === '1') return;
+  homeEditFields.dataset.floatMenuBound = '1';
+  homeEditFields.addEventListener('click', function (e) {
+    if (editingHomeSection !== 'floatmenu') return;
+    const btn = e.target.closest('[data-fm-editor]');
+    if (!btn) return;
+    e.preventDefault();
+    const action = btn.getAttribute('data-fm-editor');
+    const draft = readFloatMenuDraftFromEditor();
+    if (action === 'add-item') {
+      draft.items.push(normalizeFloatMenuItem({ label: 'פריט חדש', type: 'section', target: 'header' }));
+    } else if (action === 'add-tag') {
+      draft.tags.push(normalizeFloatMenuItem({ label: 'תג', type: 'section', target: 'cards' }));
+    } else if (action === 'fill-sections') {
+      draft.items = defaultFloatMenuSectionItems(loadHome());
+    } else if (action === 'remove') {
+      const id = btn.getAttribute('data-fm-id');
+      const kind = btn.getAttribute('data-fm-kind') === 'tags' ? 'tags' : 'items';
+      draft[kind] = (draft[kind] || []).filter(function (item) { return item.id !== id; });
+    } else {
+      return;
+    }
+    homeEditFloatMenuDraft = draft;
+    homeEditFields.innerHTML = floatMenuFieldsHtml(draft);
+    scheduleHomeEditorPreview();
+  });
+  homeEditFields.addEventListener('change', function (e) {
+    if (editingHomeSection !== 'floatmenu') return;
+    if (!e.target || e.target.getAttribute('data-fm-field') !== 'type') return;
+    readFloatMenuDraftFromEditor();
+    homeEditFields.innerHTML = floatMenuFieldsHtml(homeEditFloatMenuDraft);
+    scheduleHomeEditorPreview();
+  });
+}
+
 function openHomeEditor(section) {
   if (IS_USER_MODE) return;
   clearTimeout(homeEditPreviewTimer);
@@ -5982,6 +6817,7 @@ function openHomeEditor(section) {
   homeEditVideoFile = null;
   homeEditVideoRemoved = false;
   homeEditHeaderDraft = null;
+  homeEditFloatMenuDraft = null;
 
   let fieldsHtml = '';
   let title = 'עריכת מקטע';
@@ -6060,6 +6896,16 @@ function openHomeEditor(section) {
       homeSectionLayoutFieldsHtml(home, section);
   }
 
+  if (section === 'floatmenu') {
+    title = 'עריכת תפריט צף';
+    homeEditFloatMenuDraft = normalizeFloatMenu(home.floatMenu, home);
+    homeEditFloatMenuDraft.enabled = true;
+    if (!homeEditFloatMenuDraft.items.length) {
+      homeEditFloatMenuDraft.items = defaultFloatMenuSectionItems(home);
+    }
+    fieldsHtml = floatMenuFieldsHtml(homeEditFloatMenuDraft);
+  }
+
   if (section === 'cards') {
     title = 'עריכת כרטיסי תוכן';
     fieldsHtml =
@@ -6070,6 +6916,10 @@ function openHomeEditor(section) {
   homeEditFields.innerHTML = fieldsHtml;
   homeEditOverlay.hidden = false;
   homeEditOverlay.classList.add('home-edit-live');
+  homeEditOverlay.classList.toggle(
+    'is-editing-float-menu',
+    section === 'floatmenu' && homeEditFloatMenuDraft && homeEditFloatMenuDraft.side !== 'end'
+  );
 
   if (section === 'cards') {
     if (!mountCardsLayoutBarIntoEditor()) {
@@ -6089,6 +6939,7 @@ function openHomeEditor(section) {
   bindHomeEditorMediaInputs();
   bindClosingDevTeamFields();
   bindHomeHeaderEditor();
+  bindFloatMenuEditor();
   bindHomeEditorLivePreview();
   syncHomeSectionEditingFocus();
 }
@@ -6165,35 +7016,98 @@ function homeHeaderItemEditorHtml(item) {
 }
 
 function homeHeaderFieldsHtml(header) {
-  const itemsHtml = header.items.map(homeHeaderItemEditorHtml).join('');
-  const hasSubtitle = header.items.some(function (item) { return item.type === 'subtitle'; });
-  const hasBadge = header.items.some(function (item) { return item.type === 'badge'; });
-
+  const artWidth = clampHeaderArtWidth(header.artWidth);
+  const radius = clampButtonRadius(header.buttonRadius);
   return (
+    '<div class="home-header-editor-item">' +
+      '<div class="home-header-editor-item-head"><strong>איור</strong></div>' +
+      '<label class="edit-upload-btn edit-upload-btn--wide" for="homeHeaderArtFile">' +
+        '<input type="file" id="homeHeaderArtFile" accept="image/*" hidden>' +
+        editIco('image') +
+        '<span>העלאת איור / החלפה</span>' +
+      '</label>' +
+      '<img class="home-edit-preview' + (header.artSrc ? ' is-visible' : '') + '" id="homeHeaderArtPreview" src="' + (header.artSrc || '') + '" alt="">' +
+      (header.artSrc ? '<button type="button" class="edit-clear-btn" id="homeHeaderArtClear">הסרת איור</button>' : '') +
+      homeSizeControlHtml('homeHeaderArtWidth', artWidth, {
+        min: 20, max: 70, step: 1, unit: '%', label: 'רוחב איור', ico: 'size',
+      }) +
+    '</div>' +
+    '<div class="home-header-editor-item">' +
+      '<div class="home-header-editor-item-head"><strong>תווית עליונה</strong></div>' +
+      '<label for="homeHeaderKicker">טקסט</label>' +
+      '<input type="text" id="homeHeaderKicker" maxlength="80" value="' + escapeHtml(header.kicker || '') + '">' +
+      homeStyleRowHtml(
+        homeTextSizeHtml('homeHeaderKickerSize', header.kickerSize, 15, 'גודל תווית', 32),
+        homeColorChipHtml('homeHeaderKickerColor', header.kickerColor, {
+          label: 'צבע תווית', shortLabel: 'תווית', ico: 'text',
+        })
+      ) +
+    '</div>' +
+    '<div class="home-header-editor-item">' +
+      '<div class="home-header-editor-item-head"><strong>כותרת</strong></div>' +
+      '<label for="homeHeaderTitle">טקסט</label>' +
+      '<input type="text" id="homeHeaderTitle" maxlength="80" value="' + escapeHtml(header.title || '') + '">' +
+      homeStyleRowHtml(
+        homeTextSizeHtml('homeHeaderTitleSize', header.titleSize, 44, 'גודל כותרת', 72),
+        homeColorChipHtml('homeHeaderTitleColor', header.titleColor, {
+          label: 'צבע כותרת', shortLabel: 'כותרת', ico: 'text',
+        })
+      ) +
+    '</div>' +
+    '<div class="home-header-editor-item">' +
+      '<div class="home-header-editor-item-head"><strong>פסקה</strong></div>' +
+      '<label for="homeHeaderBody">טקסט</label>' +
+      '<textarea id="homeHeaderBody" rows="3" maxlength="400">' + escapeHtml(header.body || '') + '</textarea>' +
+      homeStyleRowHtml(
+        homeTextSizeHtml('homeHeaderBodySize', header.bodySize, 17, 'גודל פסקה', 32),
+        homeColorChipHtml('homeHeaderBodyColor', header.bodyColor, {
+          label: 'צבע פסקה', shortLabel: 'פסקה', ico: 'text',
+        }) +
+        homeColorChipHtml('homeHeaderAccentColor', header.bodyAccentColor, {
+          label: 'צבע הדגשה', shortLabel: 'הדגשה', ico: 'text',
+        })
+      ) +
+      '<label for="homeHeaderAccents">מילים בצבע הדגשה (שורה לכל ביטוי)</label>' +
+      '<textarea id="homeHeaderAccents" rows="2">' + escapeHtml(header.bodyAccents || '') + '</textarea>' +
+    '</div>' +
+    '<div class="home-header-editor-item">' +
+      '<div class="home-header-editor-item-head"><strong>כפתור</strong></div>' +
+      '<label for="homeHeaderButtonText">טקסט</label>' +
+      '<input type="text" id="homeHeaderButtonText" maxlength="40" value="' + escapeHtml(header.buttonText || '') + '">' +
+      '<label for="homeHeaderButtonHref" style="margin-top:10px;display:block;">קישור (אופציונלי)</label>' +
+      '<input type="text" id="homeHeaderButtonHref" placeholder="https://..." value="' + escapeHtml(header.buttonHref || '') + '">' +
+      homeStyleRowHtml(
+        homeSizeControlHtml('homeHeaderButtonRadius', radius, {
+          min: 0, max: 48, step: 1, unit: 'px', label: 'עיגול כפתור', ico: 'size',
+        }),
+        homeColorChipHtml('homeHeaderButtonBg', header.buttonBg, {
+          label: 'רקע כפתור', shortLabel: 'רקע', ico: 'fill',
+        }) +
+        homeColorChipHtml('homeHeaderButtonColor', header.buttonColor, {
+          label: 'צבע טקסט כפתור', shortLabel: 'טקסט', ico: 'text',
+        })
+      ) +
+    '</div>' +
+    '<div class="home-header-editor-item">' +
+      '<div class="home-header-editor-item-head"><strong>קישור משני</strong></div>' +
+      '<label for="homeHeaderLinkText">טקסט</label>' +
+      '<input type="text" id="homeHeaderLinkText" maxlength="40" value="' + escapeHtml(header.linkText || '') + '">' +
+      '<label for="homeHeaderLinkHref" style="margin-top:10px;display:block;">קישור (אופציונלי)</label>' +
+      '<input type="text" id="homeHeaderLinkHref" placeholder="https://..." value="' + escapeHtml(header.linkHref || '') + '">' +
+      homeStyleRowHtml(
+        '',
+        homeColorChipHtml('homeHeaderLinkColor', header.linkColor, {
+          label: 'צבע קישור', shortLabel: 'קישור', ico: 'text',
+        })
+      ) +
+    '</div>' +
     '<div class="form-field form-field--full">' +
       '<label for="homeFieldHeaderHeight">גובה מסגרת: <strong id="homeFieldHeaderHeightValue">' + header.height + 'px</strong></label>' +
-      '<input type="range" id="homeFieldHeaderHeight" min="100" max="560" step="4" value="' + header.height + '" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">' +
+      '<input type="range" id="homeFieldHeaderHeight" min="220" max="720" step="4" value="' + header.height + '" style="width:100%; accent-color: var(--site-secondary, #4a7c3f);">' +
       '<p class="field-subhint">אפשר גם לגרור את הידית בתחתית המסגרת במצב עריכה</p>' +
     '</div>' +
     homeBgOpacityHtml(header.bgOpacity) +
-    homeImageFieldHtml(header.bgImage, 'תמונת רקע לכותרת (אופציונלי)') +
-    '<div class="form-field form-field--full">' +
-      '<span class="field-label">תבניות מיקום</span>' +
-      '<div class="home-header-choice-grid">' +
-        '<button type="button" class="home-header-choice-btn" id="homeHeaderPresetRight">לוגו ימין + כותרת מרכז</button>' +
-        '<button type="button" class="home-header-choice-btn" id="homeHeaderPresetSides">לוגואים משני הצדדים</button>' +
-      '</div>' +
-      '<p class="field-subhint">אחרי בחירת תבנית אפשר לגרור כל אלמנט במסגרת</p>' +
-    '</div>' +
-    '<div class="form-field form-field--full">' +
-      '<span class="field-label">אלמנטים</span>' +
-      '<div class="home-header-choice-grid home-header-choice-grid--add">' +
-        '<button type="button" class="home-header-choice-btn home-header-choice-btn--add" id="homeHeaderAddLogo">+ לוגו</button>' +
-        (hasSubtitle ? '' : '<button type="button" class="home-header-choice-btn home-header-choice-btn--add" id="homeHeaderAddSubtitle">+ כותרת משנה</button>') +
-        (hasBadge ? '' : '<button type="button" class="home-header-choice-btn home-header-choice-btn--add" id="homeHeaderAddBadge">+ תג סיווג</button>') +
-      '</div>' +
-      '<div id="homeHeaderItemsEditor">' + itemsHtml + '</div>' +
-    '</div>'
+    homeImageFieldHtml(header.bgImage, 'תמונת רקע לכותרת (אופציונלי)')
   );
 }
 
@@ -6220,115 +7134,58 @@ function bindHomeHeaderEditor() {
     });
   }
 
-  homeEditHeaderDraft.items.forEach(function (item) {
-    bindHomeTextSizeField('homeHeaderFont_' + item.id);
-    bindHomeTextColorField('homeHeaderColor_' + item.id);
+  bindHomeTextSizeField('homeHeaderKickerSize', 32);
+  bindHomeTextSizeField('homeHeaderTitleSize', 72);
+  bindHomeTextSizeField('homeHeaderBodySize', 32);
+  bindHomeTextColorField('homeHeaderKickerColor');
+  bindHomeTextColorField('homeHeaderTitleColor');
+  bindHomeTextColorField('homeHeaderBodyColor');
+  bindHomeTextColorField('homeHeaderAccentColor');
+  bindHomeTextColorField('homeHeaderButtonBg');
+  bindHomeTextColorField('homeHeaderButtonColor');
+  bindHomeTextColorField('homeHeaderLinkColor');
 
-    if (item.type !== 'logo') return;
-    const sizeEl = document.getElementById('homeHeaderSize_' + item.id);
-    const sizeValue = document.getElementById('homeHeaderSizeValue_' + item.id);
-    if (sizeEl && sizeValue) {
-      sizeEl.addEventListener('input', function () {
-        sizeValue.textContent = clampLogoWidth(sizeEl.value) + '%';
-        scheduleHomeEditorPreview();
-      });
+  ['homeHeaderArtWidth', 'homeHeaderButtonRadius'].forEach(function (id) {
+    const range = document.getElementById(id);
+    const num = document.getElementById(id + 'Num');
+    if (!range || !num) return;
+    function sync(from) {
+      const raw = from === 'num' ? num.value : range.value;
+      const value = id === 'homeHeaderArtWidth'
+        ? clampHeaderArtWidth(raw)
+        : clampButtonRadius(raw);
+      range.value = String(value);
+      num.value = String(value);
+      scheduleHomeEditorPreview();
     }
+    range.addEventListener('input', function () { sync('range'); });
+    num.addEventListener('input', function () {
+      if (num.value === '' || num.value === '-') return;
+      sync('num');
+    });
+    num.addEventListener('change', function () { sync('num'); });
   });
 
-  document.querySelectorAll('[data-header-logo-file]').forEach(function (input) {
-    input.addEventListener('change', async function (e) {
+  const artFile = document.getElementById('homeHeaderArtFile');
+  if (artFile) {
+    artFile.addEventListener('change', async function (e) {
       const file = e.target.files[0];
       if (!file) return;
-      const itemId = input.dataset.headerLogoFile;
-      const dataUrl = await readFileAsDataURL(file, 400, null, true);
-      const item = homeEditHeaderDraft.items.find(function (entry) { return entry.id === itemId; });
-      if (!item) return;
-      item.src = dataUrl;
-      const preview = document.getElementById('homeHeaderPreview_' + itemId);
+      const dataUrl = await readFileAsDataURL(file, 900, null, true);
+      homeEditHeaderDraft.artSrc = dataUrl;
+      const preview = document.getElementById('homeHeaderArtPreview');
       if (preview) {
         preview.src = dataUrl;
         preview.classList.add('is-visible');
       }
       scheduleHomeEditorPreview();
     });
-  });
-
-  document.querySelectorAll('[data-remove-header-item]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      const itemId = btn.dataset.removeHeaderItem;
-      readHeaderDraftFromEditor();
-      homeEditHeaderDraft.items = homeEditHeaderDraft.items.filter(function (item) {
-        return item.id !== itemId || item.type === 'title';
-      });
-      homeEditHeaderDraft = normalizeHeader(homeEditHeaderDraft, '');
-      refreshHomeHeaderEditorFields();
-    });
-  });
-
-  const addLogo = document.getElementById('homeHeaderAddLogo');
-  if (addLogo) {
-    addLogo.addEventListener('click', function () {
-      readHeaderDraftFromEditor();
-      const logos = homeEditHeaderDraft.items.filter(function (item) { return item.type === 'logo'; });
-      homeEditHeaderDraft.items.push(normalizeHeaderItem({
-        type: 'logo',
-        src: '',
-        link: '',
-        caption: '',
-        x: logos.length ? 12 : 88,
-        y: 18 + logos.length * 20,
-        w: 14,
-      }));
-      refreshHomeHeaderEditorFields();
-    });
   }
 
-  const addSubtitle = document.getElementById('homeHeaderAddSubtitle');
-  if (addSubtitle) {
-    addSubtitle.addEventListener('click', function () {
-      readHeaderDraftFromEditor();
-      if (homeEditHeaderDraft.items.some(function (item) { return item.type === 'subtitle'; })) return;
-      homeEditHeaderDraft.items.push(normalizeHeaderItem({
-        type: 'subtitle',
-        text: '',
-        x: 50,
-        y: 68,
-        align: 'center',
-      }));
-      refreshHomeHeaderEditorFields();
-    });
-  }
-
-  const addBadge = document.getElementById('homeHeaderAddBadge');
-  if (addBadge) {
-    addBadge.addEventListener('click', function () {
-      readHeaderDraftFromEditor();
-      if (homeEditHeaderDraft.items.some(function (item) { return item.type === 'badge'; })) return;
-      homeEditHeaderDraft.items.push(normalizeHeaderItem({
-        type: 'badge',
-        text: 'שמור',
-        x: 50,
-        y: 12,
-        align: 'center',
-      }));
-      refreshHomeHeaderEditorFields();
-    });
-  }
-
-  const presetRight = document.getElementById('homeHeaderPresetRight');
-  if (presetRight) {
-    presetRight.addEventListener('click', function () {
-      readHeaderDraftFromEditor();
-      applyHeaderPreset(homeEditHeaderDraft, 'logo-right-title-center');
-      refreshHomeHeaderEditorFields();
-    });
-  }
-
-  const presetSides = document.getElementById('homeHeaderPresetSides');
-  if (presetSides) {
-    presetSides.addEventListener('click', function () {
-      readHeaderDraftFromEditor();
-      applyHeaderPreset(homeEditHeaderDraft, 'logos-sides-title-center');
+  const artClear = document.getElementById('homeHeaderArtClear');
+  if (artClear) {
+    artClear.addEventListener('click', function () {
+      homeEditHeaderDraft.artSrc = '';
       refreshHomeHeaderEditorFields();
     });
   }
@@ -6406,6 +7263,7 @@ function closeHomeEditor() {
   unmountCardsLayoutBarFromEditor();
   homeEditOverlay.hidden = true;
   homeEditOverlay.classList.remove('home-edit-live');
+  homeEditOverlay.classList.remove('is-editing-float-menu');
   editingHomeSection = null;
   clearHomeSectionEditingFocus();
   homeEditImageData = '';
@@ -6413,6 +7271,7 @@ function closeHomeEditor() {
   homeEditVideoFile = null;
   homeEditVideoRemoved = false;
   homeEditHeaderDraft = null;
+  homeEditFloatMenuDraft = null;
 
   if (shouldRevert) {
     renderHome();
@@ -6527,6 +7386,12 @@ async function saveHomeEditor(e) {
     } else if (home[kind + 'MediaType'] === 'image') {
       home[kind + 'Image'] = homeEditImageData || '';
     }
+  }
+
+  if (editingHomeSection === 'floatmenu') {
+    const menu = readFloatMenuDraftFromEditor();
+    menu.enabled = true;
+    home.floatMenu = menu;
   }
 
   if (!saveHome(home)) {
@@ -6981,6 +7846,27 @@ document.getElementById('cardsBgClear').addEventListener('click', async function
   updateHomeField({ cardsBgImage: '' });
 });
 
+const floatMenuEnabledEl = document.getElementById('floatMenuEnabled');
+if (floatMenuEnabledEl) {
+  floatMenuEnabledEl.addEventListener('change', function (e) {
+    const home = loadHome();
+    const menu = normalizeFloatMenu(home.floatMenu, home);
+    const enabled = !!e.target.checked;
+    menu.enabled = enabled;
+    if (enabled && !menu.items.length) {
+      menu.items = defaultFloatMenuSectionItems(home);
+    }
+    home.floatMenu = menu;
+    if (!saveHome(home)) {
+      e.target.checked = !enabled;
+      alert('אין מספיק מקום לשמירה.');
+      return;
+    }
+    renderFloatMenu(home);
+    syncHomeSectionControls(home);
+  });
+}
+
 document.getElementById('cardsSearchEnabled').addEventListener('change', function (e) {
   const enabled = !!e.target.checked;
   if (!updateHomeField({ cardsSearchEnabled: enabled })) {
@@ -7131,6 +8017,7 @@ modalOverlay.addEventListener('click', function (e) {
 
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') {
+    if (activeInlineEdit) return;
     if (isSettingsMenuOpen()) {
       closeSettingsModal();
     } else if (!homeEditOverlay.hidden) {
@@ -7174,8 +8061,12 @@ bindHslaPickers();
 setupHslaField(document.getElementById('siteColorPicker'), function (hex) {
   updateHomeField({ siteSecondaryColor: hex });
 });
+setupHslaField(document.getElementById('siteBgColorPicker'), function (hex) {
+  updateHomeField({ siteBgColor: hex });
+});
 bindSectionResizeHandles();
 syncResizeHandlesVisibility();
+bindInlineEditing();
 
 async function initApp() {
   applyAppModeShell();
@@ -7208,6 +8099,7 @@ async function initApp() {
 function preparePageEntrance() {
   const selectors = [
     '#siteToolbar',
+    '#floatMenu',
     '#homeHeader',
     '#homeIntro',
     '#homeIntro2',

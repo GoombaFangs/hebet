@@ -34,6 +34,10 @@
         <input type="file" id="siteBgImage" accept="image/*" hidden>
       </label>
       <button type="button" class="site-theme-clear" id="siteBgClear" hidden title="הסרת תמונת רקע">הסרת תמונה</button>
+      <label class="site-theme-control site-theme-check" for="floatMenuEnabled" title="תפריט צף בצד העמוד — שאר האתר נדחק הצידה">
+        <input type="checkbox" id="floatMenuEnabled">
+        <span>תפריט צף</span>
+      </label>
       <label class="site-theme-control" for="siteFont">
         <span>גופן</span>
         <select id="siteFont" title="גופן האתר">
@@ -56,7 +60,7 @@
     </div>
   </header>
 
-  <!-- כותרת מאוחדת (לוגואים + טקסטים) -->
+  <!-- כותרת hero: טקסטים + איור + כפתורים -->
   <section class="home-section home-header" id="homeHeader" data-home-section="header">
     <div class="home-header-canvas" id="homeHeaderCanvas">
       <div class="home-section-bg" id="homeHeaderBg"></div>
@@ -68,13 +72,25 @@
     <button type="button" class="home-section-edit" data-edit-home="header" hidden title="עריכת כותרת">✎</button>
   </section>
 
+  <!-- תפריט צף — מתחת לכותרת, נשאר במסך בזמן גלילה -->
+  <aside class="float-menu" id="floatMenu" hidden aria-label="תפריט צף">
+    <div class="float-menu-stack">
+      <div class="float-menu-card">
+        <button type="button" class="home-section-edit float-menu-edit" data-edit-home="floatmenu" hidden title="עריכת תפריט צף">✎</button>
+        <h2 class="float-menu-title" id="floatMenuTitle" data-inline-edit="floatMenu.title" data-inline-placeholder="כותרת תפריט"></h2>
+        <nav class="float-menu-nav" id="floatMenuNav" aria-label="ניווט באתר"></nav>
+      </div>
+      <div class="float-menu-tags" id="floatMenuTags" hidden></div>
+    </div>
+  </aside>
+
   <!-- כותרת משנה + פתיח -->
   <section class="home-section home-intro" id="homeIntro" data-home-section="intro">
     <div class="home-intro-main" id="homeIntroMain">
       <div class="home-section-bg home-intro-bg" id="homeIntroBg"></div>
       <div class="home-section-content">
-        <h2 class="home-subtitle" id="homeSubtitle">צפייה מהנה</h2>
-        <p class="home-intro-text" id="homeIntroText">ברוכים הבאים לפורטל התוכן. כאן תמצאו מצגות, לומדות וסרטים.</p>
+        <h2 class="home-subtitle" id="homeSubtitle" data-inline-edit="subtitle" data-inline-placeholder="כותרת משנה">צפייה מהנה</h2>
+        <p class="home-intro-text" id="homeIntroText" data-inline-edit="introText" data-inline-placeholder="טקסט פתיח">ברוכים הבאים לפורטל התוכן. כאן תמצאו מצגות, לומדות וסרטים.</p>
       </div>
       <div class="home-resize-handle" data-resize="intro" hidden title="גררו לשינוי גובה">
         <span class="home-resize-grip"></span>
@@ -91,8 +107,8 @@
     <div class="home-intro-main" id="homeIntro2Main">
       <div class="home-section-bg home-intro-bg" id="homeIntro2Bg"></div>
       <div class="home-section-content">
-        <h2 class="home-subtitle" id="homeIntro2Subtitle"></h2>
-        <p class="home-intro-text" id="homeIntro2Text"></p>
+        <h2 class="home-subtitle" id="homeIntro2Subtitle" data-inline-edit="intro2Subtitle" data-inline-placeholder="כותרת משנה"></h2>
+        <p class="home-intro-text" id="homeIntro2Text" data-inline-edit="intro2Text" data-inline-placeholder="טקסט פתיח"></p>
       </div>
       <div class="home-resize-handle" data-resize="intro2" hidden title="גררו לשינוי גובה">
         <span class="home-resize-grip"></span>
@@ -165,7 +181,7 @@
   <section class="home-section home-closing" id="homeClosing" data-home-section="closing">
     <div class="home-section-bg" id="homeClosingBg"></div>
     <div class="home-section-content">
-      <p class="home-closing-text" id="homeClosingText">תודה שביקרתם. נשתמע בפעם הבאה.</p>
+      <p class="home-closing-text" id="homeClosingText" data-inline-edit="closingText" data-inline-placeholder="טקסט סגירה">תודה שביקרתם. נשתמע בפעם הבאה.</p>
     </div>
     <a class="home-dev-team-btn" id="homeClosingDevTeam" hidden target="_blank" rel="noopener noreferrer" aria-label="צוות פיתוח">
       <span class="home-dev-team-label">צוות פיתוח</span>
@@ -183,7 +199,7 @@
   <section class="home-section home-closing" id="homeClosing2" data-home-section="closing2" hidden>
     <div class="home-section-bg" id="homeClosing2Bg"></div>
     <div class="home-section-content">
-      <p class="home-closing-text" id="homeClosing2Text"></p>
+      <p class="home-closing-text" id="homeClosing2Text" data-inline-edit="closing2Text" data-inline-placeholder="טקסט סגירה"></p>
     </div>
     <a class="home-dev-team-btn" id="homeClosing2DevTeam" hidden target="_blank" rel="noopener noreferrer" aria-label="צוות פיתוח">
       <span class="home-dev-team-label">צוות פיתוח</span>
