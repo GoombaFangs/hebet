@@ -9,7 +9,7 @@
 
 body {
   font-family: var(--site-font, "Segoe UI", Tahoma, Arial, sans-serif);
-  background-color: var(--site-bg-color, #F3EEE4);
+  background-color: var(--site-bg-color, #ffffff);
   background-image: var(--site-bg-image, none);
   background-size: cover;
   background-position: center;
@@ -19,7 +19,7 @@ body {
   direction: rtl;
   min-height: 100vh;
   --site-secondary: #e31c23;
-  --site-bg-color: #F3EEE4;
+  --site-bg-color: #ffffff;
 }
 
 /* מצב משתמש — תצוגה ללקוח בלי עריכה */

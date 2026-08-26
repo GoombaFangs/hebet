@@ -170,7 +170,7 @@ const DEFAULT_HOME = {
   closing2DevTeamSlant: false,
   closing2DevTeamX: 50,
   closing2DevTeamY: 78,
-  siteBgColor: '#F3EEE4',
+  siteBgColor: '#ffffff',
   siteBgImage: '',
   siteSecondaryColor: '#e31c23',
   colorCards: false,
@@ -2317,10 +2317,22 @@ function createCategoryId() {
   return 'cat-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
 }
 
+function createDefaultCategory(cardIds) {
+  return {
+    id: createCategoryId(),
+    title: 'קטגוריה',
+    subtitle: 'תיאור קצר',
+    cardIds: Array.isArray(cardIds) ? cardIds.slice() : [],
+    fontSize: 22,
+    color: '#2a3a2f',
+  };
+}
+
 function normalizeCategories(categories, cards) {
-  const cardIds = new Set((cards || []).map(function (c) { return c.id; }));
+  const cardList = cards || [];
+  const cardIds = new Set(cardList.map(function (c) { return c.id; }));
   const seen = new Set();
-  return (Array.isArray(categories) ? categories : []).map(function (cat) {
+  let normalized = (Array.isArray(categories) ? categories : []).map(function (cat) {
     const ids = (cat.cardIds || []).filter(function (id) {
       if (!cardIds.has(id) || seen.has(id)) return false;
       seen.add(id);
@@ -2329,12 +2341,23 @@ function normalizeCategories(categories, cards) {
     return {
       id: cat.id || createCategoryId(),
       title: String(cat.title || 'קטגוריה').slice(0, 40),
-      subtitle: String(cat.subtitle || '').slice(0, 80),
+      subtitle: String(cat.subtitle || 'תיאור קצר').slice(0, 80),
       cardIds: ids,
       fontSize: clampFontSize(cat.fontSize, 22),
       color: normalizeTextColor(cat.color, '#2a3a2f'),
     };
   });
+
+  if (!normalized.length) {
+    normalized = [createDefaultCategory([])];
+  }
+
+  const unassigned = cardList.filter(function (c) { return !seen.has(c.id); });
+  if (unassigned.length) {
+    normalized[0].cardIds = normalized[0].cardIds.concat(unassigned.map(function (c) { return c.id; }));
+  }
+
+  return normalized;
 }
 
 function getCategoryTitleStyle(cat) {
@@ -2352,14 +2375,6 @@ function getCategorySubtitleStyle(cat) {
 function getCardsByIds(cards, ids) {
   const map = Object.fromEntries(cards.map(function (c) { return [c.id, c]; }));
   return (ids || []).map(function (id) { return map[id]; }).filter(Boolean);
-}
-
-function getUncategorizedCards(cards, categories) {
-  const assigned = new Set();
-  (categories || []).forEach(function (cat) {
-    (cat.cardIds || []).forEach(function (id) { assigned.add(id); });
-  });
-  return cards.filter(function (c) { return !assigned.has(c.id); });
 }
 
 function getCardsLayoutMode(home, sectionId) {
@@ -2449,7 +2464,11 @@ function placeCardIdAfterSource(home, sourceId, newId, sectionId) {
     cfg.categories[i].cardIds = ids;
     return setCardsSectionConfig(home, sectionId, { categories: cfg.categories });
   }
-  return null;
+  const cards = getCardsForSection(loadCards(), sectionId);
+  const categories = normalizeCategories(cfg.categories, cards);
+  if (!categories.length) return null;
+  categories[0].cardIds.push(newId);
+  return setCardsSectionConfig(home, sectionId, { categories: categories });
 }
 
 function buildCardElementHtml(card, index, options) {
@@ -2624,25 +2643,9 @@ function renderCardsIntoSection(cards, home, sectionId) {
 
   if (mode === 'categories') {
     const categories = normalizeCategories(cfg.categories, sectionCards);
-    let html = '';
-    categories.forEach(function (cat) {
-      html += buildCategoryBlockHtml(cat, getCardsByIds(sectionCards, cat.cardIds), { isLoose: false });
-    });
-    const loose = getUncategorizedCards(sectionCards, categories);
-    if (editMode || loose.length) {
-      html += buildCategoryBlockHtml(
-        { id: '', title: 'ללא קטגוריה' },
-        loose,
-        { isLoose: true }
-      );
-    }
-    if (!html) {
-      gridEl.classList.remove('has-categories');
-      html = sectionCards.map(function (card, index) {
-        return buildCardElementHtml(card, index);
-      }).join('');
-    }
-    gridEl.innerHTML = html;
+    gridEl.innerHTML = categories.map(function (cat) {
+      return buildCategoryBlockHtml(cat, getCardsByIds(sectionCards, cat.cardIds));
+    }).join('');
     return;
   }
 
@@ -2686,21 +2689,19 @@ function renderCards(cards) {
   if (editMode) syncInlineEditableHosts();
 }
 
-function buildCategoryBlockHtml(cat, cards, options) {
-  options = options || {};
-  const isLoose = !!options.isLoose;
+function buildCategoryBlockHtml(cat, cards) {
   const catId = cat.id || '';
   const titleStyle = getCategoryTitleStyle(cat);
   const subtitleStyle = getCategorySubtitleStyle(cat);
   const fontSize = clampFontSize(cat.fontSize, 22);
   const color = normalizeTextColor(cat.color, '#2a3a2f');
   const colorFieldId = 'catColor_' + catId;
-  const subtitle = String(cat.subtitle || '');
+  const subtitle = String(cat.subtitle || 'תיאור קצר');
 
   if (!editMode && !cards.length) return '';
 
   let headerHtml;
-  if (editMode && !isLoose) {
+  if (editMode) {
     headerHtml =
       '<header class="category-header">' +
         '<div class="category-header-texts">' +
@@ -2723,17 +2724,6 @@ function buildCategoryBlockHtml(cat, cards, options) {
           '<button type="button" class="category-delete" data-category-id="' + escapeHtml(catId) + '" aria-label="מחיקת קטגוריה" title="מחק קטגוריה">×</button>' +
         '</div>' +
       '</header>';
-  } else if (isLoose) {
-    headerHtml = editMode
-      ? (
-        '<header class="category-header category-header--loose">' +
-          '<span class="category-loose-label">ללא קטגוריה</span>' +
-          '<div class="category-header-actions">' +
-            '<button type="button" class="category-add" data-category-id="" aria-label="הוספת קטגוריה" title="הוספת קטגוריה">+</button>' +
-          '</div>' +
-        '</header>'
-      )
-      : '<header class="category-header category-header--loose" aria-hidden="true"></header>';
   } else {
     const subtitleHtml = subtitle.trim()
       ? '<p class="category-subtitle" style="' + subtitleStyle + '">' + escapeHtml(subtitle) + '</p>'
@@ -2755,7 +2745,7 @@ function buildCategoryBlockHtml(cat, cards, options) {
     : '';
 
   return (
-    '<section class="category-block' + (isLoose ? ' category-block--loose' : '') + '" data-category-id="' + escapeHtml(catId) + '">' +
+    '<section class="category-block" data-category-id="' + escapeHtml(catId) + '">' +
       headerHtml +
       '<div class="category-cards" data-category-drop="' + escapeHtml(catId) + '">' +
         cardsHtml +
@@ -2826,8 +2816,8 @@ function saveOrderFromDom(contextEl) {
       ? String(titleInput.value || '').trim().slice(0, 40) || 'קטגוריה'
       : 'קטגוריה';
     const subtitle = subtitleInput
-      ? String(subtitleInput.value || '').trim().slice(0, 80)
-      : '';
+      ? String(subtitleInput.value || '').trim().slice(0, 80) || 'תיאור קצר'
+      : 'תיאור קצר';
     const sizeEl = block.querySelector('.category-font-size');
     const colorEl = block.querySelector('.category-color-input');
     categories.push({
@@ -3075,7 +3065,7 @@ function addCategoryAfter(afterCategoryId, sectionId) {
   const newCat = {
     id: createCategoryId(),
     title: 'קטגוריה חדשה',
-    subtitle: '',
+    subtitle: 'תיאור קצר',
     cardIds: [],
     fontSize: 22,
     color: '#2a3a2f',
@@ -3101,14 +3091,21 @@ function addCategoryAfter(afterCategoryId, sectionId) {
 
 function deleteCategory(categoryId, sectionId) {
   if (!categoryId) return;
-  if (!confirm('למחוק את הקטגוריה? הכרטיסים יישארו בלי קטגוריה.')) return;
   let home = loadHome();
   sectionId = sectionId || getActiveCardsSectionId();
   const cards = getCardsForSection(loadCards(), sectionId);
   const cfg = getCardsSectionConfig(home, sectionId);
-  const categories = normalizeCategories(cfg.categories, cards).filter(function (cat) {
-    return cat.id !== categoryId;
-  });
+  let categories = normalizeCategories(cfg.categories, cards);
+  if (categories.length <= 1) {
+    alert('לא ניתן למחוק את הקטגוריה האחרונה.');
+    return;
+  }
+  if (!confirm('למחוק את הקטגוריה? הכרטיסים יועברו לקטגוריה הראשונה.')) return;
+  const deleted = categories.find(function (cat) { return cat.id === categoryId; });
+  categories = categories.filter(function (cat) { return cat.id !== categoryId; });
+  if (deleted && deleted.cardIds && deleted.cardIds.length && categories.length) {
+    categories[0].cardIds = categories[0].cardIds.concat(deleted.cardIds);
+  }
   home = setCardsSectionConfig(home, sectionId, { categories: categories });
   saveHome(home);
   renderCards(loadCards());
@@ -4727,6 +4724,18 @@ function finishWizard() {
     if (!trySaveCards(cards, newCard, cards.length - 1)) {
       showError('אין מספיק מקום לשמירה. נסו תמונה קטנה יותר וחזרו על שמירה.');
       return;
+    }
+    let home = loadHome();
+    const sectionId = newCard.section;
+    if (getCardsLayoutMode(home, sectionId) === 'categories') {
+      const sectionCards = getCardsForSection(cards, sectionId);
+      const cfg = getCardsSectionConfig(home, sectionId);
+      const normalizedCategories = normalizeCategories(cfg.categories, sectionCards);
+      home = setCardsSectionConfig(home, sectionId, {
+        layoutMode: 'categories',
+        categories: normalizedCategories,
+      });
+      saveHome(home);
     }
     pendingCardPopId = newCard.id;
   }
@@ -9150,7 +9159,10 @@ document.getElementById('cardsLayoutMode').addEventListener('change', function (
   const cfg = getCardsSectionConfig(home, sectionId);
   const patch = { layoutMode: mode };
   if (mode === 'categories') {
-    patch.categories = normalizeCategories(cfg.categories, getCardsForSection(loadCards(), sectionId));
+    patch.categories = normalizeCategories(
+      cfg.categories,
+      getCardsForSection(loadCards(), sectionId)
+    );
   }
   if (mode === 'freeform') {
     patch.cardsFreeHeight = clampCardsFreeHeight(cfg.cardsFreeHeight);
