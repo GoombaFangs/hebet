@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>פורטל תוכן</title>
-  <link rel="stylesheet" href="css/style.css?v=hide-section-titles">
+  <link rel="stylesheet" href="css/style.css?v=card-toolbar-text">
 </head>
 <body data-app-mode="edit">
 
@@ -492,6 +492,26 @@
               <label for="outlineWidth" id="outlineWidthLabel">עובי מסגרת <span class="field-value" id="outlineWidthValue">2px</span></label>
               <input type="range" id="outlineWidth" name="outlineWidth" min="1" max="20" step="1" value="2" style="width:100%; accent-color: var(--site-secondary, #e31c23);">
               <p class="field-subhint" id="outlineWidthHint">כמה עבה תהיה המסגרת</p>
+            </div>
+
+            <div class="form-field" id="titleColorFieldWrap">
+              <label for="titleColor">צבע כותרת</label>
+              <div class="hsla-field" id="titleColorPicker" data-hsla-for="titleColor">
+                <button type="button" class="hsla-swatch" title="בחירת צבע כותרת" aria-label="בחירת צבע כותרת"></button>
+                <span class="color-hex" id="titleColorHex">#e31c23</span>
+                <input type="hidden" id="titleColor" name="titleColor" value="#e31c23">
+              </div>
+              <p class="field-subhint">צבע הטקסט של הכותרת בלבד</p>
+            </div>
+
+            <div class="form-field" id="notesColorFieldWrap">
+              <label for="notesColor">צבע תיאור</label>
+              <div class="hsla-field" id="notesColorPicker" data-hsla-for="notesColor">
+                <button type="button" class="hsla-swatch" title="בחירת צבע תיאור" aria-label="בחירת צבע תיאור"></button>
+                <span class="color-hex" id="notesColorHex">#333333</span>
+                <input type="hidden" id="notesColor" name="notesColor" value="#333333">
+              </div>
+              <p class="field-subhint">צבע הטקסט של התיאור בלבד</p>
             </div>
 
             <div id="cardMediaExtrasWrap" hidden>

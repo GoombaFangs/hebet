@@ -177,7 +177,7 @@ const DEFAULT_HOME = {
   siteFont: "'Segoe UI', Tahoma, Arial, sans-serif",
   cardsPerRow: 5,
   cardsGap: 16,
-  cardsLayoutMode: 'matrix',
+  cardsLayoutMode: 'categories',
   categories: [],
   cardsFreeHeight: 420,
   cardsFreeSize: 18,
@@ -205,18 +205,22 @@ const GRADIENTS = [
 ];
 
 const DEFAULT_CARD_BG_MODE = 'squareImage';
+const DEFAULT_CARD_TITLE_COLOR = '#e31c23';
+const DEFAULT_CARD_NOTES_COLOR = '#333333';
+const DEFAULT_CARD_TITLE_SIZE = 34;
+const DEFAULT_CARD_NOTES_SIZE = 15;
 
 const DEFAULT_CARDS = [
-  { id: 'card-1', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page1.html', gradient: GRADIENTS[0], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
-  { id: 'card-2', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page2.html', gradient: GRADIENTS[1], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
-  { id: 'card-3', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page3.html', gradient: GRADIENTS[2], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
-  { id: 'card-4', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page4.html', gradient: GRADIENTS[3], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
-  { id: 'card-5', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page5.html', gradient: GRADIENTS[4], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
-  { id: 'card-6', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page6.html', gradient: GRADIENTS[5], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
-  { id: 'card-7', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page7.html', gradient: GRADIENTS[6], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
-  { id: 'card-8', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page8.html', gradient: GRADIENTS[7], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
-  { id: 'card-9', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page9.html', gradient: GRADIENTS[8], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
-  { id: 'card-10', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page10.html', gradient: GRADIENTS[9], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff' },
+  { id: 'card-1', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page1.html', gradient: GRADIENTS[0], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
+  { id: 'card-2', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page2.html', gradient: GRADIENTS[1], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
+  { id: 'card-3', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page3.html', gradient: GRADIENTS[2], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
+  { id: 'card-4', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page4.html', gradient: GRADIENTS[3], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
+  { id: 'card-5', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page5.html', gradient: GRADIENTS[4], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
+  { id: 'card-6', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page6.html', gradient: GRADIENTS[5], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
+  { id: 'card-7', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page7.html', gradient: GRADIENTS[6], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
+  { id: 'card-8', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page8.html', gradient: GRADIENTS[7], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
+  { id: 'card-9', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page9.html', gradient: GRADIENTS[8], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
+  { id: 'card-10', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page10.html', gradient: GRADIENTS[9], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: '#e31c23', notesColor: '#333333', titleSize: 34, notesSize: 15 },
 ];
 
 const cardsGridTop = document.getElementById('cardsGridTop');
@@ -260,6 +264,10 @@ function createEmptyWizardData() {
     primaryColor: '#e87722',
     secondaryColor: '#4a7c3f',
     outlineColor: '#e31c23',
+    titleColor: DEFAULT_CARD_TITLE_COLOR,
+    notesColor: DEFAULT_CARD_NOTES_COLOR,
+    titleSize: DEFAULT_CARD_TITLE_SIZE,
+    notesSize: DEFAULT_CARD_NOTES_SIZE,
     flatBgColor: '#ffffff',
     outlineWidth: 2,
     flatEdge: 'outline',
@@ -405,7 +413,7 @@ let activeCardsSectionId = 'top';
 function defaultCardsSectionConfig(overrides) {
   return Object.assign({
     title: '',
-    layoutMode: 'matrix',
+    layoutMode: 'categories',
     cardsPerRow: 5,
     cardsGap: 16,
     categories: [],
@@ -447,6 +455,10 @@ function getCardsSectionIdFromGridEl(gridEl) {
   return activeCardsSectionId;
 }
 
+function getCardsSectionIdFromElement(el) {
+  return getCardsSectionIdFromGridEl(el && el.closest ? el.closest('.cards-grid') : null);
+}
+
 function forEachCardsGrid(callback) {
   CARD_SECTIONS.forEach(function (row) {
     const grid = getCardsGridEl(row.id);
@@ -471,7 +483,7 @@ function ensureCardsSections(home) {
     return home;
   }
 
-  let legacyLayoutMode = 'matrix';
+  let legacyLayoutMode = 'categories';
   if (home.cardsLayoutMode === 'matrix' || home.cardsLayoutMode === 'categories' || home.cardsLayoutMode === 'freeform') {
     legacyLayoutMode = home.cardsLayoutMode;
   } else if (home.categoriesEnabled) {
@@ -610,7 +622,14 @@ function renderStoredInlineText(value, plainFallback) {
 
 let savedInlineTextSelection = null;
 
-const WIZARD_PREVIEW_SIZE = { min: 12, max: 48, fallback: 28 };
+const WIZARD_PREVIEW_SIZE = {
+  pageName: { min: 12, max: 56, fallback: DEFAULT_CARD_TITLE_SIZE },
+  notes: { min: 10, max: 32, fallback: DEFAULT_CARD_NOTES_SIZE },
+};
+
+function getWizardPreviewSizeSpec(field) {
+  return WIZARD_PREVIEW_SIZE[field] || WIZARD_PREVIEW_SIZE.pageName;
+}
 
 function isWizardPreviewTextEditing() {
   return !!(wizardPreviewTextEdit && wizardPreviewTextEdit.el);
@@ -626,6 +645,41 @@ function canUseInlineFormattingToolbar() {
   if (!editMode || !activeInlineEdit) return false;
   const spec = getInlineEditSpec(activeInlineEdit.el);
   return supportsInlineToolbarTools(spec);
+}
+
+function isInlineFormattingToolbarEl(node) {
+  if (!node || !node.closest) return false;
+  return !!node.closest('#siteToolbar, .hsla-popover');
+}
+
+function bindInlineFormattingToolbarGuard() {
+  const shell = document.getElementById('siteToolbar');
+  if (!shell || shell.dataset.formatGuardBound === '1') return;
+  shell.dataset.formatGuardBound = '1';
+
+  shell.addEventListener('mousedown', function (e) {
+    if (!canUseInlineFormattingToolbar()) return;
+    const control = e.target.closest('#inlineTextSizeControl, #inlineTextColorPicker');
+    if (!control) return;
+    e.preventDefault();
+    saveInlineTextSelection();
+  }, true);
+}
+
+function scheduleWizardPreviewTextEditCommit() {
+  window.setTimeout(function () {
+    if (!wizardPreviewTextEdit) return;
+    const el = wizardPreviewTextEdit.el;
+    if (!el || !el.isConnected) {
+      wizardPreviewTextEdit = null;
+      syncInlineTextSizeControl();
+      return;
+    }
+    if (isInlineFormattingToolbarEl(document.activeElement)) return;
+    if (document.activeElement === el) return;
+    commitWizardPreviewTextEdit();
+    updateLivePreview();
+  }, 0);
 }
 
 function saveInlineTextSelection() {
@@ -685,45 +739,41 @@ function applyWizardPreviewTextColor(hex) {
   const color = colorToCss(hex);
 
   if (spec.field === 'pageName') {
-    wizardData.outlineColor = color;
-    const outlineInput = document.getElementById('outlineColor');
-    if (outlineInput) outlineInput.value = color;
-    setHslaFieldValue('outlineColor', color);
-    const outlineHex = document.getElementById('outlineColorHex');
-    if (outlineHex) outlineHex.textContent = colorToDisplayHex(color);
-    patchWizardPreviewCardTheme();
-    return;
+    wizardData.titleColor = color;
+    const titleInput = document.getElementById('titleColor');
+    if (titleInput) titleInput.value = color;
+    setHslaFieldValue('titleColor', color);
+    const titleHex = document.getElementById('titleColorHex');
+    if (titleHex) titleHex.textContent = colorToDisplayHex(color);
+  } else if (spec.field === 'notes') {
+    wizardData.notesColor = color;
+    const notesInput = document.getElementById('notesColor');
+    if (notesInput) notesInput.value = color;
+    setHslaFieldValue('notesColor', color);
+    const notesHex = document.getElementById('notesColorHex');
+    if (notesHex) notesHex.textContent = colorToDisplayHex(color);
   }
 
+  patchWizardPreviewCardTheme();
   el.focus();
-  if (!hasActiveInlineTextSelection() && !restoreInlineTextSelection()) {
-    selectElementContents(el);
-  }
-  const sel = window.getSelection();
-  if (!sel || !sel.rangeCount) return;
-  const range = sel.getRangeAt(0);
-  if (!el.contains(range.commonAncestorContainer) || range.collapsed) return;
-
-  const workingRange = range.cloneRange();
-  sel.removeAllRanges();
-  sel.addRange(workingRange);
-  try {
-    document.execCommand('styleWithCSS', false, true);
-    if (!document.execCommand('foreColor', false, color)) {
-      wrapRangeWithColor(workingRange.cloneRange(), color);
-    }
-  } catch (_) {
-    wrapRangeWithColor(workingRange.cloneRange(), color);
-  }
+  selectElementContents(el);
 }
 
 function applyWizardPreviewTextSize(rawSize) {
   if (!isWizardPreviewTextEditing()) return;
-  const size = clampFontSize(rawSize, WIZARD_PREVIEW_SIZE.fallback, WIZARD_PREVIEW_SIZE.max);
-  wizardPreviewTextEdit.el.style.fontSize = size + 'px';
+  const spec = wizardPreviewTextEdit.spec;
+  const cfg = getWizardPreviewSizeSpec(spec.field);
+  const size = clampFontSize(rawSize, cfg.fallback, cfg.max);
+  if (spec.field === 'pageName') wizardData.titleSize = size;
+  else if (spec.field === 'notes') wizardData.notesSize = size;
+  patchWizardPreviewCardTheme();
   const range = document.getElementById('inlineTextSize');
   const valueEl = document.getElementById('inlineTextSizeValue');
-  if (range) range.value = String(size);
+  if (range) {
+    range.min = String(cfg.min);
+    range.max = String(cfg.max);
+    range.value = String(size);
+  }
   if (valueEl) valueEl.textContent = String(size);
 }
 
@@ -838,19 +888,14 @@ function syncInlineTextSizeControl() {
   if (isWizardPreviewTextEditing()) {
     control.classList.remove('is-disabled');
     range.disabled = false;
-    range.min = String(WIZARD_PREVIEW_SIZE.min);
-    range.max = String(WIZARD_PREVIEW_SIZE.max);
-    const el = wizardPreviewTextEdit.el;
-    const inlinePx = parseFloat(el.style.fontSize);
-    let size = Number.isFinite(inlinePx)
-      ? clampFontSize(inlinePx, WIZARD_PREVIEW_SIZE.fallback, WIZARD_PREVIEW_SIZE.max)
-      : WIZARD_PREVIEW_SIZE.fallback;
-    if (!Number.isFinite(inlinePx)) {
-      const computed = parseFloat(window.getComputedStyle(el).fontSize);
-      if (Number.isFinite(computed)) {
-        size = clampFontSize(Math.round(computed), WIZARD_PREVIEW_SIZE.fallback, WIZARD_PREVIEW_SIZE.max);
-      }
-    }
+    const spec = wizardPreviewTextEdit.spec;
+    const cfg = getWizardPreviewSizeSpec(spec.field);
+    const stored = spec.field === 'pageName'
+      ? wizardData.titleSize
+      : wizardData.notesSize;
+    const size = clampFontSize(stored, cfg.fallback, cfg.max);
+    range.min = String(cfg.min);
+    range.max = String(cfg.max);
     range.value = String(size);
     valueEl.textContent = String(size);
     syncInlineTextColorControl();
@@ -881,6 +926,17 @@ function syncInlineTextColorControl() {
   field.classList.toggle('is-disabled', !enabled);
   const swatch = field.querySelector('.hsla-swatch');
   if (swatch) swatch.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+  if (enabled && isWizardPreviewTextEditing()) {
+    const spec = wizardPreviewTextEdit.spec;
+    const color = spec.field === 'pageName'
+      ? (wizardData.titleColor || DEFAULT_CARD_TITLE_COLOR)
+      : (wizardData.notesColor || DEFAULT_CARD_NOTES_COLOR);
+    const input = document.getElementById('inlineTextColor');
+    if (input) {
+      input.value = colorToDisplayHex(color);
+      updateHslaSwatch(field);
+    }
+  }
 }
 
 function applyInlineTextSize(rawSize) {
@@ -1406,6 +1462,14 @@ function openHslaPopover(field, onChange) {
 
   if (field.id === 'inlineTextColorPicker') {
     if (!canUseInlineFormattingToolbar()) return;
+    if (isWizardPreviewTextEditing()) {
+      const spec = wizardPreviewTextEdit.spec;
+      const current = spec.field === 'pageName'
+        ? (wizardData.titleColor || DEFAULT_CARD_TITLE_COLOR)
+        : (wizardData.notesColor || DEFAULT_CARD_NOTES_COLOR);
+      input.value = colorToDisplayHex(current);
+      updateHslaSwatch(field);
+    }
     saveInlineTextSelection();
     applyInlineTextColor(input.value);
   }
@@ -1526,6 +1590,7 @@ function setupHslaField(field, onChange) {
   if (!swatch) return;
   if (field.id === 'inlineTextColorPicker') {
     field.addEventListener('mousedown', function (e) {
+      if (!canUseInlineFormattingToolbar()) return;
       e.preventDefault();
       saveInlineTextSelection();
     });
@@ -1707,6 +1772,11 @@ function syncCardBgModeUi() {
   const outlineWidthWrap = document.getElementById('outlineWidthFieldWrap');
   if (outlineWidthWrap) outlineWidthWrap.hidden = !hasEdgeFx;
 
+  const titleColorWrap = document.getElementById('titleColorFieldWrap');
+  if (titleColorWrap) titleColorWrap.hidden = !isFlat;
+  const notesColorWrap = document.getElementById('notesColorFieldWrap');
+  if (notesColorWrap) notesColorWrap.hidden = !isFlat;
+
   const primaryWrap = document.getElementById('primaryColorFieldWrap');
   if (primaryWrap) primaryWrap.hidden = mode !== 'colors';
   const secondaryWrap = document.getElementById('secondaryColorFieldWrap');
@@ -1735,6 +1805,28 @@ function syncCardBgModeUi() {
 function getCardOutlineColor(card) {
   if (!card) return '#e31c23';
   return card.outlineColor || '#e31c23';
+}
+
+function getCardTitleColor(card) {
+  if (!card) return DEFAULT_CARD_TITLE_COLOR;
+  return card.titleColor || DEFAULT_CARD_TITLE_COLOR;
+}
+
+function getCardNotesColor(card) {
+  if (!card) return DEFAULT_CARD_NOTES_COLOR;
+  return card.notesColor || DEFAULT_CARD_NOTES_COLOR;
+}
+
+function getCardTitleSize(card) {
+  const n = Number(card && card.titleSize);
+  if (!Number.isFinite(n)) return DEFAULT_CARD_TITLE_SIZE;
+  return clampFontSize(n, 12, 56);
+}
+
+function getCardNotesSize(card) {
+  const n = Number(card && card.notesSize);
+  if (!Number.isFinite(n)) return DEFAULT_CARD_NOTES_SIZE;
+  return clampFontSize(n, 10, 32);
 }
 
 function getCardFlatBgColor(card) {
@@ -1784,6 +1876,10 @@ function getCardThemeStyle(card) {
   return (
     'font-family: ' + font + ';' +
     '--card-outline:' + outline + ';' +
+    '--card-title-color:' + colorToCss(getCardTitleColor(card)) + ';' +
+    '--card-notes-color:' + colorToCss(getCardNotesColor(card)) + ';' +
+    '--card-title-size:' + getCardTitleSize(card) + 'px;' +
+    '--card-notes-size:' + getCardNotesSize(card) + 'px;' +
     '--card-flat-bg:' + flatBg + ';' +
     '--card-outline-width:' + outlineWidth + 'px;' +
     '--card-action:' + actionColor + ';' +
@@ -2274,7 +2370,7 @@ function getCardsLayoutMode(home, sectionId) {
     return cfg.layoutMode;
   }
   if (home.categoriesEnabled && sectionId === 'top') return 'categories';
-  return 'matrix';
+  return 'categories';
 }
 
 function clampCardsFreeHeight(value) {
@@ -2681,11 +2777,21 @@ function mergeSectionCardOrder(allCards, sectionId, orderedSectionCards) {
   return topCards.concat(orderedSectionCards);
 }
 
-function saveOrderFromDom() {
+function saveOrderFromDom(contextEl) {
   let home = ensureCardsSections(loadHome());
   const cards = loadCards();
   const cardMap = Object.fromEntries(cards.map(function (c) { return [c.id, c]; }));
-  const gridEl = draggedElement && draggedElement.closest('.cards-grid');
+  let gridEl = null;
+  if (contextEl) {
+    if (contextEl.classList && contextEl.classList.contains('cards-grid')) {
+      gridEl = contextEl;
+    } else if (contextEl.closest) {
+      gridEl = contextEl.closest('.cards-grid');
+    }
+  }
+  if (!gridEl && draggedElement) {
+    gridEl = draggedElement.closest('.cards-grid');
+  }
   const sectionId = getCardsSectionIdFromGridEl(gridEl);
   const mode = getCardsLayoutMode(home, sectionId);
   const cfg = getCardsSectionConfig(home, sectionId);
@@ -2702,11 +2808,12 @@ function saveOrderFromDom() {
     return;
   }
 
-  if (!gridEl) return;
+  const targetGrid = gridEl || getCardsGridEl(sectionId);
+  if (!targetGrid) return;
   const allIds = [];
   const categories = [];
 
-  gridEl.querySelectorAll('.category-block').forEach(function (block) {
+  targetGrid.querySelectorAll('.category-block').forEach(function (block) {
     const catId = block.dataset.categoryId || '';
     const ids = [...block.querySelectorAll('.card')].map(function (el) {
       return el.dataset.id;
@@ -2737,6 +2844,13 @@ function saveOrderFromDom() {
   saveHome(home);
   const ordered = allIds.map(function (id) { return cardMap[id]; }).filter(Boolean);
   saveCards(mergeSectionCardOrder(cards, sectionId, ordered));
+}
+
+function saveAllCardsSectionsFromDom() {
+  CARD_SECTIONS.forEach(function (row) {
+    const grid = getCardsGridEl(row.id);
+    if (grid) saveOrderFromDom(grid);
+  });
 }
 
 function getCardDropContainer(el) {
@@ -2785,8 +2899,8 @@ function setupDragAndDrop() {
         el.classList.remove('is-drop-target');
       });
       document.querySelectorAll('.cards-grid .category-cards').forEach(ensureCategoryEmptyPlaceholder);
+      saveOrderFromDom(card);
       draggedElement = null;
-      saveOrderFromDom();
     });
 
     card.addEventListener('dragover', function (e) {
@@ -2858,7 +2972,7 @@ function setupCategoryControls() {
       e.stopPropagation();
     });
     input.addEventListener('change', function () {
-      saveOrderFromDom();
+      saveOrderFromDom(input);
     });
     input.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') {
@@ -2873,7 +2987,7 @@ function setupCategoryControls() {
       e.stopPropagation();
     });
     input.addEventListener('change', function () {
-      saveOrderFromDom();
+      saveOrderFromDom(input);
     });
     input.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') {
@@ -2886,14 +3000,14 @@ function setupCategoryControls() {
   document.querySelectorAll('.cards-grid .category-delete').forEach(function (btn) {
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
-      deleteCategory(btn.dataset.categoryId);
+      deleteCategory(btn.dataset.categoryId, getCardsSectionIdFromElement(btn));
     });
   });
 
   document.querySelectorAll('.cards-grid .category-add').forEach(function (btn) {
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
-      addCategoryAfter(btn.dataset.categoryId || '');
+      addCategoryAfter(btn.dataset.categoryId || '', getCardsSectionIdFromElement(btn));
     });
   });
 
@@ -2910,7 +3024,7 @@ function setupCategoryControls() {
       if (valueEl) valueEl.textContent = String(size);
       if (titleInput) titleInput.style.fontSize = size + 'px';
       if (subtitleInput) subtitleInput.style.fontSize = subtitleSize + 'px';
-      saveOrderFromDom();
+      saveOrderFromDom(range);
     }
 
     range.addEventListener('input', function () {
@@ -2930,7 +3044,7 @@ function setupCategoryControls() {
       const cssColor = colorToCss(hex);
       if (titleInput) titleInput.style.color = cssColor;
       if (subtitleInput) subtitleInput.style.color = cssColor;
-      saveOrderFromDom();
+      saveOrderFromDom(field);
     });
   });
 }
@@ -2952,9 +3066,9 @@ function updateActiveCardsSectionConfig(patch) {
   return true;
 }
 
-function addCategoryAfter(afterCategoryId) {
+function addCategoryAfter(afterCategoryId, sectionId) {
   let home = loadHome();
-  const sectionId = getActiveCardsSectionId();
+  sectionId = sectionId || getActiveCardsSectionId();
   const cards = getCardsForSection(loadCards(), sectionId);
   const cfg = getCardsSectionConfig(home, sectionId);
   const categories = normalizeCategories(cfg.categories, cards);
@@ -2985,11 +3099,11 @@ function addCategoryAfter(afterCategoryId) {
   renderCards(loadCards());
 }
 
-function deleteCategory(categoryId) {
+function deleteCategory(categoryId, sectionId) {
   if (!categoryId) return;
   if (!confirm('למחוק את הקטגוריה? הכרטיסים יישארו בלי קטגוריה.')) return;
   let home = loadHome();
-  const sectionId = getActiveCardsSectionId();
+  sectionId = sectionId || getActiveCardsSectionId();
   const cards = getCardsForSection(loadCards(), sectionId);
   const cfg = getCardsSectionConfig(home, sectionId);
   const categories = normalizeCategories(cfg.categories, cards).filter(function (cat) {
@@ -3443,6 +3557,7 @@ async function deleteCard(id) {
 function toggleEditMode() {
   if (IS_USER_MODE) return;
   if (activeInlineEdit) commitInlineEdit();
+  const wasEditMode = editMode;
   editMode = !editMode;
   btnEdit.textContent = editMode ? 'סיום עריכה' : 'עריכה';
   btnEdit.classList.toggle('active', editMode);
@@ -3450,6 +3565,9 @@ function toggleEditMode() {
     grid.classList.toggle('edit-mode', editMode);
   });
   document.body.classList.toggle('page-edit-mode', editMode);
+  if (wasEditMode && !editMode) {
+    saveAllCardsSectionsFromDom();
+  }
   if (!editMode && isCardsHomeSection(editingHomeSection)) {
     homeEditCommitted = true;
     closeHomeEditor();
@@ -3481,6 +3599,10 @@ function getWizardPreviewCardData() {
     primaryColor: wizardData.primaryColor || '#e87722',
     secondaryColor: wizardData.secondaryColor || '#4a7c3f',
     outlineColor: wizardData.outlineColor || '#e87722',
+    titleColor: wizardData.titleColor || DEFAULT_CARD_TITLE_COLOR,
+    notesColor: wizardData.notesColor || DEFAULT_CARD_NOTES_COLOR,
+    titleSize: wizardData.titleSize || DEFAULT_CARD_TITLE_SIZE,
+    notesSize: wizardData.notesSize || DEFAULT_CARD_NOTES_SIZE,
     flatBgColor: wizardData.flatBgColor || '#ffffff',
     outlineWidth: getCardOutlineWidth(wizardData),
     flatEdge: getCardFlatEdge(wizardData),
@@ -3682,7 +3804,12 @@ function startWizardPreviewTextEdit(el) {
   if (wizardPreviewTextEdit) commitWizardPreviewTextEdit();
 
   const original = wizardData[spec.field] || '';
-  el.textContent = original;
+  let editText = original;
+  if (!editText) {
+    const visible = readPreviewEditableText(el).trim();
+    if (visible && visible !== spec.placeholder) editText = visible;
+  }
+  el.textContent = editText;
   el.classList.add('is-preview-editing');
   el.setAttribute('contenteditable', 'true');
   wizardPreviewTextEdit = { el: el, spec: spec, original: original };
@@ -3715,6 +3842,18 @@ function markWizardPreviewTextFields() {
 function bindWizardPreviewTextEdit() {
   if (!livePreview || livePreview.dataset.previewTextBound === '1') return;
   livePreview.dataset.previewTextBound = '1';
+
+  if (document.body.dataset.wizardPreviewDocBound !== '1') {
+    document.body.dataset.wizardPreviewDocBound = '1';
+    document.addEventListener('pointerdown', function (e) {
+      if (!wizardPreviewTextEdit) return;
+      const el = wizardPreviewTextEdit.el;
+      if (el.contains(e.target)) return;
+      if (isInlineFormattingToolbarEl(e.target)) return;
+      commitWizardPreviewTextEdit();
+      updateLivePreview();
+    }, true);
+  }
 
   livePreview.addEventListener('pointerdown', function (e) {
     const el = e.target.closest('.is-preview-text');
@@ -3770,8 +3909,8 @@ function bindWizardPreviewTextEdit() {
 
   livePreview.addEventListener('blur', function (e) {
     if (!wizardPreviewTextEdit || wizardPreviewTextEdit.el !== e.target) return;
-    commitWizardPreviewTextEdit();
-    updateLivePreview();
+    if (isInlineFormattingToolbarEl(e.relatedTarget)) return;
+    scheduleWizardPreviewTextEditCommit();
   }, true);
 }
 
@@ -3908,6 +4047,8 @@ function syncFormToData() {
   wizardData.primaryColor = document.getElementById('primaryColor').value;
   wizardData.secondaryColor = document.getElementById('secondaryColor').value;
   wizardData.outlineColor = (document.getElementById('outlineColor') || {}).value || '#e87722';
+  wizardData.titleColor = (document.getElementById('titleColor') || {}).value || DEFAULT_CARD_TITLE_COLOR;
+  wizardData.notesColor = (document.getElementById('notesColor') || {}).value || DEFAULT_CARD_NOTES_COLOR;
   wizardData.flatBgColor = (document.getElementById('flatBgColor') || {}).value || '#ffffff';
   wizardData.flatEdge = getSelectedFlatEdge();
   wizardData.actionStyle = getSelectedActionStyle();
@@ -3974,6 +4115,10 @@ function syncFormToData() {
   document.getElementById('secondaryColorHex').textContent = colorToDisplayHex(wizardData.secondaryColor);
   const outlineHex = document.getElementById('outlineColorHex');
   if (outlineHex) outlineHex.textContent = colorToDisplayHex(wizardData.outlineColor);
+  const titleHex = document.getElementById('titleColorHex');
+  if (titleHex) titleHex.textContent = colorToDisplayHex(wizardData.titleColor);
+  const notesHex = document.getElementById('notesColorHex');
+  if (notesHex) notesHex.textContent = colorToDisplayHex(wizardData.notesColor);
   const flatBgHex = document.getElementById('flatBgColorHex');
   if (flatBgHex) flatBgHex.textContent = colorToDisplayHex(wizardData.flatBgColor);
   const actionColorHex = document.getElementById('actionColorHex');
@@ -4145,6 +4290,20 @@ function bindLiveInputs() {
     updateLivePreview();
   });
 
+  setupHslaField(document.getElementById('titleColorPicker'), function (hex) {
+    wizardData.titleColor = hex;
+    const titleHex = document.getElementById('titleColorHex');
+    if (titleHex) titleHex.textContent = colorToDisplayHex(hex);
+    updateLivePreview();
+  });
+
+  setupHslaField(document.getElementById('notesColorPicker'), function (hex) {
+    wizardData.notesColor = hex;
+    const notesHex = document.getElementById('notesColorHex');
+    if (notesHex) notesHex.textContent = colorToDisplayHex(hex);
+    updateLivePreview();
+  });
+
   setupHslaField(document.getElementById('flatBgColorPicker'), function (hex) {
     wizardData.flatBgColor = hex;
     const flatBgHex = document.getElementById('flatBgColorHex');
@@ -4250,6 +4409,10 @@ function applyWizardDataToForm() {
   document.getElementById('secondaryColor').value = wizardData.secondaryColor || '#4a7c3f';
   const outlineInput = document.getElementById('outlineColor');
   if (outlineInput) outlineInput.value = wizardData.outlineColor || '#e87722';
+  const titleInput = document.getElementById('titleColor');
+  if (titleInput) titleInput.value = wizardData.titleColor || DEFAULT_CARD_TITLE_COLOR;
+  const notesInput = document.getElementById('notesColor');
+  if (notesInput) notesInput.value = wizardData.notesColor || DEFAULT_CARD_NOTES_COLOR;
   const flatBgInput = document.getElementById('flatBgColor');
   if (flatBgInput) flatBgInput.value = wizardData.flatBgColor || '#ffffff';
   const actionColorInput = document.getElementById('actionColor');
@@ -4257,6 +4420,8 @@ function applyWizardDataToForm() {
   setHslaFieldValue('primaryColor', wizardData.primaryColor || '#e87722');
   setHslaFieldValue('secondaryColor', wizardData.secondaryColor || '#4a7c3f');
   setHslaFieldValue('outlineColor', wizardData.outlineColor || '#e87722');
+  setHslaFieldValue('titleColor', wizardData.titleColor || DEFAULT_CARD_TITLE_COLOR);
+  setHslaFieldValue('notesColor', wizardData.notesColor || DEFAULT_CARD_NOTES_COLOR);
   setHslaFieldValue('flatBgColor', wizardData.flatBgColor || '#ffffff');
   setHslaFieldValue('actionColor', wizardData.actionColor || '#e87722');
   document.getElementById('primaryColorHex').textContent = colorToDisplayHex(wizardData.primaryColor || '#e87722');
@@ -4264,6 +4429,14 @@ function applyWizardDataToForm() {
   const outlineHex = document.getElementById('outlineColorHex');
   if (outlineHex) {
     outlineHex.textContent = colorToDisplayHex(wizardData.outlineColor || '#e87722');
+  }
+  const titleHex = document.getElementById('titleColorHex');
+  if (titleHex) {
+    titleHex.textContent = colorToDisplayHex(wizardData.titleColor || DEFAULT_CARD_TITLE_COLOR);
+  }
+  const notesHex = document.getElementById('notesColorHex');
+  if (notesHex) {
+    notesHex.textContent = colorToDisplayHex(wizardData.notesColor || DEFAULT_CARD_NOTES_COLOR);
   }
   const flatBgHex = document.getElementById('flatBgColorHex');
   if (flatBgHex) {
@@ -4343,6 +4516,10 @@ function buildCardFromWizard(id) {
     primaryColor: wizardData.primaryColor,
     secondaryColor: wizardData.secondaryColor,
     outlineColor: wizardData.outlineColor || '#e87722',
+    titleColor: wizardData.titleColor || DEFAULT_CARD_TITLE_COLOR,
+    notesColor: wizardData.notesColor || DEFAULT_CARD_NOTES_COLOR,
+    titleSize: wizardData.titleSize || DEFAULT_CARD_TITLE_SIZE,
+    notesSize: wizardData.notesSize || DEFAULT_CARD_NOTES_SIZE,
     flatBgColor: wizardData.flatBgColor || '#ffffff',
     outlineWidth: getCardOutlineWidth(wizardData),
     flatEdge: getCardFlatEdge(wizardData),
@@ -4403,6 +4580,10 @@ function openWizard() {
   wizardData.primaryColor = '#e87722';
   wizardData.secondaryColor = '#4a7c3f';
   wizardData.outlineColor = '#e31c23';
+  wizardData.titleColor = DEFAULT_CARD_TITLE_COLOR;
+  wizardData.notesColor = DEFAULT_CARD_NOTES_COLOR;
+  wizardData.titleSize = DEFAULT_CARD_TITLE_SIZE;
+  wizardData.notesSize = DEFAULT_CARD_NOTES_SIZE;
   wizardData.flatBgColor = '#ffffff';
   wizardData.outlineWidth = 2;
   wizardData.flatEdge = 'outline';
@@ -4422,6 +4603,7 @@ function openWizard() {
   updateWizardChrome();
 
   modalOverlay.hidden = false;
+  document.body.classList.add('is-wizard-open');
   syncSiteToolbarHeight();
   updateStepUI();
   syncInlineTextSizeControl();
@@ -4453,6 +4635,10 @@ function openWizardForEdit(cardId) {
   wizardData.primaryColor = card.primaryColor || '#e87722';
   wizardData.secondaryColor = card.secondaryColor || '#4a7c3f';
   wizardData.outlineColor = card.outlineColor || '#e87722';
+  wizardData.titleColor = card.titleColor || DEFAULT_CARD_TITLE_COLOR;
+  wizardData.notesColor = card.notesColor || DEFAULT_CARD_NOTES_COLOR;
+  wizardData.titleSize = getCardTitleSize(card);
+  wizardData.notesSize = getCardNotesSize(card);
   wizardData.flatBgColor = card.flatBgColor || '#ffffff';
   wizardData.outlineWidth = getCardOutlineWidth(card);
   wizardData.flatEdge = getCardFlatEdge(card);
@@ -4489,6 +4675,7 @@ function openWizardForEdit(cardId) {
   updateWizardChrome();
 
   modalOverlay.hidden = false;
+  document.body.classList.add('is-wizard-open');
   syncSiteToolbarHeight();
   updateStepUI();
   syncInlineTextSizeControl();
@@ -4497,6 +4684,7 @@ function openWizardForEdit(cardId) {
 function closeWizard() {
   if (wizardPreviewTextEdit) commitWizardPreviewTextEdit();
   modalOverlay.hidden = true;
+  document.body.classList.remove('is-wizard-open');
   editingCardId = null;
   showError('');
   syncInlineTextSizeControl();
@@ -9118,6 +9306,7 @@ detailOverlay.addEventListener('click', function (e) {
 
 bindLiveInputs();
 bindWizardPreviewTextEdit();
+bindInlineFormattingToolbarGuard();
 bindHslaPickers();
 setupHslaField(document.getElementById('inlineTextColorPicker'), function (hex) {
   applyInlineTextColor(hex);
