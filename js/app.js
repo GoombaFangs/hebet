@@ -49,9 +49,24 @@ function isLegacyDefaultFont(value) {
   return isStockSiteFont(value);
 }
 
+function getSiteFontCss() {
+  return 'var(--site-font, ' + DEFAULT_SITE_FONT + ')';
+}
+
+function getCurrentSiteFont() {
+  try {
+    const home = loadHome();
+    const font = home && home.siteFont;
+    if (!font) return DEFAULT_SITE_FONT;
+    return String(font).replace(/"/g, "'");
+  } catch (_) {
+    return DEFAULT_SITE_FONT;
+  }
+}
+
 function resolveFontFamily(value) {
-  if (isLegacyDefaultFont(value)) return DEFAULT_SITE_FONT;
-  return String(value).replace(/"/g, "'");
+  if (isLegacyDefaultFont(value)) return getCurrentSiteFont();
+  return String(value || DEFAULT_SITE_FONT).replace(/"/g, "'");
 }
 
 let customFontsCache = [];
@@ -238,6 +253,7 @@ const DEFAULT_CARD_TITLE_SIZE = 44;
 const DEFAULT_CARD_NOTES_SIZE = 17;
 const DEFAULT_CATEGORY_COLOR = '#1a1a1a';
 const DEFAULT_CATEGORY_FONT_SIZE = 28;
+const DEFAULT_CATEGORY_SUBTITLE_SIZE = 20;
 
 const DEFAULT_CARDS = [
   { id: 'card-1', title: 'כותרת', description: 'תיאור קצר', link: 'pages/page1.html', gradient: GRADIENTS[0], projectType: 'מצגת', classification: 'שמור', status: 'מוכן', primaryColor: '#e87722', secondaryColor: '#4a7c3f', bgMode: DEFAULT_CARD_BG_MODE, outlineColor: '#e31c23', outlineWidth: 2, flatEdge: 'outline', flatBgColor: '#ffffff', titleColor: DEFAULT_CARD_TITLE_COLOR, notesColor: DEFAULT_CARD_NOTES_COLOR, titleSize: DEFAULT_CARD_TITLE_SIZE, notesSize: DEFAULT_CARD_NOTES_SIZE },
@@ -274,6 +290,7 @@ let draggedElement = null;
 let currentStep = 1;
 let editingCardId = null;
 let wizardPreviewTextEdit = null;
+let activeCategoryTextEdit = null;
 const TOTAL_STEPS = 3;
 
 function createEmptyWizardData() {
@@ -310,7 +327,7 @@ function createEmptyWizardData() {
     flatImageZoom: 100,
     flatImagePosX: 50,
     flatImagePosY: 50,
-    fontFamily: DEFAULT_SITE_FONT,
+    fontFamily: getCurrentSiteFont(),
     bgMode: DEFAULT_CARD_BG_MODE,
     useImageBg: false,
   };
@@ -676,6 +693,16 @@ function canUseInlineFormattingToolbar() {
   return supportsInlineToolbarTools(spec);
 }
 
+function isCategoryTextEditing() {
+  return !!(activeCategoryTextEdit && activeCategoryTextEdit.el && activeCategoryTextEdit.el.isConnected);
+}
+
+function canUseInlineColorToolbar() {
+  if (isWizardPreviewTextEditing()) return true;
+  if (editMode && isCategoryTextEditing()) return true;
+  return !!(editMode && activeInlineEdit && activeInlineEdit.el && getInlineEditSpec(activeInlineEdit.el));
+}
+
 function isInlineFormattingToolbarEl(node) {
   if (!node || !node.closest) return false;
   return !!node.closest('#siteToolbar, .hsla-popover');
@@ -687,11 +714,19 @@ function bindInlineFormattingToolbarGuard() {
   shell.dataset.formatGuardBound = '1';
 
   shell.addEventListener('mousedown', function (e) {
-    if (!canUseInlineFormattingToolbar()) return;
-    const control = e.target.closest('#inlineTextSizeControl, #inlineTextColorPicker');
-    if (!control) return;
-    e.preventDefault();
-    saveInlineTextSelection();
+    const colorControl = e.target.closest('#inlineTextColorPicker');
+    const sizeControl = e.target.closest('#inlineTextSizeControl');
+    if (colorControl) {
+      if (!canUseInlineColorToolbar()) return;
+      e.preventDefault();
+      saveInlineTextSelection();
+      return;
+    }
+    if (sizeControl) {
+      if (!canUseInlineFormattingToolbar()) return;
+      e.preventDefault();
+      saveInlineTextSelection();
+    }
   }, true);
 }
 
@@ -786,6 +821,7 @@ function applyWizardPreviewTextColor(hex) {
   patchWizardPreviewCardTheme();
   el.focus();
   selectElementContents(el);
+  updateToolbarColorSwatch(color);
 }
 
 function applyWizardPreviewTextSize(rawSize) {
@@ -811,31 +847,26 @@ function applyInlineTextColor(hex) {
     applyWizardPreviewTextColor(hex);
     return;
   }
+  if (isCategoryTextEditing()) {
+    applyCategoryTextColor(hex);
+    return;
+  }
   if (!activeInlineEdit) return;
   const spec = getInlineEditSpec(activeInlineEdit.el);
-  if (!supportsInlineToolbarTools(spec)) return;
-  if (!hasActiveInlineTextSelection() && !restoreInlineTextSelection()) return;
-  const el = activeInlineEdit.el;
-  const sel = window.getSelection();
-  if (!sel || !sel.rangeCount) return;
-  const range = sel.getRangeAt(0);
-  if (!el.contains(range.commonAncestorContainer) || range.collapsed) return;
-
+  if (!spec) return;
   const color = colorToCss(hex);
-  const workingRange = range.cloneRange();
-  el.focus();
-  sel.removeAllRanges();
-  sel.addRange(workingRange);
-  try {
-    document.execCommand('styleWithCSS', false, true);
-    if (!document.execCommand('foreColor', false, color)) {
-      wrapRangeWithColor(workingRange.cloneRange(), color);
+  const home = loadHome();
+  setInlineEditColor(home, spec, activeInlineEdit.el, color);
+  if (String(spec.key || '').indexOf('card.') !== 0) {
+    if (!saveHome(home)) {
+      alert('אין מספיק מקום לשמירה.');
+      return;
     }
-  } catch (_) {
-    wrapRangeWithColor(workingRange.cloneRange(), color);
   }
-  activeInlineEdit.lastGoodHtml = el.innerHTML;
-  saveInlineTextSelection();
+  paintEditableTextColor(activeInlineEdit.el, color);
+  syncLinkedEditorColorChip(spec, activeInlineEdit.el, color);
+  if (spec.richText) activeInlineEdit.lastGoodHtml = activeInlineEdit.el.innerHTML;
+  updateToolbarColorSwatch(color);
 }
 
 function supportsInlineToolbarTools(spec) {
@@ -845,7 +876,6 @@ function supportsInlineToolbarTools(spec) {
 function stripPlainInlineFormatting(el) {
   if (!el) return;
   el.style.removeProperty('font-size');
-  el.style.removeProperty('color');
   el.style.removeProperty('font-weight');
   el.style.removeProperty('line-height');
   el.querySelectorAll('span, font, b, i, u').forEach(function (node) {
@@ -899,6 +929,158 @@ function setInlineEditFontSize(home, key, size) {
   return clamped;
 }
 
+const INLINE_EDIT_COLOR_FIELDS = {
+  subtitle: { homeKey: 'subtitleColor', fallback: '#ffffff', editorId: 'homeFieldSubtitleColor' },
+  introText: { homeKey: 'introTextColor', fallback: '#ffffff', editorId: 'homeFieldTextColor' },
+  intro2Subtitle: { homeKey: 'intro2SubtitleColor', fallback: '#ffffff', editorId: 'homeFieldSubtitleColor' },
+  intro2Text: { homeKey: 'intro2TextColor', fallback: '#ffffff', editorId: 'homeFieldTextColor' },
+  closingText: { homeKey: 'closingTextColor', fallback: '#ffffff', editorId: 'homeFieldTextColor' },
+  closing2Text: { homeKey: 'closing2TextColor', fallback: '#ffffff', editorId: 'homeFieldTextColor' },
+  'header.kicker': { headerField: 'kickerColor', fallback: HEADER_TEXT_COLOR },
+  'header.title': { headerField: 'titleColor', fallback: HEADER_TEXT_COLOR },
+  'header.body': { headerField: 'bodyColor', fallback: HEADER_TEXT_COLOR },
+  'header.buttonText': { headerField: 'buttonColor', fallback: '#ffffff' },
+  'header.linkText': { headerField: 'linkColor', fallback: HEADER_ACCENT },
+  'card.title': { cardField: 'titleColor', fallback: DEFAULT_CARD_TITLE_COLOR, wizardInput: 'titleColor', wizardHex: 'titleColorHex' },
+  'card.notes': { cardField: 'notesColor', fallback: DEFAULT_CARD_NOTES_COLOR, wizardInput: 'notesColor', wizardHex: 'notesColorHex' },
+  'floatMenu.title': { floatMenuField: 'titleColor', fallback: '#222222' },
+  'floatMenu.item': { floatMenuItemField: 'color', fallback: '#333333' },
+};
+
+function readElementTextColor(el, fallback) {
+  if (!el) return fallback || '#000000';
+  const inline = String(el.style && el.style.color || '').trim();
+  if (inline) return colorToDisplayHex(inline);
+  try {
+    return colorToDisplayHex(getComputedStyle(el).color) || fallback || '#000000';
+  } catch (_) {
+    return fallback || '#000000';
+  }
+}
+
+function paintEditableTextColor(el, color) {
+  if (!el) return;
+  const css = colorToCss(color);
+  el.style.color = css;
+  el.querySelectorAll('*').forEach(function (node) {
+    if (node.style) node.style.removeProperty('color');
+    if (node.removeAttribute) node.removeAttribute('color');
+  });
+  const linkWrap = el.closest ? el.closest('.home-header-link') : null;
+  if (linkWrap && linkWrap !== el) linkWrap.style.color = css;
+  const cardEl = el.closest ? el.closest('.card') : null;
+  if (cardEl && el.classList.contains('card-title')) {
+    cardEl.style.setProperty('--card-title-color', css);
+  }
+  if (cardEl && el.classList.contains('card-notes')) {
+    cardEl.style.setProperty('--card-notes-color', css);
+  }
+}
+
+function updateToolbarColorSwatch(color) {
+  const input = document.getElementById('inlineTextColor');
+  if (input) input.value = colorToDisplayHex(color);
+  const picker = document.getElementById('inlineTextColorPicker');
+  if (picker) updateHslaSwatch(picker);
+}
+
+function syncLinkedEditorColorChip(spec, el, color) {
+  if (!spec) return;
+  const cfg = INLINE_EDIT_COLOR_FIELDS[spec.key];
+  if (!cfg) return;
+  const hex = colorToDisplayHex(color);
+  if (cfg.editorId) setHslaFieldValue(cfg.editorId, hex);
+  if (cfg.wizardInput) {
+    const overlay = document.getElementById('modalOverlay');
+    const cardId = el && el.getAttribute('data-card-id');
+    if (overlay && !overlay.hidden && (!editingCardId || cardId === editingCardId)) {
+      const input = document.getElementById(cfg.wizardInput);
+      if (input) input.value = hex;
+      setHslaFieldValue(cfg.wizardInput, hex);
+      const hexEl = cfg.wizardHex ? document.getElementById(cfg.wizardHex) : null;
+      if (hexEl) hexEl.textContent = hex;
+    }
+  }
+}
+
+function getInlineEditColor(home, spec, el) {
+  if (!spec) return readElementTextColor(el, '#000000');
+  const cfg = INLINE_EDIT_COLOR_FIELDS[spec.key] || {};
+  const fallback = cfg.fallback || '#000000';
+  if (spec.key === 'card.title' || spec.key === 'card.notes') {
+    const cardId = el && el.getAttribute('data-card-id');
+    const card = loadCards().find(function (row) { return row.id === cardId; });
+    if (!card) return readElementTextColor(el, fallback);
+    return colorToDisplayHex(spec.key === 'card.notes' ? getCardNotesColor(card) : getCardTitleColor(card));
+  }
+  if (spec.key === 'floatMenu.title') {
+    const menu = normalizeFloatMenu(home.floatMenu, home);
+    return menu.titleColor ? colorToDisplayHex(menu.titleColor) : readElementTextColor(el, fallback);
+  }
+  if (spec.key === 'floatMenu.item') {
+    const id = el && el.getAttribute('data-fm-id');
+    const menu = normalizeFloatMenu(home.floatMenu, home);
+    const item = [].concat(menu.items || [], menu.tags || []).find(function (row) { return row.id === id; });
+    return item && item.color ? colorToDisplayHex(item.color) : readElementTextColor(el, fallback);
+  }
+  if (cfg.headerField) {
+    const header = normalizeHeader(home.header, home.title);
+    return colorToDisplayHex(header[cfg.headerField] || fallback);
+  }
+  if (cfg.homeKey) {
+    return colorToDisplayHex(home[cfg.homeKey] || fallback);
+  }
+  return readElementTextColor(el, fallback);
+}
+
+function setInlineEditColor(home, spec, el, color) {
+  const css = colorToCss(color);
+  if (!spec) return css;
+  if (spec.key === 'card.title' || spec.key === 'card.notes') {
+    const cardId = el && el.getAttribute('data-card-id');
+    const cards = loadCards();
+    const card = cards.find(function (row) { return row.id === cardId; });
+    if (card) {
+      if (spec.key === 'card.notes') card.notesColor = css;
+      else card.titleColor = css;
+      saveCards(cards);
+    }
+    return css;
+  }
+  if (spec.key === 'floatMenu.title') {
+    const menu = normalizeFloatMenu(home.floatMenu, home);
+    menu.titleColor = css;
+    home.floatMenu = menu;
+    if (homeEditFloatMenuDraft) homeEditFloatMenuDraft.titleColor = css;
+    return css;
+  }
+  if (spec.key === 'floatMenu.item') {
+    const id = el && el.getAttribute('data-fm-id');
+    const menu = normalizeFloatMenu(home.floatMenu, home);
+    [].concat(menu.items || [], menu.tags || []).forEach(function (item) {
+      if (item.id === id) item.color = css;
+    });
+    home.floatMenu = menu;
+    if (homeEditFloatMenuDraft) {
+      [].concat(homeEditFloatMenuDraft.items || [], homeEditFloatMenuDraft.tags || []).forEach(function (item) {
+        if (item.id === id) item.color = css;
+      });
+    }
+    return css;
+  }
+  const cfg = INLINE_EDIT_COLOR_FIELDS[spec.key];
+  if (!cfg) return css;
+  if (cfg.headerField) {
+    const next = Object.assign({}, normalizeHeader(home.header, home.title));
+    next[cfg.headerField] = css;
+    home.header = normalizeHeader(next, next.title);
+    if (homeEditHeaderDraft) homeEditHeaderDraft[cfg.headerField] = css;
+  } else if (cfg.homeKey) {
+    home[cfg.homeKey] = css;
+  }
+  return css;
+}
+
 function syncInlineTextSizeControl() {
   const control = document.getElementById('inlineTextSizeControl');
   const range = document.getElementById('inlineTextSize');
@@ -948,24 +1130,50 @@ function syncInlineTextSizeControl() {
   syncInlineTextColorControl();
 }
 
+function applyCategoryTextColor(hex) {
+  if (!isCategoryTextEditing()) return;
+  const el = activeCategoryTextEdit.el;
+  const field = activeCategoryTextEdit.field;
+  const color = colorToCss(hex);
+  el.style.color = color;
+  if (field === 'subtitle') el.setAttribute('data-cat-subtitle-color', color);
+  else el.setAttribute('data-cat-color', color);
+  saveOrderFromDom(el);
+  updateToolbarColorSwatch(color);
+}
+
 function syncInlineTextColorControl() {
   const field = document.getElementById('inlineTextColorPicker');
   if (!field) return;
-  const enabled = canUseInlineFormattingToolbar();
+  const enabled = canUseInlineColorToolbar();
   field.classList.toggle('is-disabled', !enabled);
   const swatch = field.querySelector('.hsla-swatch');
   if (swatch) swatch.setAttribute('aria-disabled', enabled ? 'false' : 'true');
-  if (enabled && isWizardPreviewTextEditing()) {
+  if (!enabled) return;
+
+  const input = document.getElementById('inlineTextColor');
+  if (!input) return;
+  let color = '#000000';
+  if (isWizardPreviewTextEditing()) {
     const spec = wizardPreviewTextEdit.spec;
-    const color = spec.field === 'pageName'
+    color = spec.field === 'pageName'
       ? (wizardData.titleColor || DEFAULT_CARD_TITLE_COLOR)
       : (wizardData.notesColor || DEFAULT_CARD_NOTES_COLOR);
-    const input = document.getElementById('inlineTextColor');
-    if (input) {
-      input.value = colorToDisplayHex(color);
-      updateHslaSwatch(field);
+  } else if (isCategoryTextEditing()) {
+    const el = activeCategoryTextEdit.el;
+    if (activeCategoryTextEdit.field === 'subtitle') {
+      color = el.getAttribute('data-cat-subtitle-color')
+        || colorToDisplayHex(getComputedStyle(el).color)
+        || '#e31c23';
+    } else {
+      color = el.getAttribute('data-cat-color') || DEFAULT_CATEGORY_COLOR;
     }
+  } else if (activeInlineEdit) {
+    const spec = getInlineEditSpec(activeInlineEdit.el);
+    color = getInlineEditColor(loadHome(), spec, activeInlineEdit.el);
   }
+  input.value = colorToDisplayHex(color);
+  updateHslaSwatch(field);
 }
 
 function applyInlineTextSize(rawSize) {
@@ -1481,6 +1689,10 @@ function closeHslaPopover() {
   const els = getHslaPopoverEls();
   if (els.popover) els.popover.hidden = true;
   activeHslaTarget = null;
+  if (activeCategoryTextEdit && document.activeElement !== activeCategoryTextEdit.el) {
+    activeCategoryTextEdit = null;
+    syncInlineTextSizeControl();
+  }
 }
 
 function openHslaPopover(field, onChange) {
@@ -1490,15 +1702,8 @@ function openHslaPopover(field, onChange) {
   if (!input || !swatch || !els.popover) return;
 
   if (field.id === 'inlineTextColorPicker') {
-    if (!canUseInlineFormattingToolbar()) return;
-    if (isWizardPreviewTextEditing()) {
-      const spec = wizardPreviewTextEdit.spec;
-      const current = spec.field === 'pageName'
-        ? (wizardData.titleColor || DEFAULT_CARD_TITLE_COLOR)
-        : (wizardData.notesColor || DEFAULT_CARD_NOTES_COLOR);
-      input.value = colorToDisplayHex(current);
-      updateHslaSwatch(field);
-    }
+    if (!canUseInlineColorToolbar()) return;
+    syncInlineTextColorControl();
     saveInlineTextSelection();
     applyInlineTextColor(input.value);
   }
@@ -1619,7 +1824,7 @@ function setupHslaField(field, onChange) {
   if (!swatch) return;
   if (field.id === 'inlineTextColorPicker') {
     field.addEventListener('mousedown', function (e) {
-      if (!canUseInlineFormattingToolbar()) return;
+      if (!canUseInlineColorToolbar()) return;
       e.preventDefault();
       saveInlineTextSelection();
     });
@@ -1627,7 +1832,7 @@ function setupHslaField(field, onChange) {
   swatch.addEventListener('click', function (e) {
     e.preventDefault();
     e.stopPropagation();
-    if (field.id === 'inlineTextColorPicker' && !canUseInlineFormattingToolbar()) return;
+    if (field.id === 'inlineTextColorPicker' && !canUseInlineColorToolbar()) return;
     const pop = getHslaPopoverEls();
     if (!pop.popover.hidden && activeHslaTarget && activeHslaTarget.field === field) {
       closeHslaPopover();
@@ -1900,10 +2105,8 @@ function getCardThemeStyle(card) {
   const zoom = getFlatImageZoom(card);
   const posX = getFlatImagePosX(card);
   const posY = getFlatImagePosY(card);
-  // מרכאות בודדות — כדי לא לשבור את מאפיין style ב-HTML
-  const font = isLegacyDefaultFont(card && card.fontFamily)
-    ? 'var(--site-font, ' + DEFAULT_SITE_FONT + ')'
-    : String(card.fontFamily).replace(/"/g, "'");
+  // כל הכרטיסים יורשים את גופן סרגל הכלים
+  const font = getSiteFontCss();
   return (
     'font-family: ' + font + ';' +
     '--card-outline:' + outline + ';' +
@@ -2355,6 +2558,7 @@ function createDefaultCategory(cardIds) {
     subtitle: 'תיאור קצר',
     cardIds: Array.isArray(cardIds) ? cardIds.slice() : [],
     fontSize: DEFAULT_CATEGORY_FONT_SIZE,
+    subtitleSize: DEFAULT_CATEGORY_SUBTITLE_SIZE,
     color: DEFAULT_CATEGORY_COLOR,
   };
 }
@@ -2375,7 +2579,9 @@ function normalizeCategories(categories, cards) {
       subtitle: String(cat.subtitle || 'תיאור קצר').slice(0, 80),
       cardIds: ids,
       fontSize: clampFontSize(cat.fontSize, DEFAULT_CATEGORY_FONT_SIZE),
+      subtitleSize: getCategorySubtitleSize(cat),
       color: normalizeTextColor(cat.color, DEFAULT_CATEGORY_COLOR),
+      subtitleColor: cat.subtitleColor ? normalizeTextColor(cat.subtitleColor, '') : '',
     };
   });
 
@@ -2397,9 +2603,19 @@ function getCategoryTitleStyle(cat) {
   return 'font-size:' + size + 'px;color:' + color + ';';
 }
 
+function getCategorySubtitleSize(cat) {
+  if (cat && cat.subtitleSize != null && cat.subtitleSize !== '') {
+    return clampFontSize(cat.subtitleSize, DEFAULT_CATEGORY_SUBTITLE_SIZE);
+  }
+  return Math.max(10, Math.round(clampFontSize(cat && cat.fontSize, DEFAULT_CATEGORY_FONT_SIZE) * 0.72));
+}
+
 function getCategorySubtitleStyle(cat) {
-  const size = Math.max(10, Math.round(clampFontSize(cat && cat.fontSize, DEFAULT_CATEGORY_FONT_SIZE) * 0.72));
-  return 'font-size:' + size + 'px;color:var(--site-secondary,#e31c23);';
+  const size = getCategorySubtitleSize(cat);
+  const color = cat && cat.subtitleColor
+    ? colorToCss(normalizeTextColor(cat.subtitleColor, DEFAULT_CATEGORY_COLOR))
+    : 'var(--site-secondary,#e31c23)';
+  return 'font-size:' + size + 'px;color:' + color + ';';
 }
 
 function getCardsByIds(cards, ids) {
@@ -2724,8 +2940,9 @@ function buildCategoryBlockHtml(cat, cards) {
   const titleStyle = getCategoryTitleStyle(cat);
   const subtitleStyle = getCategorySubtitleStyle(cat);
   const fontSize = clampFontSize(cat.fontSize, DEFAULT_CATEGORY_FONT_SIZE);
+  const subtitleSize = getCategorySubtitleSize(cat);
   const color = normalizeTextColor(cat.color, '#2a3a2f');
-  const colorFieldId = 'catColor_' + catId;
+  const subtitleColorAttr = cat.subtitleColor ? normalizeTextColor(cat.subtitleColor, '') : '';
   const subtitle = String(cat.subtitle || 'תיאור קצר');
 
   if (!editMode && !cards.length) return '';
@@ -2735,18 +2952,21 @@ function buildCategoryBlockHtml(cat, cards) {
     headerHtml =
       '<header class="category-header">' +
         '<div class="category-header-texts">' +
-          '<input type="text" class="category-title-input" data-category-id="' + escapeHtml(catId) + '" value="' + escapeHtml(cat.title || 'קטגוריה') + '" maxlength="40" aria-label="שם קטגוריה" style="' + titleStyle + '">' +
-          '<input type="text" class="category-subtitle-input" data-category-id="' + escapeHtml(catId) + '" value="' + escapeHtml(subtitle) + '" maxlength="80" placeholder="תיאור קצר" aria-label="תיאור קטגוריה" style="' + subtitleStyle + '">' +
+          '<input type="text" class="category-title-input" data-category-id="' + escapeHtml(catId) + '" data-cat-color="' + escapeHtml(color) + '" value="' + escapeHtml(cat.title || 'קטגוריה') + '" maxlength="40" aria-label="שם קטגוריה" style="' + titleStyle + '">' +
+          '<input type="text" class="category-subtitle-input" data-category-id="' + escapeHtml(catId) + '" data-cat-subtitle-color="' + escapeHtml(subtitleColorAttr) + '" value="' + escapeHtml(subtitle) + '" maxlength="80" placeholder="תיאור קצר" aria-label="תיאור קטגוריה" style="' + subtitleStyle + '">' +
         '</div>' +
         '<div class="category-style-controls">' +
-          '<label class="category-size-control" title="גודל גופן">' +
-            '<span>גודל</span>' +
-            '<input type="range" class="category-font-size" min="10" max="56" step="1" value="' + fontSize + '" data-category-id="' + escapeHtml(catId) + '" aria-label="גודל גופן לקטגוריה">' +
-            '<strong class="category-font-size-value">' + fontSize + '</strong>' +
-          '</label>' +
-          '<div class="hsla-field category-color-field" id="' + colorFieldId + 'Picker" data-hsla-for="' + colorFieldId + '" data-category-id="' + escapeHtml(catId) + '">' +
-            '<button type="button" class="hsla-swatch" title="צבע גופן" aria-label="צבע גופן לקטגוריה"></button>' +
-            '<input type="hidden" id="' + colorFieldId + '" class="category-color-input" value="' + escapeHtml(color) + '">' +
+          '<div class="category-size-stack">' +
+            '<label class="category-size-control" title="גודל כותרת">' +
+              '<span>כותרת</span>' +
+              '<input type="range" class="category-font-size" min="10" max="56" step="1" value="' + fontSize + '" data-category-id="' + escapeHtml(catId) + '" aria-label="גודל כותרת קטגוריה">' +
+              '<strong class="category-font-size-value">' + fontSize + '</strong>' +
+            '</label>' +
+            '<label class="category-size-control" title="גודל תיאור">' +
+              '<span>תיאור</span>' +
+              '<input type="range" class="category-subtitle-size" min="10" max="56" step="1" value="' + subtitleSize + '" data-category-id="' + escapeHtml(catId) + '" aria-label="גודל תיאור קטגוריה">' +
+              '<strong class="category-subtitle-size-value">' + subtitleSize + '</strong>' +
+            '</label>' +
           '</div>' +
         '</div>' +
         '<div class="category-header-actions">' +
@@ -2849,14 +3069,19 @@ function saveOrderFromDom(contextEl) {
       ? String(subtitleInput.value || '').trim().slice(0, 80) || 'תיאור קצר'
       : 'תיאור קצר';
     const sizeEl = block.querySelector('.category-font-size');
-    const colorEl = block.querySelector('.category-color-input');
+    const subtitleSizeEl = block.querySelector('.category-subtitle-size');
+    const existing = (cfg.categories || []).find(function (row) { return row.id === catId; }) || {};
+    const titleColor = (titleInput && titleInput.getAttribute('data-cat-color')) || existing.color || DEFAULT_CATEGORY_COLOR;
+    const subtitleColor = (subtitleInput && subtitleInput.getAttribute('data-cat-subtitle-color')) || existing.subtitleColor || '';
     categories.push({
       id: catId,
       title: title,
       subtitle: subtitle,
       cardIds: ids,
       fontSize: clampFontSize(sizeEl ? sizeEl.value : DEFAULT_CATEGORY_FONT_SIZE, DEFAULT_CATEGORY_FONT_SIZE),
-      color: normalizeTextColor(colorEl ? colorEl.value : DEFAULT_CATEGORY_COLOR, DEFAULT_CATEGORY_COLOR),
+      subtitleSize: clampFontSize(subtitleSizeEl ? subtitleSizeEl.value : DEFAULT_CATEGORY_SUBTITLE_SIZE, DEFAULT_CATEGORY_SUBTITLE_SIZE),
+      color: normalizeTextColor(titleColor, DEFAULT_CATEGORY_COLOR),
+      subtitleColor: subtitleColor ? normalizeTextColor(subtitleColor, '') : '',
     });
   });
 
@@ -2986,35 +3211,44 @@ function setupDragAndDrop() {
   });
 }
 
+function bindCategoryTextInput(input, field) {
+  if (!input || input.dataset.catTextBound === '1') return;
+  input.dataset.catTextBound = '1';
+
+  input.addEventListener('click', function (e) {
+    e.stopPropagation();
+  });
+  input.addEventListener('focus', function () {
+    activeCategoryTextEdit = { el: input, field: field };
+    syncInlineTextSizeControl();
+  });
+  input.addEventListener('blur', function () {
+    setTimeout(function () {
+      if (!activeCategoryTextEdit || activeCategoryTextEdit.el !== input) return;
+      if (isInlineFormattingToolbarEl(document.activeElement)) return;
+      if (activeHslaTarget && activeHslaTarget.field && activeHslaTarget.field.id === 'inlineTextColorPicker') return;
+      activeCategoryTextEdit = null;
+      syncInlineTextSizeControl();
+    }, 0);
+  });
+  input.addEventListener('change', function () {
+    saveOrderFromDom(input);
+  });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      input.blur();
+    }
+  });
+}
+
 function setupCategoryControls() {
   document.querySelectorAll('.cards-grid .category-title-input').forEach(function (input) {
-    input.addEventListener('click', function (e) {
-      e.stopPropagation();
-    });
-    input.addEventListener('change', function () {
-      saveOrderFromDom(input);
-    });
-    input.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        input.blur();
-      }
-    });
+    bindCategoryTextInput(input, 'title');
   });
 
   document.querySelectorAll('.cards-grid .category-subtitle-input').forEach(function (input) {
-    input.addEventListener('click', function (e) {
-      e.stopPropagation();
-    });
-    input.addEventListener('change', function () {
-      saveOrderFromDom(input);
-    });
-    input.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        input.blur();
-      }
-    });
+    bindCategoryTextInput(input, 'subtitle');
   });
 
   document.querySelectorAll('.cards-grid .category-delete').forEach(function (btn) {
@@ -3035,15 +3269,12 @@ function setupCategoryControls() {
     const block = range.closest('.category-block');
     const valueEl = block && block.querySelector('.category-font-size-value');
     const titleInput = block && block.querySelector('.category-title-input');
-    const subtitleInput = block && block.querySelector('.category-subtitle-input');
 
     function applySize(raw) {
       const size = clampFontSize(raw, DEFAULT_CATEGORY_FONT_SIZE);
-      const subtitleSize = Math.max(10, Math.round(size * 0.72));
       range.value = String(size);
       if (valueEl) valueEl.textContent = String(size);
       if (titleInput) titleInput.style.fontSize = size + 'px';
-      if (subtitleInput) subtitleInput.style.fontSize = subtitleSize + 'px';
       saveOrderFromDom(range);
     }
 
@@ -3055,16 +3286,24 @@ function setupCategoryControls() {
     });
   });
 
-  document.querySelectorAll('.cards-grid .category-color-field').forEach(function (field) {
-    field.dataset.hslaReady = '';
-    setupHslaField(field, function (hex) {
-      const block = field.closest('.category-block');
-      const titleInput = block && block.querySelector('.category-title-input');
-      const subtitleInput = block && block.querySelector('.category-subtitle-input');
-      const cssColor = colorToCss(hex);
-      if (titleInput) titleInput.style.color = cssColor;
-      if (subtitleInput) subtitleInput.style.color = 'var(--site-secondary,#e31c23)';
-      saveOrderFromDom(field);
+  document.querySelectorAll('.cards-grid .category-subtitle-size').forEach(function (range) {
+    const block = range.closest('.category-block');
+    const valueEl = block && block.querySelector('.category-subtitle-size-value');
+    const subtitleInput = block && block.querySelector('.category-subtitle-input');
+
+    function applySize(raw) {
+      const size = clampFontSize(raw, DEFAULT_CATEGORY_SUBTITLE_SIZE);
+      range.value = String(size);
+      if (valueEl) valueEl.textContent = String(size);
+      if (subtitleInput) subtitleInput.style.fontSize = size + 'px';
+      saveOrderFromDom(range);
+    }
+
+    range.addEventListener('input', function () {
+      applySize(range.value);
+    });
+    range.addEventListener('click', function (e) {
+      e.stopPropagation();
     });
   });
 }
@@ -3098,6 +3337,7 @@ function addCategoryAfter(afterCategoryId, sectionId) {
     subtitle: 'תיאור קצר',
     cardIds: [],
     fontSize: DEFAULT_CATEGORY_FONT_SIZE,
+    subtitleSize: DEFAULT_CATEGORY_SUBTITLE_SIZE,
     color: DEFAULT_CATEGORY_COLOR,
   };
   if (afterCategoryId) {
@@ -3584,6 +3824,7 @@ async function deleteCard(id) {
 function toggleEditMode() {
   if (IS_USER_MODE) return;
   if (activeInlineEdit) commitInlineEdit();
+  activeCategoryTextEdit = null;
   const wasEditMode = editMode;
   editMode = !editMode;
   btnEdit.textContent = editMode ? 'סיום עריכה' : 'עריכה';
@@ -3645,7 +3886,7 @@ function getWizardPreviewCardData() {
     flatImagePosY: getFlatImagePosY(wizardData),
     mainImage: wizardData.mainImage,
     logo: wizardData.logo,
-    fontFamily: wizardData.fontFamily,
+    fontFamily: getCurrentSiteFont(),
     bgMode: wizardData.bgMode || DEFAULT_CARD_BG_MODE,
     useImageBg: wizardData.bgMode === 'image',
     enabledActions: wizardData.enabledActions.slice(),
@@ -4117,10 +4358,8 @@ function syncFormToData() {
   });
   const outlineWidthValue = document.getElementById('outlineWidthValue');
   if (outlineWidthValue) outlineWidthValue.textContent = wizardData.outlineWidth + 'px';
-  // גופן הכרטיס נשאר ברירת מחדל / ערך שמור — אין בחירה באשף
-  if (!wizardData.fontFamily) {
-    wizardData.fontFamily = DEFAULT_SITE_FONT;
-  }
+  // גופן הכרטיס תמיד לפי סרגל הכלים
+  wizardData.fontFamily = getCurrentSiteFont();
   wizardData.bgMode = getSelectedCardBgMode();
   wizardData.useImageBg = wizardData.bgMode === 'image';
   syncCardBgModeUi();
@@ -4560,7 +4799,7 @@ function buildCardFromWizard(id) {
     flatImageZoom: getFlatImageZoom(wizardData),
     flatImagePosX: getFlatImagePosX(wizardData),
     flatImagePosY: getFlatImagePosY(wizardData),
-    fontFamily: resolveFontFamily(wizardData.fontFamily),
+    fontFamily: getCurrentSiteFont(),
     bgMode: wizardData.bgMode || DEFAULT_CARD_BG_MODE,
     useImageBg: wizardData.bgMode === 'image',
     gradient: getColorBlend(wizardData.primaryColor, wizardData.secondaryColor),
@@ -4624,7 +4863,7 @@ function openWizard() {
   wizardData.flatImageZoom = 100;
   wizardData.flatImagePosX = 50;
   wizardData.flatImagePosY = 50;
-  wizardData.fontFamily = DEFAULT_SITE_FONT;
+  wizardData.fontFamily = getCurrentSiteFont();
 
   applyWizardDataToForm();
   updateWizardChrome();
@@ -4679,7 +4918,7 @@ function openWizardForEdit(cardId) {
   wizardData.flatImageZoom = getFlatImageZoom(card);
   wizardData.flatImagePosX = getFlatImagePosX(card);
   wizardData.flatImagePosY = getFlatImagePosY(card);
-  wizardData.fontFamily = resolveFontFamily(card.fontFamily);
+  wizardData.fontFamily = getCurrentSiteFont();
   wizardData.bgMode = getCardBgMode(card);
   wizardData.useImageBg = wizardData.bgMode === 'image';
 
@@ -5325,7 +5564,7 @@ function syncHomeSectionControls(home) {
     } else if (section === 'closing2') {
       btn.hidden = !editMode || !home.hasClosing2;
     } else if (section === 'floatmenu') {
-      btn.hidden = !editMode || !normalizeFloatMenu(home.floatMenu, home).enabled;
+      btn.hidden = !editMode;
     } else {
       btn.hidden = !editMode;
     }
@@ -6665,6 +6904,7 @@ function normalizeFloatMenuItem(item) {
     label: String(item.label || '').trim().slice(0, 40),
     type: type,
     target: target.slice(0, 300),
+    color: item.color ? normalizeTextColor(item.color, '') : '',
   };
 }
 
@@ -6717,14 +6957,14 @@ function normalizeFloatMenu(raw, home) {
   const tags = Array.isArray(src.tags)
     ? src.tags.map(normalizeFloatMenuItem).filter(function (item) { return item.label; })
     : [];
-  const enabled = Object.prototype.hasOwnProperty.call(src, 'enabled') ? !!src.enabled : !!defaults.enabled;
-  if (enabled && isStockFloatMenuItems(items)) {
+  if (!items.length || isStockFloatMenuItems(items)) {
     items = defaultFloatMenuNavItems();
   }
   return {
-    enabled: enabled,
+    enabled: true,
     side: src.side === 'end' ? 'end' : 'start',
     title: String(src.title == null ? defaults.title : src.title).trim().slice(0, 40),
+    titleColor: src.titleColor ? normalizeTextColor(src.titleColor, '#222222') : '',
     items: items,
     tags: tags,
   };
@@ -6740,6 +6980,7 @@ function visibleFloatMenuItems(items, home) {
 function floatMenuItemButtonHtml(item, extraClass) {
   const label = renderStoredInlineText(item.label || '');
   const idAttr = ' data-fm-id="' + escapeHtml(item.id) + '"';
+  const colorStyle = item.color ? ' style="color:' + colorToCss(item.color) + ';"' : '';
   const inlineAttr = editMode
     ? ' data-inline-edit="floatMenu.item" data-inline-placeholder="תווית"' +
       ' contenteditable="true" spellcheck="false" role="textbox" tabindex="0"'
@@ -6748,11 +6989,11 @@ function floatMenuItemButtonHtml(item, extraClass) {
     const href = escapeHtml(item.target || '#');
     return (
       '<a class="' + extraClass + '" href="' + href + '" target="_blank" rel="noopener noreferrer"' +
-        idAttr + '>' + label + '</a>'
+        idAttr + colorStyle + '>' + label + '</a>'
     );
   }
   return (
-    '<button type="button" class="' + extraClass + '"' + idAttr + inlineAttr +
+    '<button type="button" class="' + extraClass + '"' + idAttr + inlineAttr + colorStyle +
       ' data-fm-type="' + escapeHtml(item.type) + '"' +
       ' data-fm-target="' + escapeHtml(item.target) + '">' +
       label +
@@ -6761,15 +7002,8 @@ function floatMenuItemButtonHtml(item, extraClass) {
 }
 
 function applyFloatMenuLayout(menu) {
-  const enabled = !!(menu && menu.enabled);
-  document.body.classList.toggle('has-float-menu', enabled);
-  if (enabled) {
-    document.body.setAttribute('data-float-menu-side', menu.side === 'end' ? 'end' : 'start');
-  } else {
-    document.body.removeAttribute('data-float-menu-side');
-  }
-  const check = document.getElementById('floatMenuEnabled');
-  if (check) check.checked = enabled;
+  document.body.classList.add('has-float-menu');
+  document.body.setAttribute('data-float-menu-side', menu && menu.side === 'end' ? 'end' : 'start');
 }
 
 function isFloatMenuCompactViewport() {
@@ -6926,16 +7160,8 @@ function renderFloatMenu(home) {
 
   if (!aside || !navEl || !tagsEl) return;
 
-  aside.hidden = !menu.enabled;
-  if (editBtn) editBtn.hidden = !editMode || !menu.enabled || IS_USER_MODE;
-
-  if (!menu.enabled) {
-    navEl.innerHTML = '';
-    tagsEl.innerHTML = '';
-    tagsEl.hidden = true;
-    syncFloatMenuAnchor();
-    return;
-  }
+  aside.hidden = false;
+  if (editBtn) editBtn.hidden = !editMode || IS_USER_MODE;
 
   if (titleEl) {
     const titlePlain = isRichTextValue(menu.title) ? plainTextFromHtml(menu.title) : String(menu.title || '');
@@ -6949,6 +7175,8 @@ function renderFloatMenu(home) {
       else titleEl.textContent = menu.title || '';
       titleEl.hidden = !titlePlain.trim();
     }
+    if (menu.titleColor) titleEl.style.color = colorToCss(menu.titleColor);
+    else titleEl.style.removeProperty('color');
   }
 
   const items = visibleFloatMenuItems(menu.items, home);
@@ -7009,6 +7237,19 @@ function applySiteTheme(home) {
   syncCategoriesToolbar(home);
 }
 
+function applySiteFontToAllTexts(font) {
+  const css = resolveFontFamily(font);
+  const cards = loadCards();
+  let changed = false;
+  cards.forEach(function (card) {
+    if (card.fontFamily !== css) {
+      card.fontFamily = css;
+      changed = true;
+    }
+  });
+  if (changed) saveCards(cards);
+}
+
 function updateHomeField(patch) {
   const home = Object.assign(loadHome(), patch);
   if (!saveHome(home)) {
@@ -7016,6 +7257,11 @@ function updateHomeField(patch) {
     return false;
   }
   applySiteTheme(home);
+  if (Object.prototype.hasOwnProperty.call(patch, 'siteFont')) {
+    applySiteFontToAllTexts(home.siteFont);
+    renderCards(loadCards());
+    patchWizardPreviewCardTheme();
+  }
   return true;
 }
 
@@ -7631,6 +7877,7 @@ function startInlineEdit(el) {
   if (!spec) return;
   if (activeInlineEdit && activeInlineEdit.el === el) return;
   if (activeInlineEdit) commitInlineEdit({ silent: true });
+  activeCategoryTextEdit = null;
 
   if (el.classList.contains('is-inline-placeholder')) {
     el.classList.remove('is-inline-placeholder');
@@ -8184,6 +8431,7 @@ function readFloatMenuDraftFromEditor() {
     enabled: true,
     side: sideEl && sideEl.value === 'end' ? 'end' : 'start',
     title: titleEl ? titleEl.value.trim().slice(0, 40) : base.title,
+    titleColor: base.titleColor || '',
     items: [],
     tags: [],
   };
@@ -8193,11 +8441,16 @@ function readFloatMenuDraftFromEditor() {
     const labelEl = row.querySelector('[data-fm-field="label"]');
     const typeEl = row.querySelector('[data-fm-field="type"]');
     const targetEl = row.querySelector('[data-fm-field="target"]');
+    const prevId = row.getAttribute('data-fm-row');
+    const prev = [].concat(base.items || [], base.tags || []).find(function (rowItem) {
+      return rowItem.id === prevId;
+    });
     const item = normalizeFloatMenuItem({
-      id: row.getAttribute('data-fm-row'),
+      id: prevId,
       label: labelEl ? labelEl.value : '',
       type: typeEl ? typeEl.value : 'section',
       target: targetEl ? targetEl.value : '',
+      color: prev && prev.color ? prev.color : '',
     });
     next[kind].push(item);
   });
@@ -9198,27 +9451,6 @@ document.getElementById('siteBgImage').addEventListener('change', async function
 document.getElementById('siteBgClear').addEventListener('click', function () {
   updateHomeField({ siteBgImage: '' });
 });
-
-const floatMenuEnabledEl = document.getElementById('floatMenuEnabled');
-if (floatMenuEnabledEl) {
-  floatMenuEnabledEl.addEventListener('change', function (e) {
-    const home = loadHome();
-    const menu = normalizeFloatMenu(home.floatMenu, home);
-    const enabled = !!e.target.checked;
-    menu.enabled = enabled;
-    if (enabled && !menu.items.length) {
-      menu.items = defaultFloatMenuNavItems();
-    }
-    home.floatMenu = menu;
-    if (!saveHome(home)) {
-      e.target.checked = !enabled;
-      alert('אין מספיק מקום לשמירה.');
-      return;
-    }
-    renderFloatMenu(home);
-    syncHomeSectionControls(home);
-  });
-}
 
 document.getElementById('cardsPerRow').addEventListener('input', function (e) {
   const value = Number(e.target.value);

@@ -20,6 +20,13 @@
   padding: 0;
 }
 
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
 body {
   font-family: var(--site-font, "NarkisBlockCondensedMF", "Heebo", sans-serif);
   background-color: var(--site-bg-color, #ffffff);
@@ -148,17 +155,6 @@ body[data-app-mode="user"] .float-menu-edit {
 .site-theme-control span {
   white-space: nowrap;
   color: var(--toolbar-text-muted);
-}
-
-.site-theme-check {
-  gap: 8px;
-}
-
-.site-theme-check input[type="checkbox"] {
-  width: 15px;
-  height: 15px;
-  accent-color: var(--toolbar-edit);
-  cursor: pointer;
 }
 
 .site-theme-control input[type="color"] {
@@ -2472,6 +2468,11 @@ body.page-edit-mode .cards-freeform-canvas:not(.has-image-bg)::before {
   line-height: 1.35;
 }
 
+.category-title-input,
+.category-subtitle-input {
+  font-family: inherit;
+}
+
 .category-title-input {
   width: 100%;
   padding: 8px 12px;
@@ -2507,6 +2508,12 @@ body.page-edit-mode .cards-freeform-canvas:not(.has-image-bg)::before {
   flex: 0 0 auto;
 }
 
+.category-size-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .category-size-control {
   display: inline-flex;
   align-items: center;
@@ -2532,18 +2539,6 @@ body.page-edit-mode .cards-freeform-canvas:not(.has-image-bg)::before {
   min-width: 1.6rem;
   font-variant-numeric: tabular-nums;
   color: #475569;
-}
-
-.category-color-field {
-  padding: 4px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid #c5d6c0;
-}
-
-.category-color-field .hsla-swatch {
-  width: 28px;
-  height: 28px;
 }
 
 .category-header-actions {
@@ -2662,6 +2657,7 @@ body.page-edit-mode .category-cards.is-drop-target {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   text-decoration: none;
   color: inherit;
+  font-family: var(--site-font, inherit);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   position: relative;
 }
@@ -3042,6 +3038,11 @@ body.cards-colored .card.card--flat .card-footer {
   border-radius: 10px;
   box-shadow: none;
   min-height: 148px;
+}
+
+.cards-grid:not(.is-freeform) .card {
+  width: 92%;
+  justify-self: center;
 }
 
 .cards-grid .card.card--flat.card--edge-outline,

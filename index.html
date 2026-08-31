@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=narkis-block-font">
+  <link rel="stylesheet" href="css/style.css?v=float-menu-always">
 </head>
 <body data-app-mode="edit">
 
@@ -30,7 +30,7 @@
     <div class="site-toolbar-theme">
       <div class="hsla-field site-theme-control" id="inlineTextColorPicker" data-hsla-for="inlineTextColor">
         <span>צבע טקסט</span>
-        <button type="button" class="hsla-swatch" id="inlineTextColorSwatch" title="צביעת הקטע המסומן בעריכת טקסט" aria-label="צבע טקסט"></button>
+        <button type="button" class="hsla-swatch" id="inlineTextColorSwatch" title="צבע הטקסט בעריכה" aria-label="צבע טקסט"></button>
         <input type="hidden" id="inlineTextColor" value="#000000">
       </div>
       <label class="site-theme-control site-theme-size is-disabled" id="inlineTextSizeControl" for="inlineTextSize" title="גודל טקסט בעריכה ישירה">
@@ -53,10 +53,6 @@
         <input type="file" id="siteBgImage" accept="image/*" hidden>
       </label>
       <button type="button" class="site-theme-clear" id="siteBgClear" hidden title="הסרת תמונת רקע">הסרת תמונה</button>
-      <label class="site-theme-control site-theme-check" for="floatMenuEnabled" title="תפריט צף בצד העמוד — שאר האתר נדחק הצידה">
-        <input type="checkbox" id="floatMenuEnabled">
-        <span>תפריט צף</span>
-      </label>
       <label class="site-theme-control" for="siteFont">
         <span>גופן</span>
         <select id="siteFont" title="גופן האתר">
@@ -645,6 +641,6 @@
     </label>
   </div>
 
-  <script src="js/app.js?v=narkis-block-font"></script>
+  <script src="js/app.js?v=float-menu-always"></script>
 </body>
 </html>
