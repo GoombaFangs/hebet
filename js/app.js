@@ -20,8 +20,15 @@ const APP_MODE = (function detectAppMode() {
 const IS_USER_MODE = APP_MODE === 'user';
 const IS_EDIT_MODE = !IS_USER_MODE;
 
+const DEFAULT_SITE_FONT = "'NarkisBlockCondensedMF', 'Heebo', sans-serif";
+const HEEBO_FONT = "'Heebo', sans-serif";
+const LEGACY_DEFAULT_SITE_FONT = "'Segoe UI', Tahoma, Arial, sans-serif";
+const SITE_FONT_DEFAULT_VERSION = 3;
+
 const BUILTIN_FONTS = [
-  { value: "'Segoe UI', Tahoma, Arial, sans-serif", label: 'Segoe UI' },
+  { value: DEFAULT_SITE_FONT, label: 'NarkisBlockCondensedMF' },
+  { value: HEEBO_FONT, label: 'Heebo' },
+  { value: LEGACY_DEFAULT_SITE_FONT, label: 'Segoe UI' },
   { value: 'Arial, Helvetica, sans-serif', label: 'Arial' },
   { value: 'Tahoma, Geneva, sans-serif', label: 'Tahoma' },
   { value: 'Gisha, Arial, sans-serif', label: 'Gisha' },
@@ -32,6 +39,20 @@ const BUILTIN_FONTS = [
   { value: 'Georgia, serif', label: 'Georgia' },
   { value: "'Courier New', Courier, monospace", label: 'Courier New' },
 ];
+
+function isStockSiteFont(value) {
+  const font = String(value || '').replace(/"/g, "'").trim();
+  return !font || font === LEGACY_DEFAULT_SITE_FONT || font === HEEBO_FONT;
+}
+
+function isLegacyDefaultFont(value) {
+  return isStockSiteFont(value);
+}
+
+function resolveFontFamily(value) {
+  if (isLegacyDefaultFont(value)) return DEFAULT_SITE_FONT;
+  return String(value).replace(/"/g, "'");
+}
 
 let customFontsCache = [];
 const registeredFontFamilies = {};
@@ -174,7 +195,8 @@ const DEFAULT_HOME = {
   siteBgImage: '',
   siteSecondaryColor: '#e31c23',
   colorCards: false,
-  siteFont: "'Segoe UI', Tahoma, Arial, sans-serif",
+  siteFont: DEFAULT_SITE_FONT,
+  siteFontDefaultVersion: SITE_FONT_DEFAULT_VERSION,
   cardsPerRow: 4,
   cardsGap: 16,
   cardsLayoutMode: 'categories',
@@ -186,7 +208,12 @@ const DEFAULT_HOME = {
     enabled: true,
     side: 'start',
     title: 'כותרת תפריט',
-    items: [],
+    items: [
+      { id: 'fm-overview', label: 'מבט כללי', type: 'section', target: 'header' },
+      { id: 'fm-products', label: 'תוצרים חדשים', type: 'section', target: 'cardsTop' },
+      { id: 'fm-edition', label: 'הבט - מהדורה חדשה', type: 'section', target: 'cardsBottom' },
+      { id: 'fm-video', label: 'סרטון', type: 'section', target: 'closing' },
+    ],
     tags: [],
   },
 };
@@ -283,7 +310,7 @@ function createEmptyWizardData() {
     flatImageZoom: 100,
     flatImagePosX: 50,
     flatImagePosY: 50,
-    fontFamily: "'Segoe UI', Tahoma, Arial, sans-serif",
+    fontFamily: DEFAULT_SITE_FONT,
     bgMode: DEFAULT_CARD_BG_MODE,
     useImageBg: false,
   };
@@ -1874,7 +1901,9 @@ function getCardThemeStyle(card) {
   const posX = getFlatImagePosX(card);
   const posY = getFlatImagePosY(card);
   // מרכאות בודדות — כדי לא לשבור את מאפיין style ב-HTML
-  const font = (card.fontFamily || "'Segoe UI', Tahoma, Arial, sans-serif").replace(/"/g, "'");
+  const font = isLegacyDefaultFont(card && card.fontFamily)
+    ? 'var(--site-font, ' + DEFAULT_SITE_FONT + ')'
+    : String(card.fontFamily).replace(/"/g, "'");
   return (
     'font-family: ' + font + ';' +
     '--card-outline:' + outline + ';' +
@@ -4090,7 +4119,7 @@ function syncFormToData() {
   if (outlineWidthValue) outlineWidthValue.textContent = wizardData.outlineWidth + 'px';
   // גופן הכרטיס נשאר ברירת מחדל / ערך שמור — אין בחירה באשף
   if (!wizardData.fontFamily) {
-    wizardData.fontFamily = "'Segoe UI', Tahoma, Arial, sans-serif";
+    wizardData.fontFamily = DEFAULT_SITE_FONT;
   }
   wizardData.bgMode = getSelectedCardBgMode();
   wizardData.useImageBg = wizardData.bgMode === 'image';
@@ -4531,7 +4560,7 @@ function buildCardFromWizard(id) {
     flatImageZoom: getFlatImageZoom(wizardData),
     flatImagePosX: getFlatImagePosX(wizardData),
     flatImagePosY: getFlatImagePosY(wizardData),
-    fontFamily: wizardData.fontFamily || "'Segoe UI', Tahoma, Arial, sans-serif",
+    fontFamily: resolveFontFamily(wizardData.fontFamily),
     bgMode: wizardData.bgMode || DEFAULT_CARD_BG_MODE,
     useImageBg: wizardData.bgMode === 'image',
     gradient: getColorBlend(wizardData.primaryColor, wizardData.secondaryColor),
@@ -4595,7 +4624,7 @@ function openWizard() {
   wizardData.flatImageZoom = 100;
   wizardData.flatImagePosX = 50;
   wizardData.flatImagePosY = 50;
-  wizardData.fontFamily = "'Segoe UI', Tahoma, Arial, sans-serif";
+  wizardData.fontFamily = DEFAULT_SITE_FONT;
 
   applyWizardDataToForm();
   updateWizardChrome();
@@ -4650,7 +4679,7 @@ function openWizardForEdit(cardId) {
   wizardData.flatImageZoom = getFlatImageZoom(card);
   wizardData.flatImagePosX = getFlatImagePosX(card);
   wizardData.flatImagePosY = getFlatImagePosY(card);
-  wizardData.fontFamily = card.fontFamily || "'Segoe UI', Tahoma, Arial, sans-serif";
+  wizardData.fontFamily = resolveFontFamily(card.fontFamily);
   wizardData.bgMode = getCardBgMode(card);
   wizardData.useImageBg = wizardData.bgMode === 'image';
 
@@ -5112,6 +5141,12 @@ function loadHome() {
     }
   }
   home = ensureCardsSections(home);
+  if (Number(home.siteFontDefaultVersion) < SITE_FONT_DEFAULT_VERSION) {
+    if (isStockSiteFont(home.siteFont)) {
+      home.siteFont = DEFAULT_SITE_FONT;
+    }
+    home.siteFontDefaultVersion = SITE_FONT_DEFAULT_VERSION;
+  }
   return home;
 }
 
@@ -6633,6 +6668,15 @@ function normalizeFloatMenuItem(item) {
   };
 }
 
+function defaultFloatMenuNavItems() {
+  return [
+    { id: 'fm-overview', label: 'מבט כללי', type: 'section', target: 'header' },
+    { id: 'fm-products', label: 'תוצרים חדשים', type: 'section', target: 'cardsTop' },
+    { id: 'fm-edition', label: 'הבט - מהדורה חדשה', type: 'section', target: 'cardsBottom' },
+    { id: 'fm-video', label: 'סרטון', type: 'section', target: 'closing' },
+  ].map(normalizeFloatMenuItem);
+}
+
 function defaultFloatMenuSectionItems(home) {
   return FLOAT_MENU_SECTIONS.filter(function (row) {
     return isFloatMenuSectionAvailable(row.id, home);
@@ -6642,6 +6686,25 @@ function defaultFloatMenuSectionItems(home) {
       type: 'section',
       target: row.id,
     });
+  });
+}
+
+const STOCK_FLOAT_MENU_LABELS = {
+  header: ['כותרת'],
+  intro: ['פתיח'],
+  intro2: ['פתיח 2'],
+  cardsTop: ['סקשן עליון', 'כרטיסי תוכן'],
+  cardsBottom: ['סקשן תחתון'],
+  closing: ['סגירה'],
+  closing2: ['סגירה 2'],
+};
+
+function isStockFloatMenuItems(items) {
+  if (!items || !items.length) return true;
+  return items.every(function (item) {
+    if (!item || item.type !== 'section') return false;
+    const stock = STOCK_FLOAT_MENU_LABELS[item.target] || [];
+    return stock.indexOf(item.label) !== -1;
   });
 }
 
@@ -6655,8 +6718,8 @@ function normalizeFloatMenu(raw, home) {
     ? src.tags.map(normalizeFloatMenuItem).filter(function (item) { return item.label; })
     : [];
   const enabled = Object.prototype.hasOwnProperty.call(src, 'enabled') ? !!src.enabled : !!defaults.enabled;
-  if (enabled && !items.length) {
-    items = defaultFloatMenuSectionItems(home);
+  if (enabled && isStockFloatMenuItems(items)) {
+    items = defaultFloatMenuNavItems();
   }
   return {
     enabled: enabled,
@@ -6769,8 +6832,15 @@ function scrollToFloatMenuItem(item) {
 function setFloatMenuActiveId(id) {
   floatMenuActiveId = id || '';
   document.querySelectorAll('#floatMenu [data-fm-id]').forEach(function (el) {
-    el.classList.toggle('is-active', el.getAttribute('data-fm-id') === floatMenuActiveId);
+    const on = el.getAttribute('data-fm-id') === floatMenuActiveId;
+    el.classList.toggle('is-active', on);
+    if (on) el.setAttribute('aria-current', 'true');
+    else el.removeAttribute('aria-current');
   });
+}
+
+function defaultFloatMenuActiveId(items) {
+  return items && items[0] ? items[0].id : '';
 }
 
 function syncFloatMenuActiveFromScroll() {
@@ -6781,6 +6851,11 @@ function syncFloatMenuActiveFromScroll() {
   const items = visibleFloatMenuItems(menu.items, home);
   if (!items.length) {
     setFloatMenuActiveId('');
+    return;
+  }
+
+  if (window.scrollY < 24) {
+    setFloatMenuActiveId(defaultFloatMenuActiveId(items));
     return;
   }
 
@@ -6888,6 +6963,11 @@ function renderFloatMenu(home) {
   tagsEl.hidden = !tags.length;
 
   bindFloatMenuInteractions();
+  setFloatMenuActiveId(
+    items.some(function (item) { return item.id === floatMenuActiveId; })
+      ? floatMenuActiveId
+      : defaultFloatMenuActiveId(items)
+  );
   requestAnimationFrame(syncFloatMenuFromViewport);
 }
 
@@ -8268,7 +8348,7 @@ function openHomeEditor(section) {
     homeEditFloatMenuDraft = normalizeFloatMenu(home.floatMenu, home);
     homeEditFloatMenuDraft.enabled = true;
     if (!homeEditFloatMenuDraft.items.length) {
-      homeEditFloatMenuDraft.items = defaultFloatMenuSectionItems(home);
+      homeEditFloatMenuDraft.items = defaultFloatMenuNavItems();
     }
     fieldsHtml = floatMenuFieldsHtml(homeEditFloatMenuDraft);
   }
@@ -8898,7 +8978,7 @@ function buildExportedPortalHtml(snapshot, indexHtml, cssText, jsText) {
   out = out.replace('<body data-app-mode="edit">', '<body data-app-mode="user" class="user-mode">');
   out = out.replace('<body>', '<body data-app-mode="user" class="user-mode">');
   out = out.replace(
-    /<link rel="stylesheet" href="css\/style\.css">/,
+    /<link rel="stylesheet" href="css\/style\.css(?:\?[^"]*)?">/,
     '<style>\n' + cssText + '\n</style>'
   );
 
@@ -8908,7 +8988,7 @@ function buildExportedPortalHtml(snapshot, indexHtml, cssText, jsText) {
     '</script>\n';
 
   out = out.replace(
-    '<script src="js/app.js"></script>',
+    /<script src="js\/app\.js(?:\?[^"]*)?"><\/script>/,
     bootstrapTag + '<script>\n' + escapeForInlineScript(jsText) + '\n</script>'
   );
 
@@ -9127,7 +9207,7 @@ if (floatMenuEnabledEl) {
     const enabled = !!e.target.checked;
     menu.enabled = enabled;
     if (enabled && !menu.items.length) {
-      menu.items = defaultFloatMenuSectionItems(home);
+      menu.items = defaultFloatMenuNavItems();
     }
     home.floatMenu = menu;
     if (!saveHome(home)) {
