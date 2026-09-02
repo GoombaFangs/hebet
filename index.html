@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=float-menu-always">
+  <link rel="stylesheet" href="css/style.css?v=section-card-design">
 </head>
 <body data-app-mode="edit">
 
@@ -282,22 +282,6 @@
           <button type="button" class="wizard-close" id="btnCancel" aria-label="סגירה">×</button>
         </div>
 
-        <nav class="wizard-steps" aria-label="שלבי יצירה">
-          <div class="wizard-step" data-step="1">
-            <span class="step-circle">1</span>
-            <span class="step-label">עיצוב</span>
-          </div>
-          <div class="wizard-step-line"></div>
-          <div class="wizard-step" data-step="2">
-            <span class="step-circle">2</span>
-            <span class="step-label">תיאור כללי</span>
-          </div>
-          <div class="wizard-step-line"></div>
-          <div class="wizard-step" data-step="3">
-            <span class="step-circle">3</span>
-            <span class="step-label">סוג הפרויקט</span>
-          </div>
-        </nav>
 
         <div class="wizard-preview-wrap">
           <div class="wizard-preview" id="livePreview"></div>
@@ -305,132 +289,50 @@
       </div>
 
       <form id="wizardForm" novalidate>
+        <div hidden aria-hidden="true">
+          <input type="text" id="pageName" name="pageName" maxlength="10">
+          <input type="text" id="unitName" name="unitName" maxlength="10">
+          <textarea id="notes" name="notes" maxlength="30"></textarea>
+          <select id="classification" name="classification">
+            <option value="בלמ״ס">בלמ״ס</option>
+            <option value="שמור" selected>שמור</option>
+            <option value="סודי">סודי</option>
+            <option value="סודי ביותר">סודי ביותר</option>
+          </select>
+          <select id="projectType" name="projectType">
+            <option value="מצגת" selected>מצגת</option>
+            <option value="לומדה">לומדה</option>
+            <option value="סרט">סרט</option>
+            <option value="__other__">אחר</option>
+          </select>
+          <input type="text" id="projectTypeCustom" maxlength="10">
+          <input type="checkbox" id="actionView" checked>
+          <input type="checkbox" id="actionDownload">
+          <input type="checkbox" id="actionPrint">
+          <div id="actionLinkFields"></div>
+        </div>
 
-        <section class="wizard-panel" data-panel="2" hidden>
-          <h3>תיאור כללי</h3>
-          <p class="wizard-hint">הזינו את הפרטים הבסיסיים של הדף החדש</p>
+        <section class="wizard-panel" data-panel="1" hidden>
+          <h3 hidden>עיצוב</h3>
 
-          <div class="form-grid">
-            <div class="form-field">
-              <label for="pageName">שם הדף <span class="req">*</span></label>
-              <input type="text" id="pageName" name="pageName" placeholder="לדוגמה: מבוא ליחידה" maxlength="10" required>
+          <div class="form-grid form-grid--design" hidden>
+            <div hidden aria-hidden="true">
+              <input type="radio" name="cardBgMode" id="cardBgModeColors" value="colors">
+              <input type="radio" name="cardBgMode" id="cardBgModeImage" value="image">
+              <input type="radio" name="cardBgMode" id="cardBgModeNone" value="none" checked>
+              <input type="radio" name="cardBgMode" id="cardBgModeSquareImage" value="squareImage">
+              <input type="file" id="mainImage" name="mainImage" accept="image/*">
+              <span id="mainImageText"></span>
+              <img id="mainImagePreview" alt="">
+              <input type="range" id="flatImageZoom" name="flatImageZoom" min="50" max="200" step="5" value="100">
+              <input type="range" id="flatImagePosX" name="flatImagePosX" min="0" max="100" step="1" value="50">
+              <input type="range" id="flatImagePosY" name="flatImagePosY" min="0" max="100" step="1" value="50">
+              <span id="flatImageZoomValue"></span>
+              <span id="flatImagePosXValue"></span>
+              <span id="flatImagePosYValue"></span>
             </div>
 
-            <div class="form-field">
-              <label for="unitName">שם היחידה</label>
-              <input type="text" id="unitName" name="unitName" placeholder="אופציונלי" maxlength="10">
-            </div>
-
-            <div class="form-field form-field--full">
-              <label for="notes">הערות</label>
-              <textarea id="notes" name="notes" rows="2" maxlength="30" placeholder="הערות נוספות (אופציונלי)"></textarea>
-            </div>
-
-            <div class="form-field form-field--full">
-              <label for="classification">סיווג <span class="req">*</span></label>
-              <select id="classification" name="classification" required>
-                <option value="">בחרו סיווג</option>
-                <option value="בלמ״ס">בלמ״ס</option>
-                <option value="שמור">שמור</option>
-                <option value="סודי">סודי</option>
-                <option value="סודי ביותר">סודי ביותר</option>
-              </select>
-            </div>
-          </div>
-        </section>
-
-        <section class="wizard-panel" data-panel="3" hidden>
-          <h3>סוג הפרויקט</h3>
-          <p class="wizard-hint">בחרו את סוג התוכן ואת פעולות הכפתור</p>
-
-          <div class="form-grid">
-            <div class="form-field form-field--full">
-              <label for="projectType">סוג פרויקט <span class="req">*</span></label>
-              <div class="project-type-row">
-                <select id="projectType" name="projectType" required>
-                  <option value="">בחרו סוג</option>
-                  <option value="מצגת">מצגת</option>
-                  <option value="לומדה">לומדה</option>
-                  <option value="סרט">סרט</option>
-                  <option value="__other__">אחר</option>
-                </select>
-                <input type="text" id="projectTypeCustom" maxlength="10" placeholder="הקלידו סוג..." hidden aria-label="סוג פרויקט מותאם">
-              </div>
-            </div>
-
-            <div class="form-field form-field--full">
-              <span class="field-label">פעולות כפתור <span class="req">*</span></span>
-              <div class="action-checks">
-                <label class="action-check" for="actionView">
-                  <input type="checkbox" id="actionView" checked>
-                  <span>צפייה</span>
-                </label>
-                <label class="action-check" for="actionDownload">
-                  <input type="checkbox" id="actionDownload">
-                  <span>הורדה</span>
-                </label>
-                <label class="action-check" for="actionPrint">
-                  <input type="checkbox" id="actionPrint">
-                  <span>הדפסה</span>
-                </label>
-              </div>
-              <p class="field-subhint">יש לבחור לפחות פעולה אחת</p>
-            </div>
-
-            <div class="form-field form-field--full" id="actionLinkFields"></div>
-          </div>
-        </section>
-
-        <section class="wizard-panel" data-panel="1">
-          <h3>עיצוב</h3>
-          <p class="wizard-hint">הגדירו מסגרת, צבעים ותמונה — רק מה שרלוונטי לסוג שנבחר</p>
-
-          <div class="form-grid form-grid--design">
-            <div class="form-field form-field--full">
-              <span class="field-label">סוג עיצוב</span>
-              <div class="edit-seg" id="cardBgModeGroup" role="radiogroup" aria-label="סוג עיצוב">
-                <label class="edit-seg-btn" for="cardBgModeColors" title="כרטיס רגיל: חלק עליון צבעוני וגוף לבן">
-                  <input type="radio" name="cardBgMode" id="cardBgModeColors" value="colors">
-                  <span>קלאסי · צבעים</span>
-                </label>
-                <label class="edit-seg-btn" for="cardBgModeImage" title="כרטיס רגיל: תמונה בחלק העליון וגוף לבן">
-                  <input type="radio" name="cardBgMode" id="cardBgModeImage" value="image">
-                  <span>קלאסי · תמונה</span>
-                </label>
-                <label class="edit-seg-btn" for="cardBgModeNone" title="משטח אחד בצבע אחיד">
-                  <input type="radio" name="cardBgMode" id="cardBgModeNone" value="none">
-                  <span>שטוח · צבע</span>
-                </label>
-                <label class="edit-seg-btn" for="cardBgModeSquareImage" title="משטח אחד מתמונה — מומלץ PNG עם שקיפות">
-                  <input type="radio" name="cardBgMode" id="cardBgModeSquareImage" value="squareImage" checked>
-                  <span>שטוח · ארט</span>
-                </label>
-              </div>
-              <p class="field-subhint">קלאסי = חלק עליון + גוף · שטוח = משטח אחד · ארט = תמונה עם שקיפות</p>
-            </div>
-
-            <div class="form-field form-field--full" id="mainImageFieldWrap">
-              <label id="mainImageFieldLabel">תמונת ארט <span class="req">*</span></label>
-              <label class="upload-box" for="mainImage">
-                <input type="file" id="mainImage" name="mainImage" accept="image/*" hidden>
-                <span class="upload-icon">🖼️</span>
-                <span class="upload-text" id="mainImageText">לחצו להעלאת תמונה</span>
-                <img class="upload-preview" id="mainImagePreview" alt="" hidden>
-              </label>
-              <p class="field-subhint" id="mainImageFieldHint">מומלץ PNG עם שקיפות — החלקים השקופים ייעלמו מהכרטיס</p>
-            </div>
-
-            <div class="form-field form-field--full" id="flatImagePosWrap" hidden>
-              <label for="flatImageZoom">זום ארט <span class="field-value" id="flatImageZoomValue">100%</span></label>
-              <input type="range" id="flatImageZoom" name="flatImageZoom" min="50" max="200" step="5" value="100" style="width:100%; accent-color: var(--site-secondary, #e31c23);">
-              <label for="flatImagePosX" style="margin-top:10px;display:block;">מיקום אופקי <span class="field-value" id="flatImagePosXValue">50%</span></label>
-              <input type="range" id="flatImagePosX" name="flatImagePosX" min="0" max="100" step="1" value="50" style="width:100%; accent-color: var(--site-secondary, #e31c23);">
-              <label for="flatImagePosY" style="margin-top:10px;display:block;">מיקום אנכי <span class="field-value" id="flatImagePosYValue">50%</span></label>
-              <input type="range" id="flatImagePosY" name="flatImagePosY" min="0" max="100" step="1" value="50" style="width:100%; accent-color: var(--site-secondary, #e31c23);">
-              <p class="field-subhint">התאמת גודל ומיקום של תמונת הארט בתוך הכרטיס</p>
-            </div>
-
-            <div class="form-field" id="flatBgColorFieldWrap" hidden>
+            <div class="form-field" id="flatBgColorFieldWrap">
               <label>צבע הרקע</label>
               <div class="hsla-field" id="flatBgColorPicker" data-hsla-for="flatBgColor">
                 <button type="button" class="hsla-swatch" title="בחירת צבע הרקע" aria-label="בחירת צבע הרקע"></button>
@@ -495,51 +397,28 @@
               <p class="field-subhint" id="outlineWidthHint">כמה עבה תהיה המסגרת</p>
             </div>
 
-            <div class="form-field" id="titleColorFieldWrap">
-              <label for="titleColor">צבע כותרת</label>
+            <div hidden aria-hidden="true" id="titleColorFieldWrap">
               <div class="hsla-field" id="titleColorPicker" data-hsla-for="titleColor">
-                <button type="button" class="hsla-swatch" title="בחירת צבע כותרת" aria-label="בחירת צבע כותרת"></button>
+                <button type="button" class="hsla-swatch" aria-hidden="true"></button>
                 <span class="color-hex" id="titleColorHex">#e31c23</span>
                 <input type="hidden" id="titleColor" name="titleColor" value="#e31c23">
               </div>
-              <p class="field-subhint">צבע הטקסט של הכותרת בלבד</p>
             </div>
-
-            <div class="form-field" id="notesColorFieldWrap">
-              <label for="notesColor">צבע תיאור</label>
+            <div hidden aria-hidden="true" id="notesColorFieldWrap">
               <div class="hsla-field" id="notesColorPicker" data-hsla-for="notesColor">
-                <button type="button" class="hsla-swatch" title="בחירת צבע תיאור" aria-label="בחירת צבע תיאור"></button>
+                <button type="button" class="hsla-swatch" aria-hidden="true"></button>
                 <span class="color-hex" id="notesColorHex">#333333</span>
                 <input type="hidden" id="notesColor" name="notesColor" value="#333333">
               </div>
-              <p class="field-subhint">צבע הטקסט של התיאור בלבד</p>
             </div>
-
-            <div id="cardMediaExtrasWrap" hidden>
-              <div class="form-field">
-                <label>תמונות נוספות</label>
-                <label class="upload-box upload-box--sm" for="extraImages">
-                  <input type="file" id="extraImages" name="extraImages" accept="image/*" multiple hidden>
-                  <span class="upload-icon">📷</span>
-                  <span class="upload-text" id="extraImagesText">העלאה (אופציונלי)</span>
-                </label>
-                <div class="extra-thumbs" id="extraThumbs"></div>
-              </div>
-
-              <div class="form-field">
-                <label>לוגו</label>
-                <label class="upload-box upload-box--sm" for="logoImage">
-                  <input type="file" id="logoImage" name="logoImage" accept="image/*" hidden>
-                  <span class="upload-icon">🏷️</span>
-                  <span class="upload-text" id="logoImageText">העלאה (אופציונלי)</span>
-                  <img class="upload-preview upload-preview--logo" id="logoImagePreview" alt="" hidden>
-                </label>
-                <label class="action-check" for="logoFree" style="margin-top:10px;">
-                  <input type="checkbox" id="logoFree" name="logoFree">
-                  <span>לוגו חופשי</span>
-                </label>
-                <p class="field-subhint">גרירה חופשית של הלוגו בתצוגה המקדימה</p>
-              </div>
+            <div hidden aria-hidden="true" id="cardMediaExtrasWrap">
+              <input type="file" id="extraImages" name="extraImages" accept="image/*" multiple>
+              <span id="extraImagesText"></span>
+              <div id="extraThumbs"></div>
+              <input type="file" id="logoImage" name="logoImage" accept="image/*">
+              <span id="logoImageText"></span>
+              <img id="logoImagePreview" alt="">
+              <input type="checkbox" id="logoFree" name="logoFree">
             </div>
           </div>
         </section>
@@ -549,8 +428,8 @@
         <div class="wizard-nav">
           <button type="button" class="wizard-nav-btn wizard-nav-btn--back" id="btnPrev" hidden>הקודם</button>
           <span class="wizard-nav-spacer" aria-hidden="true"></span>
-          <button type="button" class="wizard-nav-btn wizard-nav-btn--next" id="btnNext">הבא</button>
-          <button type="button" class="wizard-nav-btn wizard-nav-btn--finish" id="btnFinish" hidden>✓ שמירה</button>
+          <button type="button" class="wizard-nav-btn wizard-nav-btn--next" id="btnNext" hidden>הבא</button>
+          <button type="button" class="wizard-nav-btn wizard-nav-btn--finish" id="btnFinish">✓ שמירה</button>
         </div>
       </form>
     </div>
@@ -641,6 +520,6 @@
     </label>
   </div>
 
-  <script src="js/app.js?v=float-menu-always"></script>
+  <script src="js/app.js?v=section-card-design"></script>
 </body>
 </html>

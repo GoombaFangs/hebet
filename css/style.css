@@ -2236,6 +2236,24 @@ body.page-edit-mode .cards-layout-bar:not(.is-in-editor) {
   width: 100%;
 }
 
+.cards-section-design {
+  margin: 8px 0 18px;
+  padding: 14px 14px 6px;
+  border: 1px solid #d5e2d2;
+  border-radius: 12px;
+  background: #fafcfa;
+}
+
+.cards-section-design-title {
+  font-size: 1.05rem;
+  margin: 0 0 12px;
+  color: #222;
+}
+
+.cards-section-design .form-grid--design {
+  max-width: none;
+}
+
 .cards-editor-mount[hidden] {
   display: none !important;
 }
@@ -3047,7 +3065,7 @@ body.cards-colored .card.card--flat .card-footer {
 
 .cards-grid .card.card--flat.card--edge-outline,
 .wizard-preview .card--preview.card--flat.card--edge-outline {
-  border: 1px solid var(--card-outline, #e31c23);
+  border: var(--card-outline-width, 2px) solid var(--card-outline, #e31c23);
 }
 
 .cards-grid .card.card--flat.card--edge-glow,
@@ -3917,14 +3935,10 @@ body.is-wizard-open .site-toolbar-shell {
   background: #e0e0e0;
 }
 
-/* שלבים */
-.wizard-steps {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  margin-bottom: 24px;
-  padding: 0 8px;
+.wizard-steps,
+.wizard-step,
+.wizard-step-line {
+  display: none !important;
 }
 
 .wizard-step {
@@ -4057,17 +4071,9 @@ body.is-wizard-open .site-toolbar-shell {
   background: rgba(227, 28, 35, 0.06);
 }
 
-.form-grid--design #cardMediaExtrasWrap {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px 20px;
-}
-
-@media (max-width: 720px) {
-  .form-grid--design #cardMediaExtrasWrap {
-    grid-template-columns: 1fr;
-  }
+.form-grid--design #cardMediaExtrasWrap,
+.form-grid--design #cardMediaExtrasWrap[hidden] {
+  display: none;
 }
 
 /* פאנלים */

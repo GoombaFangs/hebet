@@ -246,7 +246,7 @@ const GRADIENTS = [
   'linear-gradient(135deg, #2b3d1f, #5e8b3c)',
 ];
 
-const DEFAULT_CARD_BG_MODE = 'squareImage';
+const DEFAULT_CARD_BG_MODE = 'none';
 const DEFAULT_CARD_TITLE_COLOR = '#e31c23';
 const DEFAULT_CARD_NOTES_COLOR = '#1a1a1a';
 const DEFAULT_CARD_TITLE_SIZE = 44;
@@ -291,17 +291,18 @@ let currentStep = 1;
 let editingCardId = null;
 let wizardPreviewTextEdit = null;
 let activeCategoryTextEdit = null;
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 1;
 
 function createEmptyWizardData() {
   return {
-    pageName: '',
+    pageName: 'כותרת',
     unitName: '',
-    notes: '',
+    notes: 'תיאור קצר',
     date: '',
     status: '',
-    classification: '',
-    projectType: '',
+    classification: 'שמור',
+    projectType: 'מצגת',
+    section: 'top',
     enabledActions: ['צפייה'],
     actionLinks: { 'צפייה': '', 'הורדה': '', 'הדפסה': '' },
     mainImage: '',
@@ -466,6 +467,10 @@ function defaultCardsSectionConfig(overrides) {
     cardPositions: {},
     cardsFreeHeight: 420,
     cardsFreeSize: 18,
+    cardFlatBgColor: '#ffffff',
+    cardFlatEdge: 'outline',
+    cardOutlineColor: '#e31c23',
+    cardOutlineWidth: 2,
   }, overrides || {});
 }
 
@@ -1919,9 +1924,24 @@ function normalizeFlatEdge(value) {
   return 'outline';
 }
 
+function clampCardOutlineWidth(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 2;
+  return Math.max(1, Math.min(20, Math.round(n)));
+}
+
+function getSectionCardDesign(sectionId) {
+  const cfg = getCardsSectionConfig(loadHome(), sectionId || 'top');
+  return {
+    flatBgColor: cfg.cardFlatBgColor || '#ffffff',
+    flatEdge: normalizeFlatEdge(cfg.cardFlatEdge),
+    outlineColor: cfg.cardOutlineColor || '#e31c23',
+    outlineWidth: clampCardOutlineWidth(cfg.cardOutlineWidth),
+  };
+}
+
 function getCardFlatEdge(card) {
-  if (!card) return 'outline';
-  return normalizeFlatEdge(card.flatEdge);
+  return getSectionCardDesign(normalizeCardSection(card)).flatEdge;
 }
 
 function getSelectedFlatEdge() {
@@ -1965,51 +1985,32 @@ function syncCardBgModeUi() {
   const edge = getSelectedFlatEdge();
   const isFlat = isFlatCardMode(mode);
   const hasEdgeFx = isFlat && (edge === 'outline' || edge === 'glow');
-  const needsMainImage = mode === 'image' || mode === 'squareImage';
 
   const wrap = document.getElementById('mainImageFieldWrap');
-  if (wrap) wrap.hidden = !needsMainImage;
+  if (wrap) wrap.hidden = true;
 
   const flatImagePosWrap = document.getElementById('flatImagePosWrap');
-  if (flatImagePosWrap) {
-    flatImagePosWrap.hidden = mode !== 'squareImage' || !wizardData.mainImage;
-  }
+  if (flatImagePosWrap) flatImagePosWrap.hidden = true;
 
   const mediaExtrasWrap = document.getElementById('cardMediaExtrasWrap');
-  if (mediaExtrasWrap) mediaExtrasWrap.hidden = isFlat;
-
-  const mainImageLabel = document.getElementById('mainImageFieldLabel');
-  const mainImageHint = document.getElementById('mainImageFieldHint');
-  if (mode === 'squareImage') {
-    if (mainImageLabel) mainImageLabel.innerHTML = 'תמונת ארט <span class="req">*</span>';
-    if (mainImageHint) {
-      mainImageHint.hidden = false;
-      mainImageHint.textContent = 'מומלץ PNG עם שקיפות — החלקים השקופים ייעלמו מהכרטיס';
-    }
-  } else if (mode === 'image') {
-    if (mainImageLabel) mainImageLabel.innerHTML = 'תמונה לחלק העליון <span class="req">*</span>';
-    if (mainImageHint) {
-      mainImageHint.hidden = false;
-      mainImageHint.textContent = 'התמונה תופיע בראש הכרטיס הקלאסי';
-    }
-  }
+  if (mediaExtrasWrap) mediaExtrasWrap.hidden = true;
 
   const flatBgWrap = document.getElementById('flatBgColorFieldWrap');
-  if (flatBgWrap) flatBgWrap.hidden = mode !== 'none';
+  if (flatBgWrap) flatBgWrap.hidden = true;
 
   const flatEdgeWrap = document.getElementById('flatEdgeFieldWrap');
-  if (flatEdgeWrap) flatEdgeWrap.hidden = !isFlat;
+  if (flatEdgeWrap) flatEdgeWrap.hidden = true;
 
   const outlineWrap = document.getElementById('outlineColorFieldWrap');
-  if (outlineWrap) outlineWrap.hidden = !hasEdgeFx;
+  if (outlineWrap) outlineWrap.hidden = true;
 
   const outlineWidthWrap = document.getElementById('outlineWidthFieldWrap');
-  if (outlineWidthWrap) outlineWidthWrap.hidden = !hasEdgeFx;
+  if (outlineWidthWrap) outlineWidthWrap.hidden = true;
 
   const titleColorWrap = document.getElementById('titleColorFieldWrap');
-  if (titleColorWrap) titleColorWrap.hidden = !isFlat;
+  if (titleColorWrap) titleColorWrap.hidden = true;
   const notesColorWrap = document.getElementById('notesColorFieldWrap');
-  if (notesColorWrap) notesColorWrap.hidden = !isFlat;
+  if (notesColorWrap) notesColorWrap.hidden = true;
 
   const primaryWrap = document.getElementById('primaryColorFieldWrap');
   if (primaryWrap) primaryWrap.hidden = mode !== 'colors';
@@ -2037,8 +2038,7 @@ function syncCardBgModeUi() {
 }
 
 function getCardOutlineColor(card) {
-  if (!card) return '#e31c23';
-  return card.outlineColor || '#e31c23';
+  return getSectionCardDesign(normalizeCardSection(card)).outlineColor;
 }
 
 function getCardTitleColor(card) {
@@ -2064,14 +2064,11 @@ function getCardNotesSize(card) {
 }
 
 function getCardFlatBgColor(card) {
-  if (!card) return '#ffffff';
-  return card.flatBgColor || '#ffffff';
+  return getSectionCardDesign(normalizeCardSection(card)).flatBgColor;
 }
 
 function getCardOutlineWidth(card) {
-  const n = Number(card && card.outlineWidth);
-  if (!Number.isFinite(n)) return 2;
-  return Math.max(1, Math.min(20, Math.round(n)));
+  return getSectionCardDesign(normalizeCardSection(card)).outlineWidth;
 }
 
 function shouldShowImageBg(card) {
@@ -3862,6 +3859,7 @@ function getWizardPreviewCardData() {
     unitName: wizardData.unitName,
     notes: wizardData.notes || 'התיאור יופיע כאן...',
     description: wizardData.notes || 'התיאור יופיע כאן...',
+    section: wizardData.section || getActiveCardsSectionId(),
     projectType: wizardData.projectType || 'סוג',
     classification: wizardData.classification || 'סיווג',
     primaryColor: wizardData.primaryColor || '#e87722',
@@ -4195,55 +4193,22 @@ function updateStepUI() {
     el.classList.toggle('active', step === currentStep);
     el.classList.toggle('done', step < currentStep);
     const circle = el.querySelector('.step-circle');
-    circle.textContent = step < currentStep ? '✓' : String(step);
+    if (circle) circle.textContent = step < currentStep ? '✓' : String(step);
   });
 
   document.querySelectorAll('.wizard-panel').forEach(function (panel) {
     panel.hidden = Number(panel.dataset.panel) !== currentStep;
   });
 
-  btnPrev.hidden = currentStep === 1;
-  btnNext.hidden = currentStep === TOTAL_STEPS;
-  btnFinish.hidden = currentStep !== TOTAL_STEPS;
+  if (btnPrev) btnPrev.hidden = true;
+  if (btnNext) btnNext.hidden = true;
+  if (btnFinish) btnFinish.hidden = false;
 
   showError('');
   updateLivePreview();
 }
 
 function validateStep(step) {
-  if (step === 1) {
-    if ((wizardData.bgMode === 'image' || wizardData.bgMode === 'squareImage') && !wizardData.mainImage) {
-      return wizardData.bgMode === 'squareImage'
-        ? 'יש להעלות תמונת ארט'
-        : 'יש להעלות תמונה לחלק העליון של הכרטיס';
-    }
-  }
-
-  if (step === 2) {
-    if (!wizardData.pageName.trim()) return 'שם הדף הוא שדה חובה';
-    if (!wizardData.classification) return 'סיווג הוא שדה חובה';
-  }
-
-  if (step === 3) {
-    if (isProjectTypeOtherSelected() && !getWizardProjectTypeValue()) {
-      return 'יש להזין סוג פרויקט מותאם (עד 10 תווים)';
-    }
-    if (!wizardData.projectType) return 'סוג פרויקט הוא שדה חובה';
-    if (!wizardData.enabledActions.length) return 'יש לבחור לפחות פעולת כפתור אחת';
-
-    for (let i = 0; i < wizardData.enabledActions.length; i++) {
-      const action = wizardData.enabledActions[i];
-      const link = (wizardData.actionLinks[action] || '').trim();
-      if (!link) return 'יש להזין קישור עבור "' + action + '"';
-      try {
-        const url = new URL(normalizeProjectLink(link));
-        if (!/^https?:$/.test(url.protocol)) return 'הקישור ל"' + action + '" אינו תקין';
-      } catch {
-        return 'הקישור ל"' + action + '" אינו תקין';
-      }
-    }
-  }
-
   return '';
 }
 
@@ -4393,6 +4358,7 @@ function syncFormToData() {
 
 function renderActionLinkFields() {
   const container = document.getElementById('actionLinkFields');
+  if (!container) return;
   const enabled = wizardData.enabledActions || [];
 
   if (!enabled.length) {
@@ -4839,6 +4805,11 @@ function openWizard() {
 
   wizardData.date = '';
   wizardData.status = '';
+  wizardData.pageName = 'כותרת';
+  wizardData.notes = 'תיאור קצר';
+  wizardData.classification = 'שמור';
+  wizardData.projectType = 'מצגת';
+  wizardData.section = getActiveCardsSectionId();
   wizardData.bgMode = DEFAULT_CARD_BG_MODE;
   wizardData.useImageBg = false;
   wizardData.enabledActions = ['צפייה'];
@@ -4895,6 +4866,7 @@ function openWizardForEdit(cardId) {
   wizardData.status = '';
   wizardData.classification = card.classification || '';
   wizardData.projectType = card.projectType || '';
+  wizardData.section = normalizeCardSection(card);
   wizardData.mainImage = card.mainImage || '';
   wizardData.extraImages = (card.extraImages || []).slice();
   wizardData.logo = card.logo || '';
@@ -8617,7 +8589,8 @@ function openHomeEditor(section) {
         '<label for="cardsSectionTitleInput">כותרת הסקשן</label>' +
         '<input type="text" id="cardsSectionTitleInput" maxlength="80" value="' + escapeHtml(cfg.title || meta.defaultTitle) + '">' +
       '</div>' +
-      '<p class="field-subhint">הגדרות פריסה ל' + escapeHtml(meta.label) + '. השינויים נשמרים מיד.</p>';
+      '<p class="field-subhint">הגדרות פריסה ועיצוב ל' + escapeHtml(meta.label) + '. השינויים נשמרים מיד וחלים על כל הכרטיסים בסקשן.</p>' +
+      cardsSectionDesignFieldsHtml(cfg);
   }
 
   homeEditTitle.textContent = title;
@@ -8632,6 +8605,7 @@ function openHomeEditor(section) {
 
   if (isCardsHomeSection(section)) {
     bindCardsSectionTitleField(section);
+    bindCardsSectionDesignFields(section);
     if (!mountCardsLayoutBarIntoEditor()) {
       alert('לא ניתן לפתוח את עורך הכרטיסים. רעננו את העמוד ונסו שוב.');
       closeHomeEditor();
@@ -8652,6 +8626,140 @@ function openHomeEditor(section) {
   bindFloatMenuEditor();
   bindHomeEditorLivePreview();
   syncHomeSectionEditingFocus();
+}
+
+function cardsSectionDesignFieldsHtml(cfg) {
+  const bg = colorToDisplayHex(cfg.cardFlatBgColor || '#ffffff');
+  const edge = normalizeFlatEdge(cfg.cardFlatEdge);
+  const outline = colorToDisplayHex(cfg.cardOutlineColor || '#e31c23');
+  const width = clampCardOutlineWidth(cfg.cardOutlineWidth);
+  const hasEdgeFx = edge === 'outline' || edge === 'glow';
+  const widthLabel = edge === 'glow' ? 'עוצמת זוהר' : 'עובי מסגרת';
+  const colorLabel = edge === 'glow' ? 'צבע זוהר' : 'צבע מסגרת';
+  const colorHint = edge === 'glow' ? 'צבע ההילה סביב הכרטיסים' : 'צבע הקו סביב הכרטיסים';
+  const widthHint = edge === 'glow' ? 'כמה חזק וגדול יהיה הזוהר' : 'כמה עבה תהיה המסגרת';
+
+  return (
+    '<div class="cards-section-design">' +
+      '<h3 class="cards-section-design-title">עיצוב כרטיסים</h3>' +
+      '<div class="form-grid form-grid--design">' +
+        '<div class="form-field">' +
+          '<label>צבע הרקע</label>' +
+          '<div class="hsla-field" id="sectionCardFlatBgPicker" data-hsla-for="sectionCardFlatBg">' +
+            '<button type="button" class="hsla-swatch" title="בחירת צבע הרקע" aria-label="בחירת צבע הרקע"></button>' +
+            '<span class="color-hex" id="sectionCardFlatBgHex">' + escapeHtml(bg) + '</span>' +
+            '<input type="hidden" id="sectionCardFlatBg" value="' + escapeHtml(bg) + '">' +
+          '</div>' +
+          '<p class="field-subhint">הצבע של כל המשטח השטוח</p>' +
+        '</div>' +
+        '<div class="form-field form-field--full">' +
+          '<span class="field-label">שוליים</span>' +
+          '<div class="edit-seg" role="radiogroup" aria-label="סוג שוליים">' +
+            '<label class="edit-seg-btn" for="sectionCardEdgeOutline" title="קו מסביב לכרטיס">' +
+              '<input type="radio" name="sectionCardFlatEdge" id="sectionCardEdgeOutline" value="outline"' + (edge === 'outline' ? ' checked' : '') + '>' +
+              '<span>מסגרת</span>' +
+            '</label>' +
+            '<label class="edit-seg-btn" for="sectionCardEdgeGlow" title="זוהר רך סביב הכרטיס">' +
+              '<input type="radio" name="sectionCardFlatEdge" id="sectionCardEdgeGlow" value="glow"' + (edge === 'glow' ? ' checked' : '') + '>' +
+              '<span>זוהר</span>' +
+            '</label>' +
+            '<label class="edit-seg-btn" for="sectionCardEdgeNone" title="בלי מסגרת ובלי זוהר">' +
+              '<input type="radio" name="sectionCardFlatEdge" id="sectionCardEdgeNone" value="none"' + (edge === 'none' ? ' checked' : '') + '>' +
+              '<span>בלי</span>' +
+            '</label>' +
+          '</div>' +
+          '<p class="field-subhint">מסגרת = קו חד · זוהר = הילה רכה · בלי = ללא אפקט</p>' +
+        '</div>' +
+        '<div class="form-field" id="sectionCardOutlineColorWrap"' + (hasEdgeFx ? '' : ' hidden') + '>' +
+          '<label id="sectionCardOutlineColorLabel">' + colorLabel + '</label>' +
+          '<div class="hsla-field" id="sectionCardOutlineColorPicker" data-hsla-for="sectionCardOutlineColor">' +
+            '<button type="button" class="hsla-swatch" title="בחירת צבע" aria-label="בחירת צבע מסגרת או זוהר"></button>' +
+            '<span class="color-hex" id="sectionCardOutlineColorHex">' + escapeHtml(outline) + '</span>' +
+            '<input type="hidden" id="sectionCardOutlineColor" value="' + escapeHtml(outline) + '">' +
+          '</div>' +
+          '<p class="field-subhint" id="sectionCardOutlineColorHint">' + colorHint + '</p>' +
+        '</div>' +
+        '<div class="form-field form-field--full" id="sectionCardOutlineWidthWrap"' + (hasEdgeFx ? '' : ' hidden') + '>' +
+          '<label for="sectionCardOutlineWidth" id="sectionCardOutlineWidthLabel">' + widthLabel +
+            ' <span class="field-value" id="sectionCardOutlineWidthValue">' + width + 'px</span></label>' +
+          '<input type="range" id="sectionCardOutlineWidth" min="1" max="20" step="1" value="' + width +
+            '" style="width:100%; accent-color: var(--site-secondary, #e31c23);">' +
+          '<p class="field-subhint" id="sectionCardOutlineWidthHint">' + widthHint + '</p>' +
+        '</div>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function syncSectionCardDesignUi() {
+  const checked = document.querySelector('input[name="sectionCardFlatEdge"]:checked');
+  const edge = normalizeFlatEdge(checked ? checked.value : 'outline');
+  const hasEdgeFx = edge === 'outline' || edge === 'glow';
+  const colorWrap = document.getElementById('sectionCardOutlineColorWrap');
+  const widthWrap = document.getElementById('sectionCardOutlineWidthWrap');
+  if (colorWrap) colorWrap.hidden = !hasEdgeFx;
+  if (widthWrap) widthWrap.hidden = !hasEdgeFx;
+
+  const widthEl = document.getElementById('sectionCardOutlineWidth');
+  const widthNum = widthEl ? widthEl.value : '2';
+  const colorLabel = document.getElementById('sectionCardOutlineColorLabel');
+  const colorHint = document.getElementById('sectionCardOutlineColorHint');
+  const widthLabelEl = document.getElementById('sectionCardOutlineWidthLabel');
+  const widthHint = document.getElementById('sectionCardOutlineWidthHint');
+
+  if (edge === 'glow') {
+    if (colorLabel) colorLabel.textContent = 'צבע זוהר';
+    if (colorHint) colorHint.textContent = 'צבע ההילה סביב הכרטיסים';
+    if (widthLabelEl) widthLabelEl.innerHTML = 'עוצמת זוהר <span class="field-value" id="sectionCardOutlineWidthValue">' + widthNum + 'px</span>';
+    if (widthHint) widthHint.textContent = 'כמה חזק וגדול יהיה הזוהר';
+  } else {
+    if (colorLabel) colorLabel.textContent = 'צבע מסגרת';
+    if (colorHint) colorHint.textContent = 'צבע הקו סביב הכרטיסים';
+    if (widthLabelEl) widthLabelEl.innerHTML = 'עובי מסגרת <span class="field-value" id="sectionCardOutlineWidthValue">' + widthNum + 'px</span>';
+    if (widthHint) widthHint.textContent = 'כמה עבה תהיה המסגרת';
+  }
+}
+
+function bindCardsSectionDesignFields(section) {
+  const sectionId = getCardsSectionIdFromEditKey(section);
+
+  function savePatch(patch) {
+    setActiveCardsSectionId(sectionId);
+    updateActiveCardsSectionConfig(patch);
+    syncSectionCardDesignUi();
+  }
+
+  setupHslaField(document.getElementById('sectionCardFlatBgPicker'), function (hex) {
+    const hexEl = document.getElementById('sectionCardFlatBgHex');
+    if (hexEl) hexEl.textContent = colorToDisplayHex(hex);
+    savePatch({ cardFlatBgColor: hex });
+  });
+  setHslaFieldValue('sectionCardFlatBg', document.getElementById('sectionCardFlatBg').value);
+
+  setupHslaField(document.getElementById('sectionCardOutlineColorPicker'), function (hex) {
+    const hexEl = document.getElementById('sectionCardOutlineColorHex');
+    if (hexEl) hexEl.textContent = colorToDisplayHex(hex);
+    savePatch({ cardOutlineColor: hex });
+  });
+  setHslaFieldValue('sectionCardOutlineColor', document.getElementById('sectionCardOutlineColor').value);
+
+  document.querySelectorAll('input[name="sectionCardFlatEdge"]').forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      savePatch({ cardFlatEdge: normalizeFlatEdge(radio.value) });
+    });
+  });
+
+  const widthEl = document.getElementById('sectionCardOutlineWidth');
+  if (widthEl) {
+    widthEl.addEventListener('input', function () {
+      const width = clampCardOutlineWidth(widthEl.value);
+      const valueEl = document.getElementById('sectionCardOutlineWidthValue');
+      if (valueEl) valueEl.textContent = width + 'px';
+      savePatch({ cardOutlineWidth: width });
+    });
+  }
+
+  syncSectionCardDesignUi();
 }
 
 function bindCardsSectionTitleField(section) {
