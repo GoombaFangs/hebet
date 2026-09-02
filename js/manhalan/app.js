@@ -704,6 +704,9 @@ function isCategoryTextEditing() {
 }
 
 function canUseInlineColorToolbar() {
+  // סרגל הכלים משותף עם מחולל המארזים: כשקיימת עריכת טקסט פעילה שם, מאפשרים לו
+  // להשתמש ברכיב הצבע (ראו js/pack/pack.js -> window.HebetPackText).
+  if (window.HebetPackText && window.HebetPackText.hasActiveText()) return true;
   if (isWizardPreviewTextEditing()) return true;
   if (editMode && isCategoryTextEditing()) return true;
   return !!(editMode && activeInlineEdit && activeInlineEdit.el && getInlineEditSpec(activeInlineEdit.el));
@@ -849,6 +852,10 @@ function applyWizardPreviewTextSize(rawSize) {
 }
 
 function applyInlineTextColor(hex) {
+  if (window.HebetPackText && window.HebetPackText.hasActiveText()) {
+    window.HebetPackText.applyColor(hex);
+    return;
+  }
   if (isWizardPreviewTextEditing()) {
     applyWizardPreviewTextColor(hex);
     return;
@@ -1151,6 +1158,10 @@ function applyCategoryTextColor(hex) {
 function syncInlineTextColorControl() {
   const field = document.getElementById('inlineTextColorPicker');
   if (!field) return;
+  if (window.HebetPackText && window.HebetPackText.hasActiveText()) {
+    window.HebetPackText.syncToolbar();
+    return;
+  }
   const enabled = canUseInlineColorToolbar();
   field.classList.toggle('is-disabled', !enabled);
   const swatch = field.querySelector('.hsla-swatch');
@@ -1183,6 +1194,10 @@ function syncInlineTextColorControl() {
 }
 
 function applyInlineTextSize(rawSize) {
+  if (window.HebetPackText && window.HebetPackText.hasActiveText()) {
+    window.HebetPackText.applySize(rawSize);
+    return;
+  }
   if (isWizardPreviewTextEditing()) {
     applyWizardPreviewTextSize(rawSize);
     return;

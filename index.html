@@ -7,9 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/shared/shell.css?v=gate-pro">
+  <link rel="stylesheet" href="css/shared/shell.css?v=pack-new-cube">
   <link rel="stylesheet" href="css/manhalan/style.css?v=gate-pro">
-  <link rel="stylesheet" href="css/pack/pack.css?v=pack-header-panel">
+  <link rel="stylesheet" href="css/pack/pack.css?v=pack-textfix-v1">
 </head>
 <body data-app-mode="edit" class="gate-open" data-generator="">
 
@@ -51,6 +51,7 @@
   <header class="site-toolbar">
     <div class="site-toolbar-actions">
       <button type="button" class="btn-new" id="btnNew">+ כרטיס חדש</button>
+      <button type="button" class="btn-new" id="btnPackNew">+ קובייה חדשה</button>
       <button type="button" class="btn-edit" id="btnEdit">עריכה</button>
       <div class="settings-wrap" id="settingsWrap">
         <button type="button" class="btn-settings" id="btnSettings" aria-haspopup="menu" aria-expanded="false" aria-controls="settingsMenu">הגדרות</button>
@@ -490,7 +491,14 @@
           <div class="pack-header-image" id="packHeaderImage"></div>
         </div>
 
-        <button type="button" class="home-section-edit pack-header-edit" id="packHeaderEdit" hidden title="עריכת כותרת">✎</button>
+        <div class="pack-header-logos" id="packHeaderLogos"></div>
+
+        <div class="pack-header-text" id="packHeaderText">
+          <h1 class="pack-header-title" id="packHeaderTitle" data-placeholder="כותרת המארז" spellcheck="false"></h1>
+          <p class="pack-header-subtitle" id="packHeaderSubtitle" data-placeholder="כותרת משנה" spellcheck="false"></p>
+        </div>
+
+        <button type="button" class="pack-section-edit pack-header-edit" id="packHeaderEdit" hidden title="עריכת כותרת">✎</button>
 
         <div class="pack-header-drop" id="packHeaderDrop" hidden>
           <span>גררו תמונה לכאן</span>
@@ -500,69 +508,45 @@
           <span class="pack-header-resize-grip"></span>
         </button>
       </header>
-      <div class="pack-body" id="packBody"></div>
+
+      <div class="pack-body" id="packBody">
+        <section class="pack-section pack-cards" id="packCards" data-pack-section="cards">
+          <button type="button" class="pack-section-edit pack-cards-edit" id="packCardsEdit" hidden title="עריכת אזור הקוביות">✎</button>
+          <div class="pack-cards-grid" id="packCardsGrid"></div>
+          <button type="button" class="pack-cards-resize" id="packCardsResize" hidden title="גררו לשינוי גובה האזור" aria-label="שינוי גובה אזור הקוביות">
+            <span class="pack-cards-resize-grip"></span>
+          </button>
+        </section>
+
+        <section class="pack-section pack-closing" id="packClosing" data-pack-section="closing">
+          <button type="button" class="pack-section-edit pack-closing-edit" id="packClosingEdit" hidden title="עריכת אזור תחתון">✎</button>
+          <div class="pack-closing-items" id="packClosingItems"></div>
+          <a class="pack-dev-team-btn" id="packDevTeamBtn" href="#" target="_blank" rel="noopener noreferrer" hidden>
+            <span class="pack-dev-team-label" id="packDevTeamLabel" spellcheck="false">צוות פיתוח</span>
+          </a>
+          <button type="button" class="pack-closing-resize" id="packClosingResize" hidden title="גררו לשינוי גובה האזור" aria-label="שינוי גובה אזור תחתון">
+            <span class="pack-closing-resize-grip"></span>
+          </button>
+        </section>
+      </div>
     </div>
 
-    <div class="pack-edit-overlay" id="packHeaderOverlay" hidden>
-      <div class="home-edit-modal pack-edit-modal" role="dialog" aria-labelledby="packHeaderEditTitle" aria-modal="true">
-        <div class="wizard-header">
-          <h2 id="packHeaderEditTitle">עריכת כותרת</h2>
-          <button type="button" class="wizard-close" id="packHeaderEditClose" aria-label="סגירה">×</button>
+    <!-- חלונית עריכה כללית של מחולל המארז — נעשה בה שימוש חוזר לכל הסקשנים -->
+    <div class="pack-edit-overlay" id="packEditOverlay" hidden>
+      <div class="pack-edit-modal" role="dialog" aria-labelledby="packEditTitle" aria-modal="true">
+        <div class="pack-edit-header">
+          <h2 id="packEditTitle">עריכה</h2>
+          <button type="button" class="pack-edit-close" id="packEditClose" aria-label="סגירה">×</button>
         </div>
-        <form id="packHeaderForm" class="home-edit-form">
-          <div class="home-edit-body">
-            <p class="field-subhint pack-edit-hint">כאן מגדירים את רקע הכותרת. אפשר צבע או תמונה, ואז לכוון שקיפות וגובה.</p>
-
-            <section class="home-header-editor-item">
-              <div class="pack-edit-card-head">רקע</div>
-              <div class="edit-seg" role="radiogroup" aria-label="סוג רקע כותרת">
-                <label class="edit-seg-btn" for="packHeaderModeColor">
-                  <input type="radio" name="packHeaderMode" id="packHeaderModeColor" value="color" checked>
-                  <span>צבע</span>
-                </label>
-                <label class="edit-seg-btn" for="packHeaderModeImage">
-                  <input type="radio" name="packHeaderMode" id="packHeaderModeImage" value="image">
-                  <span>תמונה</span>
-                </label>
-              </div>
-              <div class="hsla-field pack-edit-color" id="packHeaderColorPicker" data-hsla-for="packHeaderColorValue">
-                <span>צבע כותרת</span>
-                <button type="button" class="hsla-swatch" id="packHeaderColorSwatch" title="בחירת צבע כותרת" aria-label="בחירת צבע כותרת"></button>
-                <span class="color-hex" id="packHeaderColorHex">#3d403c</span>
-                <input type="hidden" id="packHeaderColorValue" value="#3d403c">
-              </div>
-            </section>
-
-            <section class="home-header-editor-item">
-              <div class="pack-edit-card-head">תמונה</div>
-              <label class="pack-edit-upload" for="packHeaderImageInput" id="packHeaderUploadBtn">
-                <input type="file" id="packHeaderImageInput" accept="image/*" hidden>
-                <span>העלאת תמונה / החלפה</span>
-              </label>
-              <img class="pack-edit-preview" id="packHeaderImagePreview" alt="" hidden>
-              <button type="button" class="pack-header-clear" id="packHeaderImageClear" hidden>הסרת תמונה</button>
-            </section>
-
-            <section class="home-header-editor-item">
-              <div class="pack-edit-card-head">התאמה</div>
-              <label class="pack-edit-control" for="packHeaderOpacity">
-                <span>שקיפות</span>
-                <input type="range" id="packHeaderOpacity" min="0" max="100" step="1" value="100" aria-label="שקיפות כותרת">
-                <input type="number" id="packHeaderOpacityNum" min="0" max="100" step="1" value="100" inputmode="numeric" aria-label="שקיפות באחוזים">
-                <span class="pack-edit-unit">%</span>
-              </label>
-              <label class="pack-edit-control" for="packHeaderHeight">
-                <span>גובה</span>
-                <input type="range" id="packHeaderHeight" min="72" max="280" step="1" value="108" aria-label="גובה כותרת">
-                <input type="number" id="packHeaderHeightNum" min="72" max="280" step="1" value="108" inputmode="numeric" aria-label="גובה בפיקסלים">
-                <span class="pack-edit-unit">px</span>
-              </label>
-            </section>
+        <form id="packEditForm" class="pack-edit-form">
+          <div class="pack-edit-body" id="packEditBody">
+            <p class="pack-edit-hint" id="packEditHint" hidden></p>
+            <div id="packEditFields"></div>
           </div>
-          <div class="wizard-nav home-edit-nav">
-            <button type="button" class="wizard-nav-btn wizard-nav-btn--back" id="packHeaderCancel">ביטול</button>
-            <span class="wizard-nav-spacer" aria-hidden="true"></span>
-            <button type="submit" class="wizard-nav-btn wizard-nav-btn--finish">✓ שמירה</button>
+          <div class="pack-edit-nav">
+            <button type="button" class="pack-edit-btn pack-edit-btn--back" id="packEditCancel">ביטול</button>
+            <span class="pack-edit-nav-spacer" aria-hidden="true"></span>
+            <button type="submit" class="pack-edit-btn pack-edit-btn--finish">✓ שמירה</button>
           </div>
         </form>
       </div>
@@ -650,7 +634,7 @@
   </div>
 
   <script src="js/shared/shell.js?v=generators-split"></script>
-  <script src="js/manhalan/app.js?v=generators-split"></script>
-  <script src="js/pack/pack.js?v=pack-header-panel"></script>
+  <script src="js/manhalan/app.js?v=pack-inline-text-v1"></script>
+  <script src="js/pack/pack.js?v=pack-textfix-v1"></script>
 </body>
 </html>

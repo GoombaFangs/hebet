@@ -18,3 +18,15 @@ body[data-generator="manhalan"] #manhalanApp,
 body[data-generator="pack"] #packApp {
   display: block;
 }
+
+/* כפתורי הסרגל ששייכים למחולל אחד בלבד:
+   מנהלן — אשף כרטיס חדש + תפריט הגדרות (טעינה/איפוס/ייצוא).
+   מארז — הוספת קובייה. שאר הסרגל (עריכה, ערכת נושא) משותף. */
+body.is-pack #btnNew,
+body.is-pack #settingsWrap {
+  display: none !important;
+}
+
+body:not(.is-pack) #btnPackNew {
+  display: none !important;
+}
