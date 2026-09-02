@@ -5,7 +5,7 @@ const FONTS_DB_NAME = 'hebet-fonts';
 const FONTS_STORE = 'fonts';
 const HEBET_BOOTSTRAP_ID = 'hebet-bootstrap';
 const HEBET_BOOTSTRAP_VERSION = 1;
-const HEBET_EXPORT_FILENAME = 'hebet-portal.html';
+const HEBET_EXPORT_FILENAME = 'גרסת-לקוח-מנהלן.html';
 
 const APP_MODE = (function detectAppMode() {
   if (document.body) {
@@ -25,6 +25,8 @@ const DEFAULT_SITE_FONT = "'NarkisBlockCondensedMF', 'Heebo', sans-serif";
 const HEEBO_FONT = "'Heebo', sans-serif";
 const LEGACY_DEFAULT_SITE_FONT = "'Segoe UI', Tahoma, Arial, sans-serif";
 const SITE_FONT_DEFAULT_VERSION = 3;
+
+const FONT_UPLOAD_VALUE = '__hebet-upload-font__';
 
 const BUILTIN_FONTS = [
   { value: DEFAULT_SITE_FONT, label: 'NarkisBlockCondensedMF' },
@@ -733,6 +735,10 @@ function bindInlineFormattingToolbarGuard() {
     }
     if (sizeControl) {
       if (!canUseInlineFormattingToolbar()) return;
+      if (e.target && e.target.closest('input[type="number"]')) {
+        saveInlineTextSelection();
+        return;
+      }
       e.preventDefault();
       saveInlineTextSelection();
     }
@@ -841,14 +847,7 @@ function applyWizardPreviewTextSize(rawSize) {
   if (spec.field === 'pageName') wizardData.titleSize = size;
   else if (spec.field === 'notes') wizardData.notesSize = size;
   patchWizardPreviewCardTheme();
-  const range = document.getElementById('inlineTextSize');
-  const valueEl = document.getElementById('inlineTextSizeValue');
-  if (range) {
-    range.min = String(cfg.min);
-    range.max = String(cfg.max);
-    range.value = String(size);
-  }
-  if (valueEl) valueEl.textContent = String(size);
+  setInlineTextSizeFields(size, { min: cfg.min, max: cfg.max });
 }
 
 function applyInlineTextColor(hex) {
@@ -1094,52 +1093,69 @@ function setInlineEditColor(home, spec, el, color) {
   return css;
 }
 
+function setInlineTextSizeFields(size, bounds) {
+  const range = document.getElementById('inlineTextSize');
+  const num = document.getElementById('inlineTextSizeNum');
+  if (bounds) {
+    if (bounds.min != null) {
+      if (range) range.min = String(bounds.min);
+      if (num) num.min = String(bounds.min);
+    }
+    if (bounds.max != null) {
+      if (range) range.max = String(bounds.max);
+      if (num) num.max = String(bounds.max);
+    }
+  }
+  if (size == null) return;
+  if (range) range.value = String(size);
+  if (num) num.value = String(size);
+}
+
+function setInlineTextSizeEnabled(enabled) {
+  const control = document.getElementById('inlineTextSizeControl');
+  const range = document.getElementById('inlineTextSize');
+  const num = document.getElementById('inlineTextSizeNum');
+  if (control) control.classList.toggle('is-disabled', !enabled);
+  if (range) range.disabled = !enabled;
+  if (num) num.disabled = !enabled;
+}
+
 function syncInlineTextSizeControl() {
   const control = document.getElementById('inlineTextSizeControl');
   const range = document.getElementById('inlineTextSize');
-  const valueEl = document.getElementById('inlineTextSizeValue');
-  if (!control || !range || !valueEl) return;
+  if (!control || !range) return;
 
   const enabled = canUseInlineFormattingToolbar();
 
   if (!enabled) {
-    control.classList.add('is-disabled');
-    range.disabled = true;
+    setInlineTextSizeEnabled(false);
     syncInlineTextColorControl();
     return;
   }
 
   if (isWizardPreviewTextEditing()) {
-    control.classList.remove('is-disabled');
-    range.disabled = false;
+    setInlineTextSizeEnabled(true);
     const spec = wizardPreviewTextEdit.spec;
     const cfg = getWizardPreviewSizeSpec(spec.field);
     const stored = spec.field === 'pageName'
       ? wizardData.titleSize
       : wizardData.notesSize;
     const size = clampFontSize(stored, cfg.fallback, cfg.max);
-    range.min = String(cfg.min);
-    range.max = String(cfg.max);
-    range.value = String(size);
-    valueEl.textContent = String(size);
+    setInlineTextSizeFields(size, { min: cfg.min, max: cfg.max });
     syncInlineTextColorControl();
     return;
   }
 
   const cfg = INLINE_EDIT_SIZE_FIELDS[activeInlineEdit.key];
   if (!cfg) {
-    control.classList.add('is-disabled');
-    range.disabled = true;
+    setInlineTextSizeEnabled(false);
     syncInlineTextColorControl();
     return;
   }
 
-  control.classList.remove('is-disabled');
-  range.disabled = false;
-  range.max = String(cfg.max);
+  setInlineTextSizeEnabled(true);
   const size = getInlineEditFontSize(loadHome(), activeInlineEdit.key);
-  range.value = String(size);
-  valueEl.textContent = String(size);
+  setInlineTextSizeFields(size, { min: 10, max: cfg.max });
   syncInlineTextColorControl();
 }
 
@@ -1214,11 +1230,7 @@ function applyInlineTextSize(rawSize) {
   if (size == null) return;
   saveHome(home);
   activeInlineEdit.el.style.fontSize = size + 'px';
-
-  const range = document.getElementById('inlineTextSize');
-  const valueEl = document.getElementById('inlineTextSizeValue');
-  if (range) range.value = String(size);
-  if (valueEl) valueEl.textContent = String(size);
+  setInlineTextSizeFields(size);
 }
 
 function clampNumber(value, min, max) {
@@ -1877,6 +1889,10 @@ function setHslaFieldValue(fieldOrInputId, value) {
 window.HebetColor = {
   setupHslaField: setupHslaField,
   setHslaFieldValue: setHslaFieldValue,
+};
+
+window.HebetChrome = {
+  applyTheme: applySiteChrome,
 };
 
 function formatDate(dateStr) {
@@ -3839,37 +3855,43 @@ async function deleteCard(id) {
   renderCards(cards);
 }
 
-function toggleEditMode() {
-  if (IS_USER_MODE) return;
+let editModeToggleBusy = false;
+
+async function savePendingEditsBeforeLeavingEditMode() {
+  if (isPackGeneratorActive()) {
+    if (window.HebetPack && typeof window.HebetPack.commitPendingEdits === 'function') {
+      return window.HebetPack.commitPendingEdits() !== false;
+    }
+    return true;
+  }
   if (activeInlineEdit) commitInlineEdit();
-  activeCategoryTextEdit = null;
-  const wasEditMode = editMode;
-  editMode = !editMode;
-  btnEdit.textContent = editMode ? 'סיום עריכה' : 'עריכה';
-  btnEdit.classList.toggle('active', editMode);
-  forEachCardsGrid(function (grid) {
-    grid.classList.toggle('edit-mode', editMode);
-  });
-  document.body.classList.toggle('page-edit-mode', editMode);
-  if (wasEditMode && !editMode) {
-    saveAllCardsSectionsFromDom();
+  if (isCategoryTextEditing()) {
+    saveOrderFromDom(activeCategoryTextEdit.el);
+    activeCategoryTextEdit = null;
   }
-  if (!editMode && isCardsHomeSection(editingHomeSection)) {
-    homeEditCommitted = true;
-    closeHomeEditor();
+  if (editingHomeSection && homeEditOverlay && !homeEditOverlay.hidden) {
+    await saveHomeEditor({ preventDefault: function () {} });
+    if (editingHomeSection) return false;
   }
-  unmountCardsLayoutBarFromEditor();
-  const home = loadHome();
-  syncHomeSectionControls(home);
-  syncCategoriesToolbar(home);
-  syncResizeHandlesVisibility();
-  renderHomeHeader(home);
-  renderFloatMenu(home);
-  renderCards(loadCards());
-  renderClosingDevTeam('closing', home);
-  if (home.hasClosing2) renderClosingDevTeam('closing2', home);
-  syncInlineEditableHosts();
-  syncInlineTextSizeControl();
+  return true;
+}
+
+async function toggleEditMode() {
+  if (IS_USER_MODE || editModeToggleBusy) return;
+  editModeToggleBusy = true;
+  try {
+    const currentlyOn = document.body.classList.contains('page-edit-mode');
+    editMode = currentlyOn;
+    if (currentlyOn) {
+      const saved = await savePendingEditsBeforeLeavingEditMode();
+      if (!saved) return;
+    }
+    if (activeInlineEdit) commitInlineEdit();
+    activeCategoryTextEdit = null;
+    applyEditModeState(!currentlyOn);
+  } finally {
+    editModeToggleBusy = false;
+  }
 }
 
 /* ===== תצוגה מקדימה חיה ===== */
@@ -5857,12 +5879,22 @@ function populateFontSelects() {
       select.appendChild(customGroup);
     }
 
-    setFontSelectValue(select, current);
+    const uploadGroup = document.createElement('optgroup');
+    uploadGroup.label = 'הוספה';
+    const uploadOpt = document.createElement('option');
+    uploadOpt.value = FONT_UPLOAD_VALUE;
+    uploadOpt.textContent = 'העלאת גופן…';
+    uploadGroup.appendChild(uploadOpt);
+    select.appendChild(uploadGroup);
+
+    const restore = current && current !== FONT_UPLOAD_VALUE ? current : DEFAULT_SITE_FONT;
+    setFontSelectValue(select, restore);
+    rememberSiteFont(select);
   });
 }
 
 function setFontSelectValue(select, value) {
-  if (!select || !value) return;
+  if (!select || !value || value === FONT_UPLOAD_VALUE) return;
   const exists = Array.prototype.some.call(select.options, function (opt) {
     return opt.value === value;
   });
@@ -5871,9 +5903,17 @@ function setFontSelectValue(select, value) {
     opt.value = value;
     opt.textContent = 'גופן שמור';
     opt.style.fontFamily = value;
-    select.appendChild(opt);
+    const uploadGroup = select.querySelector('optgroup[label="הוספה"]');
+    if (uploadGroup) select.insertBefore(opt, uploadGroup);
+    else select.appendChild(opt);
   }
   select.value = value;
+  rememberSiteFont(select);
+}
+
+function rememberSiteFont(select) {
+  if (!select || !select.value || select.value === FONT_UPLOAD_VALUE) return;
+  select.setAttribute('data-last-font', select.value);
 }
 
 async function handleFontUpload(file, target) {
@@ -5923,7 +5963,7 @@ async function handleFontUpload(file, target) {
     if (target === 'site') {
       const siteFont = document.getElementById('siteFont');
       if (siteFont) siteFont.value = cssValue;
-      updateHomeField({ siteFont: cssValue });
+      applyActiveGeneratorThemePatch({ siteFont: cssValue });
     }
   } catch (err) {
     console.error(err);
@@ -7192,37 +7232,44 @@ function renderFloatMenu(home) {
   requestAnimationFrame(syncFloatMenuFromViewport);
 }
 
-function applySiteTheme(home) {
-  home = ensureCardsSections(home || loadHome());
-  const bgColor = home.siteBgColor || DEFAULT_HOME.siteBgColor;
-  const bgImage = home.siteBgImage || '';
-  const secondary = home.siteSecondaryColor || DEFAULT_HOME.siteSecondaryColor;
-  const font = home.siteFont || DEFAULT_HOME.siteFont;
-  const sectionId = getActiveCardsSectionId();
-  const cfg = getCardsSectionConfig(home, sectionId);
-  const perRow = Math.min(6, Math.max(2, Number(cfg.cardsPerRow) || DEFAULT_HOME.cardsPerRow));
-  const gap = Math.min(48, Math.max(4, Number(cfg.cardsGap) || DEFAULT_HOME.cardsGap));
+function applySiteChrome(theme) {
+  theme = theme || {};
+  const bgColor = theme.siteBgColor || DEFAULT_HOME.siteBgColor;
+  const bgImage = typeof theme.siteBgImage === 'string' ? theme.siteBgImage : '';
+  const font = theme.siteFont || DEFAULT_HOME.siteFont;
 
   document.body.style.setProperty('--site-bg-color', colorToCss(bgColor));
   document.body.style.setProperty(
     '--site-bg-image',
     bgImage ? 'url(' + JSON.stringify(bgImage) + ')' : 'none'
   );
-  document.body.style.setProperty('--site-secondary', colorToCss(secondary));
   document.body.style.setProperty('--site-font', font);
-  document.body.classList.remove('cards-colored');
 
   const fontSelect = document.getElementById('siteFont');
   const clearBtn = document.getElementById('siteBgClear');
+  setHslaFieldValue('siteBgColor', bgColor);
+  if (fontSelect) setFontSelectValue(fontSelect, font);
+  if (clearBtn) clearBtn.hidden = !bgImage;
+}
+
+function applySiteTheme(home) {
+  home = ensureCardsSections(home || loadHome());
+  const secondary = home.siteSecondaryColor || DEFAULT_HOME.siteSecondaryColor;
+  const sectionId = getActiveCardsSectionId();
+  const cfg = getCardsSectionConfig(home, sectionId);
+  const perRow = Math.min(6, Math.max(2, Number(cfg.cardsPerRow) || DEFAULT_HOME.cardsPerRow));
+  const gap = Math.min(48, Math.max(4, Number(cfg.cardsGap) || DEFAULT_HOME.cardsGap));
+
+  applySiteChrome(home);
+  document.body.style.setProperty('--site-secondary', colorToCss(secondary));
+  document.body.classList.remove('cards-colored');
+
   const perRowInput = document.getElementById('cardsPerRow');
   const gapInput = document.getElementById('cardsGap');
   const perRowValue = document.getElementById('cardsPerRowValue');
   const gapValue = document.getElementById('cardsGapValue');
 
   setHslaFieldValue('siteSecondaryColor', secondary);
-  setHslaFieldValue('siteBgColor', bgColor);
-  if (fontSelect) setFontSelectValue(fontSelect, font);
-  if (clearBtn) clearBtn.hidden = !bgImage;
   if (perRowInput) perRowInput.value = String(perRow);
   if (gapInput) gapInput.value = String(gap);
   if (perRowValue) perRowValue.textContent = String(perRow);
@@ -7241,6 +7288,58 @@ function applySiteFontToAllTexts(font) {
     }
   });
   if (changed) saveCards(cards);
+}
+
+function applyActiveGeneratorThemePatch(patch) {
+  if (isPackGeneratorActive() && window.HebetPack && typeof window.HebetPack.applyThemePatch === 'function') {
+    return window.HebetPack.applyThemePatch(patch);
+  }
+  return updateHomeField(patch);
+}
+
+function persistCurrentEditMode() {
+  if (!window.HebetShell || typeof window.HebetShell.setSavedEditMode !== 'function') return;
+  const generator = window.HebetShell.getGenerator();
+  if (generator) window.HebetShell.setSavedEditMode(generator, editMode);
+}
+
+function applyEditModeState(want) {
+  if (IS_USER_MODE) want = false;
+  const next = !!want;
+  const wasEditMode = editMode;
+  editMode = next;
+  if (btnEdit) {
+    btnEdit.textContent = editMode ? 'סיום עריכה' : 'עריכה';
+    btnEdit.classList.toggle('active', editMode);
+  }
+  forEachCardsGrid(function (grid) {
+    grid.classList.toggle('edit-mode', editMode);
+  });
+  document.body.classList.toggle('page-edit-mode', editMode);
+  if (wasEditMode && !editMode) {
+    saveAllCardsSectionsFromDom();
+  }
+  unmountCardsLayoutBarFromEditor();
+  const home = loadHome();
+  syncHomeSectionControls(home);
+  syncCategoriesToolbar(home);
+  syncResizeHandlesVisibility();
+  renderHomeHeader(home);
+  renderFloatMenu(home);
+  renderCards(loadCards());
+  renderClosingDevTeam('closing', home);
+  if (home.hasClosing2) renderClosingDevTeam('closing2', home);
+  syncInlineEditableHosts();
+  syncInlineTextSizeControl();
+  persistCurrentEditMode();
+}
+
+function restoreManhalanChrome() {
+  applySiteTheme(loadHome());
+  const want = window.HebetShell && typeof window.HebetShell.getSavedEditMode === 'function'
+    ? window.HebetShell.getSavedEditMode('manhalan')
+    : false;
+  applyEditModeState(want);
 }
 
 function updateHomeField(patch) {
@@ -9043,7 +9142,7 @@ function closeHomeEditor() {
 }
 
 async function saveHomeEditor(e) {
-  e.preventDefault();
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
   if (!editingHomeSection) return;
   if (activeInlineEdit) commitInlineEdit();
 
@@ -9170,7 +9269,14 @@ async function saveHomeEditor(e) {
 
 btnNew.addEventListener('click', openWizard);
 btnEdit.addEventListener('click', toggleEditMode);
-btnCancel.addEventListener('click', closeWizard);
+btnCancel.addEventListener('click', finishWizard);
+
+function isPackGeneratorActive() {
+  if (window.HebetShell && typeof window.HebetShell.getGenerator === 'function') {
+    return window.HebetShell.getGenerator() === 'pack';
+  }
+  return document.body.getAttribute('data-generator') === 'pack';
+}
 
 function isSettingsMenuOpen() {
   return !!(settingsMenu && !settingsMenu.hidden);
@@ -9302,6 +9408,7 @@ async function collectAppSnapshot() {
     version: HEBET_BOOTSTRAP_VERSION,
     exportedAt: new Date().toISOString(),
     mode: 'user',
+    generator: 'manhalan',
     home: home,
     cards: cards,
     fonts: fontsSerialized,
@@ -9369,16 +9476,14 @@ const PROJECT_SCRIPTS = [
 function buildExportedPortalHtml(snapshot, indexHtml, cssText, jsText, assetDataUrls) {
   const urls = assetDataUrls || {};
   let out = String(indexHtml || '');
-  out = out.replace(
-    '<body data-app-mode="edit" class="gate-open" data-generator="">',
-    '<body data-app-mode="user" class="user-mode gate-open" data-generator="">'
-  );
-  out = out.replace(
-    '<body data-app-mode="edit" class="gate-open">',
-    '<body data-app-mode="user" class="user-mode gate-open">'
-  );
-  out = out.replace('<body data-app-mode="edit">', '<body data-app-mode="user" class="user-mode gate-open">');
-  out = out.replace('<body>', '<body data-app-mode="user" class="user-mode gate-open">');
+  if (window.HebetShell && typeof window.HebetShell.applyClientExportShell === 'function') {
+    out = window.HebetShell.applyClientExportShell(out, 'manhalan');
+  } else {
+    out = out.replace(
+      /<body\b[^>]*>/i,
+      '<body data-app-mode="user" class="user-mode is-manhalan" data-generator="manhalan">'
+    );
+  }
   out = out.replace(/<link rel="stylesheet" href="css\/(?:shared\/shell|manhalan\/style|pack\/pack|style)\.css(?:\?[^"]*)?">\s*/g, '');
   out = out.replace('</head>', '<style>\n' + cssText + '\n</style>\n</head>');
 
@@ -9401,6 +9506,9 @@ function buildExportedPortalHtml(snapshot, indexHtml, cssText, jsText, assetData
 }
 
 async function fetchProjectAsset(path) {
+  if (window.HebetShell && typeof window.HebetShell.readProjectText === 'function') {
+    return window.HebetShell.readProjectText(path);
+  }
   const res = await fetch(path, { cache: 'no-store' });
   if (!res.ok) throw new Error('לא ניתן לקרוא ' + path);
   return res.text();
@@ -9410,14 +9518,34 @@ async function exportUserModeHtml() {
   if (IS_USER_MODE) return;
   closeSettingsModal();
 
-  let indexHtml;
-  let cssText;
-  let jsText;
-  let assetDataUrls = {};
+  const picker = window.HebetShell && typeof window.HebetShell.pickClientHtmlSave === 'function'
+    ? window.HebetShell.pickClientHtmlSave
+    : null;
+  const writer = window.HebetShell && typeof window.HebetShell.writeClientHtml === 'function'
+    ? window.HebetShell.writeClientHtml
+    : null;
+  const saveTarget = picker ? await picker(HEBET_EXPORT_FILENAME) : 'download';
+  if (!saveTarget) return;
+
+  if (typeof savePendingEditsBeforeLeavingEditMode === 'function') {
+    try { await savePendingEditsBeforeLeavingEditMode(); } catch (_) {}
+  }
+
+  let snapshot;
   try {
-    indexHtml = await fetchProjectAsset('index.html');
-    cssText = (await Promise.all(PROJECT_STYLES.map(fetchProjectAsset))).join('\n\n');
-    jsText = (await Promise.all(PROJECT_SCRIPTS.map(fetchProjectAsset))).join('\n\n');
+    snapshot = await collectAppSnapshot();
+  } catch (err) {
+    console.error(err);
+    alert('שגיאה באיסוף הנתונים לייצוא.');
+    return;
+  }
+
+  let html = '';
+  try {
+    const indexHtml = await fetchProjectAsset('index.html');
+    const cssText = (await Promise.all(PROJECT_STYLES.map(fetchProjectAsset))).join('\n\n');
+    const jsText = (await Promise.all(PROJECT_SCRIPTS.map(fetchProjectAsset))).join('\n\n');
+    const assetDataUrls = {};
     try {
       const imgRes = await fetch('assets/gate-bg.jpg', { cache: 'no-store' });
       if (imgRes.ok) {
@@ -9438,43 +9566,28 @@ async function exportUserModeHtml() {
     } catch (logoErr) {
       console.warn('Gate logo was not inlined into export', logoErr);
     }
+    html = buildExportedPortalHtml(snapshot, indexHtml, cssText, jsText, assetDataUrls);
   } catch (err) {
-    console.error(err);
-    alert(
-      'לא ניתן לייצא מהמיקום הנוכחי.\n' +
-      'פתחו את האתר דרך שרת מקומי (לא file://) ונסו שוב.'
-    );
-    return;
-  }
-
-  let snapshot;
-  try {
-    snapshot = await collectAppSnapshot();
-  } catch (err) {
-    console.error(err);
-    alert('שגיאה באיסוף הנתונים לייצוא.');
-    return;
-  }
-
-  const html = buildExportedPortalHtml(snapshot, indexHtml, cssText, jsText, assetDataUrls);
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-
-  if (window.showSaveFilePicker) {
-    try {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: HEBET_EXPORT_FILENAME,
-        types: [{ description: 'HTML', accept: { 'text/html': ['.html'] } }],
-      });
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
+    console.warn('Full export failed, using live snapshot', err);
+    if (!window.HebetShell || typeof window.HebetShell.buildLiveClientHtml !== 'function') {
+      alert('לא ניתן לייצא כרגע. נסו שוב.');
       return;
-    } catch (err) {
-      if (err && err.name === 'AbortError') return;
-      console.warn('showSaveFilePicker failed, falling back to download', err);
+    }
+    try {
+      html = await window.HebetShell.buildLiveClientHtml('manhalan', snapshot);
+    } catch (snapErr) {
+      console.error(snapErr);
+      alert('לא ניתן לייצא כרגע. נסו שוב.');
+      return;
     }
   }
 
+  if (writer) {
+    await writer(saveTarget, html, HEBET_EXPORT_FILENAME);
+    return;
+  }
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -9486,6 +9599,13 @@ async function exportUserModeHtml() {
 }
 
 function parseSnapshotFromHtmlText(htmlText) {
+  if (window.HebetShell && typeof window.HebetShell.parseClientExportHtml === 'function') {
+    const parsed = window.HebetShell.parseClientExportHtml(htmlText);
+    if (parsed.generator !== 'manhalan') {
+      throw new Error('הקובץ שייך למחולל המארז. טענו אותו כשהמארז פתוח, או השתמשו בטעינה הרגילה.');
+    }
+    return parsed.snapshot;
+  }
   const doc = new DOMParser().parseFromString(String(htmlText || ''), 'text/html');
   const bootstrapEl = doc.getElementById(HEBET_BOOTSTRAP_ID);
   if (!bootstrapEl || !String(bootstrapEl.textContent || '').trim()) {
@@ -9494,18 +9614,62 @@ function parseSnapshotFromHtmlText(htmlText) {
   return JSON.parse(bootstrapEl.textContent);
 }
 
-async function loadPortalFromHtmlFile(file) {
+async function loadClientHtmlFile(file) {
   if (!file) return;
   closeSettingsModal();
   try {
     const htmlText = await file.text();
-    const snapshot = parseSnapshotFromHtmlText(htmlText);
-    await importAppSnapshot(snapshot);
+    let parsed;
+    if (window.HebetShell && typeof window.HebetShell.parseClientExportHtml === 'function') {
+      parsed = window.HebetShell.parseClientExportHtml(htmlText);
+    } else {
+      parsed = { generator: 'manhalan', snapshot: parseSnapshotFromHtmlText(htmlText) };
+    }
+
+    const label = parsed.generator === 'pack' ? 'המארז' : 'המנהלן';
+    const ok = window.confirm(
+      'לטעון את גרסת הלקוח של ' + label + ' ולהמשיך לערוך אותה כאן?\n\n' +
+      'התוכן הנוכחי של המחולל הזה יוחלף.'
+    );
+    if (!ok) return;
+
+    if (parsed.generator === 'pack') {
+      if (!window.HebetPack || typeof window.HebetPack.importSnapshot !== 'function') {
+        throw new Error('מחולל המארז לא זמין');
+      }
+      window.HebetPack.importSnapshot(parsed.snapshot);
+    } else {
+      await importAppSnapshot(parsed.snapshot);
+    }
+
+    if (window.HebetShell && typeof window.HebetShell.setResumeGenerator === 'function') {
+      window.HebetShell.setResumeGenerator(parsed.generator);
+    }
     window.location.reload();
   } catch (err) {
     console.error(err);
     alert((err && err.message) ? err.message : 'לא הצלחנו לטעון את הקובץ');
   }
+}
+
+async function startLoadClientHtml() {
+  if (IS_USER_MODE) return;
+  closeSettingsModal();
+  let picked = 'input';
+  if (window.HebetShell && typeof window.HebetShell.pickClientHtmlOpen === 'function') {
+    picked = await window.HebetShell.pickClientHtmlOpen();
+  }
+  if (picked == null) return;
+  if (picked && picked !== 'input') {
+    await loadClientHtmlFile(picked);
+    return;
+  }
+  const loadInput = document.getElementById('settingsLoadInput');
+  if (loadInput) loadInput.click();
+}
+
+async function loadPortalFromHtmlFile(file) {
+  return loadClientHtmlFile(file);
 }
 
 function applyAppModeShell() {
@@ -9530,12 +9694,17 @@ function applyAppModeShell() {
 async function resetSiteToDefaults() {
   if (IS_USER_MODE) return;
   const ok = window.confirm(
-    'לאפס את האתר ולהתחיל מהתחלה?\n\n' +
+    'לאפס את מחולל המנהלן ולהתחיל מהתחלה?\n\n' +
     'כל הכרטיסים, עיצוב הדף והמדיה שנשמרו יימחקו. לא ניתן לבטל.'
   );
   if (!ok) return;
 
   closeSettingsModal();
+  closeHslaPopover();
+  closeWizard();
+  closeHomeEditor();
+  resetWizardData();
+
   try {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(HOME_STORAGE_KEY);
@@ -9556,7 +9725,15 @@ async function resetSiteToDefaults() {
     deleteIndexedDb(VIDEO_DB_NAME),
   ]);
 
-  window.location.reload();
+  populateFontSelects();
+  if (window.HebetShell && typeof window.HebetShell.setSavedEditMode === 'function') {
+    window.HebetShell.setSavedEditMode('manhalan', false);
+  }
+  const home = loadHome();
+  await renderHome(home);
+  renderCards(loadCards());
+  applyEditModeState(false);
+  syncSiteToolbarHeight();
 }
 
 if (btnSettings) {
@@ -9570,17 +9747,30 @@ if (settingsMenu) {
   settingsMenu.querySelectorAll('.settings-action').forEach(function (btn) {
     btn.addEventListener('click', function () {
       const action = btn.getAttribute('data-settings-action');
+      const packApi = window.HebetPack;
+      const usePack = isPackGeneratorActive() && packApi;
       if (action === 'reset') {
-        resetSiteToDefaults();
+        if (usePack && typeof packApi.reset === 'function') packApi.reset();
+        else resetSiteToDefaults();
         return;
       }
       if (action === 'export') {
-        exportUserModeHtml();
+        if (usePack && typeof packApi.exportHtml === 'function') packApi.exportHtml();
+        else exportUserModeHtml();
         return;
       }
       if (action === 'load') {
-        const loadInput = document.getElementById('settingsLoadInput');
-        if (loadInput) loadInput.click();
+        startLoadClientHtml().catch(function (err) {
+          console.error(err);
+          alert((err && err.message) ? err.message : 'לא הצלחנו לטעון את הקובץ');
+        });
+        return;
+      }
+      if (action === 'exit') {
+        closeSettingsModal();
+        if (window.HebetShell && typeof window.HebetShell.showGate === 'function') {
+          window.HebetShell.showGate();
+        }
         return;
       }
       closeSettingsModal();
@@ -9593,7 +9783,8 @@ if (settingsLoadInput) {
   settingsLoadInput.addEventListener('change', function (e) {
     const file = e.target.files && e.target.files[0];
     e.target.value = '';
-    if (file) loadPortalFromHtmlFile(file);
+    if (!file) return;
+    loadClientHtmlFile(file);
   });
 }
 
@@ -9603,8 +9794,25 @@ document.addEventListener('click', function (e) {
   closeSettingsModal();
 });
 
+document.addEventListener('hebet:generator-exit', function () {
+  closeSettingsModal();
+  closeHslaPopover();
+  closeWizard();
+  closeHomeEditor();
+  editMode = false;
+});
+
 document.getElementById('siteFont').addEventListener('change', function (e) {
-  updateHomeField({ siteFont: e.target.value });
+  const select = e.target;
+  if (select.value === FONT_UPLOAD_VALUE) {
+    const prev = select.getAttribute('data-last-font') || DEFAULT_SITE_FONT;
+    setFontSelectValue(select, prev);
+    const upload = document.getElementById('siteFontUpload');
+    if (upload) upload.click();
+    return;
+  }
+  rememberSiteFont(select);
+  applyActiveGeneratorThemePatch({ siteFont: select.value });
 });
 
 document.getElementById('siteFontUpload').addEventListener('change', async function (e) {
@@ -9617,12 +9825,12 @@ document.getElementById('siteBgImage').addEventListener('change', async function
   const file = e.target.files[0];
   if (!file) return;
   const dataUrl = await readFileAsDataURL(file, 1600, 16 / 9);
-  updateHomeField({ siteBgImage: dataUrl });
+  applyActiveGeneratorThemePatch({ siteBgImage: dataUrl });
   e.target.value = '';
 });
 
 document.getElementById('siteBgClear').addEventListener('click', function () {
-  updateHomeField({ siteBgImage: '' });
+  applyActiveGeneratorThemePatch({ siteBgImage: '' });
 });
 
 document.getElementById('cardsPerRow').addEventListener('input', function (e) {
@@ -9727,7 +9935,7 @@ if (homeIntroRestore) {
 }
 
 homeEditForm.addEventListener('submit', saveHomeEditor);
-document.getElementById('homeEditCancel').addEventListener('click', closeHomeEditor);
+document.getElementById('homeEditCancel').addEventListener('click', saveHomeEditor);
 document.getElementById('homeEditCancelBtn').addEventListener('click', closeHomeEditor);
 homeEditOverlay.addEventListener('click', function (e) {
   if (e.target === homeEditOverlay) closeHomeEditor();
@@ -9811,16 +10019,23 @@ setupHslaField(document.getElementById('inlineTextColorPicker'), function (hex) 
 });
 (function bindInlineTextSizeControl() {
   const range = document.getElementById('inlineTextSize');
-  if (!range) return;
-  range.addEventListener('input', function () {
-    applyInlineTextSize(range.value);
-  });
+  const num = document.getElementById('inlineTextSizeNum');
+  if (range) {
+    range.addEventListener('input', function () {
+      applyInlineTextSize(range.value);
+    });
+  }
+  if (num) {
+    num.addEventListener('input', function () {
+      applyInlineTextSize(num.value);
+    });
+    num.addEventListener('change', function () {
+      applyInlineTextSize(num.value);
+    });
+  }
 })();
-setupHslaField(document.getElementById('siteColorPicker'), function (hex) {
-  updateHomeField({ siteSecondaryColor: hex });
-});
 setupHslaField(document.getElementById('siteBgColorPicker'), function (hex) {
-  updateHomeField({ siteBgColor: hex });
+  applyActiveGeneratorThemePatch({ siteBgColor: hex });
 });
 bindSectionResizeHandles();
 syncResizeHandlesVisibility();
@@ -9848,7 +10063,8 @@ async function initApp() {
   await renderHome();
   renderCards(loadCards());
   if (window.HebetShell) {
-    window.HebetShell.onEnter(function () {
+    window.HebetShell.onEnter(function (name) {
+      if (name === 'manhalan') restoreManhalanChrome();
       syncSiteToolbarHeight();
       playPageEntrance();
     });

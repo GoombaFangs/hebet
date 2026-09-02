@@ -7,9 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/shared/shell.css?v=pack-new-cube">
-  <link rel="stylesheet" href="css/manhalan/style.css?v=gate-pro">
-  <link rel="stylesheet" href="css/pack/pack.css?v=pack-card-bg-icons">
+  <link rel="stylesheet" href="css/shared/shell.css?v=pack-settings">
+  <link rel="stylesheet" href="css/manhalan/style.css?v=toolbar-size-num">
+  <link rel="stylesheet" href="css/pack/pack.css?v=card-coming-soon">
 </head>
 <body data-app-mode="edit" class="gate-open" data-generator="">
 
@@ -49,47 +49,47 @@
   <!-- ===== כללי: סרגל כלים (מופיע בכל מחולל, לא בשער) ===== -->
   <div class="site-toolbar-shell" id="siteToolbar">
   <header class="site-toolbar">
-    <div class="site-toolbar-actions">
-      <button type="button" class="btn-new" id="btnNew">+ כרטיס חדש</button>
-      <button type="button" class="btn-new" id="btnPackNew">+ קובייה חדשה</button>
-      <button type="button" class="btn-edit" id="btnEdit">עריכה</button>
-      <div class="settings-wrap" id="settingsWrap">
-        <button type="button" class="btn-settings" id="btnSettings" aria-haspopup="menu" aria-expanded="false" aria-controls="settingsMenu">הגדרות</button>
-        <div class="settings-menu" id="settingsMenu" role="menu" aria-label="הגדרות" hidden>
-          <button type="button" class="settings-action" data-settings-action="load" role="menuitem">טעינה</button>
-          <button type="button" class="settings-action" data-settings-action="reset" role="menuitem">איפוס</button>
-          <button type="button" class="settings-action" data-settings-action="export" role="menuitem">ייצוא</button>
+    <div class="site-toolbar-start">
+      <div class="site-toolbar-brand" id="siteToolbarBrand">מחולל מנהלנים</div>
+      <div class="site-toolbar-actions">
+        <button type="button" class="btn-new" id="btnNew">+ כרטיס חדש</button>
+        <button type="button" class="btn-new" id="btnPackNew">+ קובייה חדשה</button>
+        <button type="button" class="btn-edit" id="btnEdit">עריכה</button>
+        <div class="settings-wrap" id="settingsWrap">
+          <button type="button" class="btn-settings" id="btnSettings" aria-haspopup="menu" aria-expanded="false" aria-controls="settingsMenu">הגדרות</button>
+          <div class="settings-menu" id="settingsMenu" role="menu" aria-label="הגדרות" hidden>
+            <button type="button" class="settings-action" data-settings-action="load" role="menuitem">טעינה</button>
+            <button type="button" class="settings-action" data-settings-action="reset" role="menuitem">איפוס</button>
+            <button type="button" class="settings-action" data-settings-action="export" role="menuitem">ייצוא</button>
+            <button type="button" class="settings-action" data-settings-action="exit" role="menuitem">יציאה</button>
+          </div>
         </div>
+        <input type="file" id="settingsLoadInput" accept=".html,text/html" hidden>
       </div>
-      <input type="file" id="settingsLoadInput" accept=".html,text/html" hidden>
     </div>
     <div class="site-toolbar-theme">
-      <div class="hsla-field site-theme-control" id="inlineTextColorPicker" data-hsla-for="inlineTextColor">
-        <span>צבע טקסט</span>
-        <button type="button" class="hsla-swatch" id="inlineTextColorSwatch" title="צבע הטקסט בעריכה" aria-label="צבע טקסט"></button>
-        <input type="hidden" id="inlineTextColor" value="#000000">
+      <div class="site-theme-cluster" id="inlineTextTools" title="צבע וגודל לטקסט שנמצא בעריכה">
+        <span>טקסט</span>
+        <div class="hsla-field site-theme-control" id="inlineTextColorPicker" data-hsla-for="inlineTextColor">
+          <button type="button" class="hsla-swatch" id="inlineTextColorSwatch" title="צבע הטקסט בעריכה" aria-label="צבע טקסט"></button>
+          <input type="hidden" id="inlineTextColor" value="#000000">
+        </div>
+        <div class="site-theme-control site-theme-size is-disabled" id="inlineTextSizeControl" title="גודל טקסט בעריכה ישירה">
+          <input type="range" id="inlineTextSize" min="10" max="56" step="1" value="16" disabled aria-label="גודל טקסט">
+          <input type="number" id="inlineTextSizeNum" min="10" max="56" step="1" value="16" inputmode="numeric" dir="ltr" disabled aria-label="גודל טקסט במספר">
+        </div>
       </div>
-      <label class="site-theme-control site-theme-size is-disabled" id="inlineTextSizeControl" for="inlineTextSize" title="גודל טקסט בעריכה ישירה">
-        <span>גודל טקסט</span>
-        <input type="range" id="inlineTextSize" min="10" max="56" step="1" value="16" disabled aria-label="גודל טקסט">
-        <strong id="inlineTextSizeValue">16</strong>
-      </label>
-      <div class="hsla-field site-theme-control" id="siteColorPicker" data-hsla-for="siteSecondaryColor">
-        <span>צבע אתר</span>
-        <button type="button" class="hsla-swatch" id="siteColorSwatch" title="צבע משני של האתר" aria-label="צבע אתר"></button>
-        <input type="hidden" id="siteSecondaryColor" value="#e31c23">
-      </div>
-      <div class="hsla-field site-theme-control" id="siteBgColorPicker" data-hsla-for="siteBgColor">
+      <div class="site-theme-cluster" title="צבע רקע ותמונת רקע של העמוד">
         <span>רקע</span>
-        <button type="button" class="hsla-swatch" id="siteBgColorSwatch" title="בחירת צבע רקע" aria-label="בחירת צבע רקע"></button>
-        <input type="hidden" id="siteBgColor" value="#ffffff">
-      </div>
-      <label class="site-theme-control site-theme-upload" for="siteBgImage">
-        <span>תמונת רקע</span>
+        <div class="hsla-field site-theme-control" id="siteBgColorPicker" data-hsla-for="siteBgColor">
+          <button type="button" class="hsla-swatch" id="siteBgColorSwatch" title="בחירת צבע רקע" aria-label="בחירת צבע רקע"></button>
+          <input type="hidden" id="siteBgColor" value="#ffffff">
+        </div>
+        <label class="site-theme-mini" for="siteBgImage" title="העלאת תמונת רקע">תמונה</label>
         <input type="file" id="siteBgImage" accept="image/*" hidden>
-      </label>
-      <button type="button" class="site-theme-clear" id="siteBgClear" hidden title="הסרת תמונת רקע">הסרת תמונה</button>
-      <label class="site-theme-control" for="siteFont">
+        <button type="button" class="site-theme-clear" id="siteBgClear" hidden title="הסרת תמונת רקע">הסרה</button>
+      </div>
+      <div class="site-theme-cluster site-theme-font" title="גופן האתר. להעלאת קובץ בחרו «העלאת גופן» בתחתית הרשימה">
         <span>גופן</span>
         <select id="siteFont" title="גופן האתר">
           <option value="'NarkisBlockCondensedMF', 'Heebo', sans-serif" selected>NarkisBlockCondensedMF</option>
@@ -105,11 +105,8 @@
           <option value="Georgia, serif">Georgia</option>
           <option value="'Courier New', Courier, monospace">Courier New</option>
         </select>
-      </label>
-      <label class="site-theme-control site-theme-upload" for="siteFontUpload">
-        <span>העלאת גופן</span>
         <input type="file" id="siteFontUpload" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2,application/font-woff,application/font-sfnt" hidden>
-      </label>
+      </div>
     </div>
   </header>
   </div>
@@ -494,9 +491,11 @@
         <div class="pack-header-logos" id="packHeaderLogos"></div>
 
         <div class="pack-header-text" id="packHeaderText">
-          <h1 class="pack-header-title" id="packHeaderTitle" data-placeholder="כותרת המארז" spellcheck="false"></h1>
-          <p class="pack-header-subtitle" id="packHeaderSubtitle" data-placeholder="כותרת משנה" spellcheck="false"></p>
+          <h1 class="pack-header-title" id="packHeaderTitle" data-placeholder="ראשי" spellcheck="false"></h1>
+          <p class="pack-header-subtitle" id="packHeaderSubtitle" data-placeholder="משני" spellcheck="false"></p>
         </div>
+
+        <p class="pack-header-hidden-note" id="packHeaderHiddenNote">הכותרת מוסתרת — לחצו על העיפרון להחזרה</p>
 
         <button type="button" class="pack-section-edit pack-header-edit" id="packHeaderEdit" hidden title="עריכת כותרת">✎</button>
 
@@ -520,6 +519,7 @@
 
         <section class="pack-section pack-closing" id="packClosing" data-pack-section="closing">
           <button type="button" class="pack-section-edit pack-closing-edit" id="packClosingEdit" hidden title="עריכת אזור תחתון">✎</button>
+          <p class="pack-closing-hidden-note" id="packClosingHiddenNote">האזור התחתון מוסתר — לחצו על העיפרון להחזרה</p>
           <div class="pack-closing-items" id="packClosingItems"></div>
           <a class="pack-dev-team-btn" id="packDevTeamBtn" href="#" target="_blank" rel="noopener noreferrer" hidden>
             <span class="pack-dev-team-label" id="packDevTeamLabel" spellcheck="false">צוות פיתוח</span>
@@ -633,8 +633,8 @@
     </label>
   </div>
 
-  <script src="js/shared/shell.js?v=generators-split"></script>
-  <script src="js/manhalan/app.js?v=pack-inline-text-v1"></script>
-  <script src="js/pack/pack.js?v=pack-card-bg-icons"></script>
+  <script src="js/shared/shell.js?v=client-load"></script>
+  <script src="js/manhalan/app.js?v=client-load"></script>
+  <script src="js/pack/pack.js?v=client-load"></script>
 </body>
 </html>

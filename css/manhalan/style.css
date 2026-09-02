@@ -386,6 +386,26 @@ body.gate-leaving .site-gate {
   font-size: 0.8125rem;
 }
 
+.site-toolbar-start {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.site-toolbar-brand {
+  flex: 0 0 auto;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: var(--toolbar-accent, #e4e4e8);
+  white-space: nowrap;
+  user-select: none;
+  line-height: 1;
+  padding-inline-end: 12px;
+  border-inline-end: 1px solid var(--toolbar-border);
+}
+
 .site-toolbar-actions {
   display: flex;
   align-items: center;
@@ -396,10 +416,72 @@ body.gate-leaving .site-gate {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 8px;
-  padding-inline-start: 14px;
+  gap: 6px;
+  padding-inline-start: 12px;
   margin-inline-start: 2px;
   border-inline-start: 1px solid var(--toolbar-border);
+}
+
+.site-theme-cluster {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--toolbar-surface);
+  border: 1px solid transparent;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--toolbar-text);
+  user-select: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.site-theme-cluster:hover {
+  background: var(--toolbar-surface-hover);
+  border-color: var(--toolbar-border);
+}
+
+.site-theme-cluster > span {
+  white-space: nowrap;
+  color: var(--toolbar-text-muted);
+}
+
+.site-theme-cluster .site-theme-control {
+  background: transparent;
+  border-color: transparent;
+  padding: 0;
+  min-height: 0;
+}
+
+.site-theme-cluster .site-theme-control:hover {
+  background: transparent;
+  border-color: transparent;
+}
+
+.site-theme-mini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 2px 8px;
+  border: 1px solid var(--toolbar-border);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--toolbar-text);
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.site-theme-mini:hover {
+  background: var(--toolbar-surface-hover);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--toolbar-accent);
 }
 
 .site-theme-control {
@@ -440,18 +522,37 @@ body.gate-leaving .site-gate {
 }
 
 .site-theme-size input[type="range"] {
-  width: 88px;
+  width: 76px;
   direction: ltr;
   accent-color: var(--toolbar-edit);
   cursor: pointer;
 }
 
-.site-theme-size strong {
-  min-width: 1.5rem;
-  font-variant-numeric: tabular-nums;
+.site-theme-size input[type="number"] {
+  width: 2.6rem;
+  flex: 0 0 2.6rem;
+  min-height: 24px;
+  padding: 2px 4px;
+  border: 1px solid var(--toolbar-border);
+  border-radius: 4px;
+  background: #252528;
   color: var(--toolbar-accent);
+  font-family: inherit;
   font-size: 0.76rem;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  direction: ltr;
+}
+
+.site-theme-size input[type="number"]:focus {
+  outline: none;
+  border-color: rgba(91, 156, 255, 0.65);
+  box-shadow: 0 0 0 2px rgba(91, 156, 255, 0.25);
+}
+
+.site-theme-size input[type="number"]:disabled {
+  opacity: 1;
 }
 
 .site-theme-size.is-disabled {
@@ -468,8 +569,9 @@ body.gate-leaving .site-gate {
   cursor: not-allowed;
 }
 
+.site-theme-cluster select,
 .site-theme-control select {
-  min-width: 108px;
+  min-width: 128px;
   padding: 4px 8px;
   border: 1px solid var(--toolbar-border);
   border-radius: 4px;
@@ -480,7 +582,8 @@ body.gate-leaving .site-gate {
   cursor: pointer;
 }
 
-.site-theme-control select:hover {
+.site-theme-control select:hover,
+.site-theme-cluster select:hover {
   border-color: rgba(255, 255, 255, 0.18);
 }
 
@@ -2391,6 +2494,12 @@ body.page-edit-mode .home-header > .home-section-edit:not([hidden]) {
 
 .settings-action:active {
   background: rgba(255, 255, 255, 0.12);
+}
+
+.settings-action[data-settings-action="exit"] {
+  margin-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0 0 5px 5px;
 }
 
 @media (max-width: 700px) {

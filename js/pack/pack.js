@@ -5,6 +5,9 @@
    ===================================================================== */
 (function () {
   const STORAGE_KEY = 'hebet-pack';
+  const PACK_BOOTSTRAP_ID = 'hebet-pack-bootstrap';
+  const PACK_BOOTSTRAP_VERSION = 1;
+  const PACK_EXPORT_FILENAME = 'גרסת-לקוח-מארז.html';
   const HEIGHT_MIN = 72;
   const HEIGHT_MAX = 320;
   const FREE_HEIGHT_MIN = 240;
@@ -13,12 +16,28 @@
   const CLOSING_HEIGHT_MAX = 400;
   const DEFAULT_HEADER_COLOR = '#3d403c';
   const DEFAULT_CARD_COLOR = '#3d403c';
+  const DEFAULT_SITE_FONT = "'NarkisBlockCondensedMF', 'Heebo', sans-serif";
+  const DEFAULT_THEME = {
+    siteBgColor: '#ffffff',
+    siteBgImage: '',
+    siteFont: DEFAULT_SITE_FONT,
+  };
   const MAX_IMAGE_BYTES = 1.8 * 1024 * 1024;
   const ICON_GLYPHS = ['🎓', '▶', '🖥', '⬇', '🖨', '📄', '⚙', '★', '📷', '🧭', '📊', '🔧'];
   const ACTION_DEFAULT_GLYPH = { view: '▶', download: '⬇', print: '🖨' };
   const ACTION_LABELS = { view: 'צפייה', download: 'הורדה', print: 'הדפסה' };
+  const ACTION_DEFAULT_POS = {
+    view: { x: 36, y: 118 },
+    download: { x: 50, y: 118 },
+    print: { x: 64, y: 118 },
+  };
   const CLOSING_ICON_SIZE_MIN = 8;
   const CLOSING_ICON_SIZE_MAX = 240;
+  const CARD_ICON_SIZE_MIN = 12;
+  const CARD_ICON_SIZE_MAX = 160;
+  const CARD_OVERLAY_POS_MIN = -60;
+  const CARD_OVERLAY_POS_MAX = 160;
+  const CARD_SNAP_PX = 7;
 
   const DEFAULT_STATE = {
     header: {
@@ -27,19 +46,22 @@
       image: '',
       opacity: 100,
       height: 108,
-      title: { text: '', size: 30, color: '#ffffff', align: 'center' },
-      subtitle: { text: '', size: 15, color: '#ffffff', align: 'center' },
+      hidden: false,
+      textFreeform: true,
+      title: { text: '', size: 30, color: '#ffffff', align: 'center', x: 50, y: 40, freePlaced: false, hidden: false },
+      subtitle: { text: '', size: 15, color: '#ffffff', align: 'center', x: 50, y: 68, freePlaced: false, hidden: false },
       logos: [],
     },
     cards: {
       perRow: 4,
       gap: 16,
-      freeform: false,
+      freeform: true,
       freeHeight: 420,
       items: [],
     },
     closing: {
       enabled: false,
+      hidden: false,
       label: 'צוות פיתוח',
       href: '',
       color: '#3d403c',
@@ -51,6 +73,11 @@
       y: 50,
       height: 78,
       icons: [],
+    },
+    theme: {
+      siteBgColor: '#ffffff',
+      siteBgImage: '',
+      siteFont: DEFAULT_SITE_FONT,
     },
   };
 
@@ -104,6 +131,18 @@
     return JSON.parse(JSON.stringify(src || {}));
   }
 
+  function normalizeTheme(raw, fallback) {
+    const src = raw && typeof raw === 'object' ? raw : (fallback && typeof fallback === 'object' ? fallback : {});
+    const font = typeof src.siteFont === 'string' && src.siteFont.trim()
+      ? src.siteFont
+      : DEFAULT_SITE_FONT;
+    return {
+      siteBgColor: typeof src.siteBgColor === 'string' && src.siteBgColor ? src.siteBgColor : DEFAULT_THEME.siteBgColor,
+      siteBgImage: typeof src.siteBgImage === 'string' ? src.siteBgImage : '',
+      siteFont: String(font).replace(/"/g, "'"),
+    };
+  }
+
   function normalizeAlign(value) {
     return value === 'start' || value === 'end' ? value : 'center';
   }
@@ -117,12 +156,20 @@
         size: clamp(t.size, 14, 72, 30),
         color: t.color || '#ffffff',
         align: normalizeAlign(t.align),
+        x: clamp(t.x, 0, 100, 50),
+        y: clamp(t.y, 0, 100, 40),
+        freePlaced: !!t.freePlaced,
+        hidden: !!t.hidden,
       },
       subtitle: {
         text: typeof s.text === 'string' ? s.text.slice(0, 140) : '',
         size: clamp(s.size, 10, 40, 15),
         color: s.color || '#ffffff',
         align: normalizeAlign(s.align),
+        x: clamp(s.x, 0, 100, 50),
+        y: clamp(s.y, 0, 100, 68),
+        freePlaced: !!s.freePlaced,
+        hidden: !!s.hidden,
       },
     };
   }
@@ -148,6 +195,8 @@
       image: typeof src.image === 'string' ? src.image : '',
       opacity: clampOpacity(src.opacity),
       height: clampHeight(src.height),
+      hidden: !!(src.hidden || (src.title && src.title.hidden)),
+      textFreeform: true,
       title: text.title,
       subtitle: text.subtitle,
       logos: Array.isArray(src.logos) ? src.logos.map(normalizeLogo).filter(function (l) { return !!l.src; }) : [],
@@ -164,10 +213,13 @@
 
   function normalizeAction(raw, kind) {
     const src = raw && typeof raw === 'object' ? raw : {};
+    const pos = ACTION_DEFAULT_POS[kind] || ACTION_DEFAULT_POS.download;
     return {
       enabled: !!src.enabled,
       href: typeof src.href === 'string' ? src.href.slice(0, 600) : '',
       icon: normalizeActionIcon(src.icon, kind),
+      x: clamp(src.x, CARD_OVERLAY_POS_MIN, CARD_OVERLAY_POS_MAX, pos.x),
+      y: clamp(src.y, CARD_OVERLAY_POS_MIN, CARD_OVERLAY_POS_MAX, pos.y),
     };
   }
 
@@ -179,23 +231,30 @@
     return { type: 'glyph', value: ICON_GLYPHS.indexOf(src.value) !== -1 ? src.value : ICON_GLYPHS[0] };
   }
 
+  function clampCardIconSize(n) {
+    return clamp(n, CARD_ICON_SIZE_MIN, CARD_ICON_SIZE_MAX, 36);
+  }
+
   function normalizeDecorIcon(raw) {
     const src = raw && typeof raw === 'object' ? raw : {};
-    if (src.type === 'image' && src.value) {
-      return { id: src.id || nextId('cico'), type: 'image', value: String(src.value) };
-    }
-    const glyph = typeof src.value === 'string' && src.value.trim()
-      ? src.value.slice(0, 8)
-      : ICON_GLYPHS[0];
-    return { id: src.id || nextId('cico'), type: 'glyph', value: glyph };
+    const isImage = src.type === 'image' && src.value;
+    return {
+      id: src.id || nextId('cico'),
+      type: isImage ? 'image' : 'glyph',
+      value: isImage
+        ? String(src.value)
+        : (typeof src.value === 'string' && src.value.trim()
+          ? src.value.slice(0, 8)
+          : ICON_GLYPHS[0]),
+      x: clamp(src.x, CARD_OVERLAY_POS_MIN, CARD_OVERLAY_POS_MAX, 50),
+      y: clamp(src.y, CARD_OVERLAY_POS_MIN, CARD_OVERLAY_POS_MAX, 14),
+      size: clampCardIconSize(src.size),
+    };
   }
 
   function normalizeCardIcons(src) {
     if (Array.isArray(src.icons)) return src.icons.map(normalizeDecorIcon);
-    if (src.icon) {
-      const one = normalizeCardIcon(src.icon);
-      return [{ id: nextId('cico'), type: one.type, value: one.value }];
-    }
+    if (src.icon) return [normalizeDecorIcon(normalizeCardIcon(src.icon))];
     return [];
   }
 
@@ -214,6 +273,9 @@
       desc: typeof src.desc === 'string' ? src.desc.slice(0, 140) : '',
       descSize: clamp(src.descSize, 10, 22, 13),
       descColor: src.descColor || '#ffffff',
+      titleHidden: !!src.titleHidden,
+      descHidden: !!src.descHidden,
+      comingSoon: !!src.comingSoon,
       bgMode: normalizeCardBgMode(src.bgMode),
       color: src.color || DEFAULT_CARD_COLOR,
       image: typeof src.image === 'string' ? src.image : '',
@@ -234,7 +296,7 @@
     return {
       perRow: clamp(src.perRow, 2, 6, 4),
       gap: clamp(src.gap, 0, 48, 16),
-      freeform: !!src.freeform,
+      freeform: src.freeform == null ? true : !!src.freeform,
       freeHeight: clampFreeHeight(src.freeHeight),
       items: Array.isArray(src.items) ? src.items.map(normalizeCard) : [],
     };
@@ -242,9 +304,22 @@
 
   function normalizeClosingIcon(raw) {
     const src = raw && typeof raw === 'object' ? raw : {};
+    if (src.kind === 'text' || src.type === 'text') {
+      return {
+        id: src.id || nextId('ctext'),
+        kind: 'text',
+        value: typeof src.value === 'string' && src.value.trim() ? src.value.slice(0, 80) : 'טקסט',
+        href: typeof src.href === 'string' ? src.href.slice(0, 600) : '',
+        x: clamp(src.x, 0, 100, 18),
+        y: clamp(src.y, 0, 100, 50),
+        size: clamp(src.size, 10, 72, 18),
+        color: src.color || '#222222',
+      };
+    }
     const isImage = src.type === 'image' && src.value;
     return {
       id: src.id || nextId('cicon'),
+      kind: 'icon',
       type: isImage ? 'image' : 'glyph',
       value: isImage
         ? String(src.value)
@@ -274,10 +349,15 @@
     return clamp(n, 0, 40, 12);
   }
 
+  function isClosingHidden() {
+    return !!(state.closing && state.closing.hidden);
+  }
+
   function normalizeClosing(raw) {
     const src = raw && typeof raw === 'object' ? raw : {};
     return {
       enabled: !!src.enabled,
+      hidden: !!src.hidden,
       label: typeof src.label === 'string' && src.label.trim() ? src.label.slice(0, 40) : 'צוות פיתוח',
       labelSize: clamp(src.labelSize, 12, 28, 14),
       href: typeof src.href === 'string' ? src.href.slice(0, 600) : '',
@@ -299,6 +379,7 @@
       header: normalizeHeader(src.header),
       cards: normalizeCards(src.cards),
       closing: normalizeClosing(src.closing),
+      theme: normalizeTheme(src.theme),
     };
   }
 
@@ -325,6 +406,46 @@
   function persist() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(persistNow, 200);
+  }
+
+  function applyPackThemeToDom() {
+    const theme = normalizeTheme(state && state.theme, DEFAULT_THEME);
+    if (window.HebetChrome && typeof window.HebetChrome.applyTheme === 'function') {
+      window.HebetChrome.applyTheme(theme);
+      return;
+    }
+    document.body.style.setProperty('--site-bg-color', theme.siteBgColor);
+    document.body.style.setProperty(
+      '--site-bg-image',
+      theme.siteBgImage ? 'url(' + JSON.stringify(theme.siteBgImage) + ')' : 'none'
+    );
+    document.body.style.setProperty('--site-font', theme.siteFont);
+  }
+
+  function applyThemePatch(patch) {
+    state.theme = normalizeTheme(Object.assign({}, state.theme, patch || {}));
+    if (!persistNow()) return false;
+    applyPackThemeToDom();
+    return true;
+  }
+
+  function syncSharedEditMode(want) {
+    const on = !!want && !isUserMode();
+    document.body.classList.toggle('page-edit-mode', on);
+    const btn = document.getElementById('btnEdit');
+    if (btn) {
+      btn.textContent = on ? 'סיום עריכה' : 'עריכה';
+      btn.classList.toggle('active', on);
+    }
+  }
+
+  function restorePackChrome() {
+    applyPackThemeToDom();
+    const want = window.HebetShell && typeof window.HebetShell.getSavedEditMode === 'function'
+      ? window.HebetShell.getSavedEditMode('pack')
+      : false;
+    syncSharedEditMode(want);
+    syncEditUi();
   }
 
   /* ---------- מצב עריכה ---------- */
@@ -390,20 +511,85 @@
     ui.header.classList.toggle('is-image', header.mode === 'image' && !!header.image);
     ui.header.classList.toggle('is-awaiting-image', header.mode === 'image' && !header.image);
     ui.header.classList.toggle('is-transparent', header.mode === 'transparent');
+    ui.header.classList.toggle('is-hidden', isHeaderHidden());
+    if (ui.headerResize) ui.headerResize.hidden = !isPageEditMode() || isHeaderHidden();
+  }
+
+  function isHeaderHidden() {
+    return !!(state.header && state.header.hidden);
+  }
+
+  function defaultTextX(align) {
+    if (align === 'start') return 78;
+    if (align === 'end') return 22;
+    return 50;
+  }
+
+  function seedTextFreePosition(item, yDefault) {
+    if (!item || item.freePlaced) return;
+    item.x = defaultTextX((item.align || (state.header.title && state.header.title.align)) || 'center');
+    item.y = clamp(item.y, 0, 100, yDefault);
+    item.freePlaced = true;
+  }
+
+  function ensureTextFreeformPositions() {
+    seedTextFreePosition(state.header.title, 40);
+    seedTextFreePosition(state.header.subtitle, 68);
+  }
+
+  function applyTextFreePosition(el, item) {
+    if (!el || !item) return;
+    el.style.setProperty('--tx', item.x + '%');
+    el.style.setProperty('--ty', item.y + '%');
+  }
+
+  function isHeaderTextHidden(kind) {
+    const item = state.header && state.header[kind];
+    return !!(item && item.hidden);
+  }
+
+  function setHeaderTextHidden(kind, hidden) {
+    const item = state.header && state.header[kind];
+    if (!item) return;
+    item.hidden = !!hidden;
+    if (item.hidden && activePackText && activePackText.role === (kind === 'title' ? 'header-title' : 'header-subtitle')) {
+      activePackText = null;
+      syncPackToolbar();
+    }
+    renderHeaderText();
   }
 
   function renderHeaderText() {
     const ui = els();
     const header = state.header;
+    const headerHidden = isHeaderHidden();
+    const titleHidden = headerHidden || isHeaderTextHidden('title');
+    const subtitleHidden = headerHidden || isHeaderTextHidden('subtitle');
+    ensureTextFreeformPositions();
+    if (ui.header) ui.header.classList.toggle('is-text-freeform', !headerHidden);
     if (ui.headerTitle) {
+      if (titleHidden && document.activeElement === ui.headerTitle) ui.headerTitle.blur();
       if (document.activeElement !== ui.headerTitle) ui.headerTitle.textContent = header.title.text;
       ui.headerTitle.style.setProperty('--pack-title-size', header.title.size + 'px');
       ui.headerTitle.style.color = header.title.color;
+      applyTextFreePosition(ui.headerTitle, header.title);
+      ui.headerTitle.hidden = titleHidden;
+      ui.headerTitle.setAttribute(
+        'contenteditable',
+        isPageEditMode() && !titleHidden ? 'true' : 'false'
+      );
     }
     if (ui.headerSubtitle) {
+      if (subtitleHidden && document.activeElement === ui.headerSubtitle) ui.headerSubtitle.blur();
       if (document.activeElement !== ui.headerSubtitle) ui.headerSubtitle.textContent = header.subtitle.text;
       ui.headerSubtitle.style.setProperty('--pack-subtitle-size', header.subtitle.size + 'px');
       ui.headerSubtitle.style.color = header.subtitle.color;
+      applyTextFreePosition(ui.headerSubtitle, header.subtitle);
+      ui.headerSubtitle.hidden = subtitleHidden;
+      ui.headerSubtitle.setAttribute(
+        'contenteditable',
+        isPageEditMode() && !subtitleHidden ? 'true' : 'false'
+      );
     }
     const textWrap = document.getElementById('packHeaderText');
     if (textWrap) {
@@ -444,24 +630,33 @@
     const hasImage = action.icon && action.icon.type === 'image' && action.icon.value;
     const iconHtml = actionIconInnerHtml(action);
     const cls = 'pack-card-action' + (hasImage ? ' has-icon-image' : '');
+    const posStyle = '--ax:' + action.x + '%;--ay:' + action.y + '%;';
+    const kindAttr = ' data-action-kind="' + kind + '"';
+    const soonAttr = card.comingSoon ? ' aria-disabled="true" tabindex="-1"' : '';
     if (kind === 'print') {
-      return '<button type="button" class="' + cls + '" data-print-href="' + escapeHtml(action.href || '') + '" title="' + title + '" aria-label="' + title + '">' + iconHtml + '</button>';
+      return '<button type="button" class="' + cls + '"' + kindAttr + ' data-print-href="' + escapeHtml(action.href || '') + '" style="' + posStyle + '" title="' + title + '" aria-label="' + title + '"' + soonAttr + '>' + iconHtml + '</button>';
     }
     const href = escapeHtml(action.href || '#');
-    const downloadAttr = kind === 'download' ? ' download' : '';
-    return '<a class="' + cls + '" href="' + href + '" target="_blank" rel="noopener noreferrer"' + downloadAttr + ' data-has-href="' + (action.href ? '1' : '0') + '" title="' + title + '" aria-label="' + title + '">' + iconHtml + '</a>';
+    const downloadAttr = kind === 'download' && !card.comingSoon ? ' download' : '';
+    return '<a class="' + cls + '"' + kindAttr + ' href="' + href + '" target="_blank" rel="noopener noreferrer"' + downloadAttr + ' data-has-href="' + (action.href && !card.comingSoon ? '1' : '0') + '" style="' + posStyle + '" title="' + title + '" aria-label="' + title + '"' + soonAttr + '>' + iconHtml + '</a>';
   }
 
-  function cardBadgeHtml(card) {
+  function cardIconInnerHtml(icon) {
+    if (icon.type === 'image' && icon.value) {
+      return '<img src="' + escapeHtml(icon.value) + '" alt="">';
+    }
+    return escapeHtml(icon.value);
+  }
+
+  function cardIconsHtml(card) {
     const icons = Array.isArray(card.icons) ? card.icons : [];
-    if (!icons.length) return '';
-    const items = icons.map(function (icon) {
-      if (icon.type === 'image' && icon.value) {
-        return '<span class="pack-card-badge"><img src="' + escapeHtml(icon.value) + '" alt=""></span>';
-      }
-      return '<span class="pack-card-badge">' + escapeHtml(icon.value) + '</span>';
+    return icons.map(function (icon) {
+      return (
+        '<span class="pack-card-icon" data-card-icon-id="' + escapeHtml(icon.id) + '"' +
+          ' style="--ix:' + icon.x + '%;--iy:' + icon.y + '%;--isize:' + icon.size + 'px;"' +
+          '>' + cardIconInnerHtml(icon) + '</span>'
+      );
     }).join('');
-    return '<div class="pack-card-badges">' + items + '</div>';
   }
 
   function defaultFreeWidth() {
@@ -495,21 +690,34 @@
     const editableAttr = editing ? ' contenteditable="true" spellcheck="false"' : '';
     const titleStyle = 'font-size:' + card.titleSize + 'px;color:' + escapeHtml(card.titleColor) + ';';
     const descStyle = 'font-size:' + card.descSize + 'px;color:' + escapeHtml(card.descColor) + ';';
-    const showDesc = !!card.desc || editing;
+    const showTitle = !card.titleHidden && (!!card.title || editing);
+    const showDesc = !card.descHidden && (!!card.desc || editing);
     const useImage = card.bgMode === 'image' && !!card.image;
+    const awaitingImage = card.bgMode === 'image' && !card.image;
     const editingClass = editingCardId && editingCardId === card.id ? ' is-editing' : '';
-    const imageClass = useImage ? ' is-image' : '';
+    const imageClass = useImage ? ' is-image' : (awaitingImage ? ' is-awaiting-image' : '');
+    const soonClass = card.comingSoon ? ' is-coming-soon' : '';
+    const photoHtml = useImage
+      ? '<img class="pack-card-photo" src="' + escapeHtml(card.image) + '" alt="">'
+      : '';
+    const soonHtml = card.comingSoon
+      ? '<div class="pack-card-soon" role="status" aria-label="בקרוב"><span class="pack-card-soon-badge">בקרוב</span></div>'
+      : '';
     return (
-      '<div class="pack-card' + editingClass + imageClass + '" data-id="' + escapeHtml(card.id) + '"' +
+      '<div class="pack-card' + editingClass + imageClass + soonClass + '" data-id="' + escapeHtml(card.id) + '"' +
+        (card.comingSoon ? ' aria-disabled="true"' : '') +
         ' style="--pack-card-color:' + escapeHtml(card.color) +
-        ';--pack-card-image:' + (useImage ? cssUrl(card.image) : 'none') +
         ';--cx:' + card.x + '%;--cy:' + card.y + '%;--cw:' + card.w + '%;">' +
+        photoHtml +
         '<button type="button" class="pack-card-edit" data-card-edit="' + escapeHtml(card.id) + '" title="עריכת קובייה" aria-label="עריכת קובייה">✎</button>' +
         '<button type="button" class="pack-card-delete" data-card-delete="' + escapeHtml(card.id) + '" title="הסרת קובייה" aria-label="הסרת קובייה">×</button>' +
-        cardBadgeHtml(card) +
-        '<h3 class="pack-card-title" data-card-text="title" data-card-id="' + escapeHtml(card.id) + '" style="' + titleStyle + '"' + editableAttr + '>' + escapeHtml(card.title) + '</h3>' +
-        (showDesc ? '<p class="pack-card-desc" data-card-text="desc" data-card-id="' + escapeHtml(card.id) + '" style="' + descStyle + '"' + editableAttr + '>' + escapeHtml(card.desc) + '</p>' : '') +
-        (actionsHtml ? '<div class="pack-card-actions">' + actionsHtml + '</div>' : '') +
+        cardIconsHtml(card) +
+        '<div class="pack-card-copy">' +
+          (showTitle ? '<h3 class="pack-card-title" data-card-text="title" data-card-id="' + escapeHtml(card.id) + '" style="' + titleStyle + '"' + editableAttr + '>' + escapeHtml(card.title) + '</h3>' : '') +
+          (showDesc ? '<p class="pack-card-desc" data-card-text="desc" data-card-id="' + escapeHtml(card.id) + '" style="' + descStyle + '"' + editableAttr + '>' + escapeHtml(card.desc) + '</p>' : '') +
+        '</div>' +
+        actionsHtml +
+        soonHtml +
       '</div>'
     );
   }
@@ -533,6 +741,7 @@
   /* ---------- רינדור: סגירה ---------- */
 
   function closingIconInnerHtml(icon) {
+    if (icon.kind === 'text') return escapeHtml(icon.value);
     if (icon.type === 'image' && icon.value) {
       return '<img src="' + escapeHtml(icon.value) + '" alt="">';
     }
@@ -540,9 +749,22 @@
   }
 
   function closingIconHtml(icon) {
+    if (icon.kind === 'text') {
+      const hasHref = !!icon.href;
+      const editing = isPageEditMode() && !isClosingHidden();
+      return (
+        '<div class="pack-closing-text" data-icon-id="' + escapeHtml(icon.id) + '" data-kind="text" data-has-href="' + (hasHref ? '1' : '0') + '"' +
+          (hasHref ? ' data-href="' + escapeHtml(icon.href) + '"' : '') +
+          ' style="--cx:' + icon.x + '%;--cy:' + icon.y + '%;--csize:' + icon.size + 'px;--ccolor:' + escapeHtml(icon.color) + ';">' +
+          '<span class="pack-closing-text-label" spellcheck="false"' + (editing ? ' contenteditable="true"' : '') + '>' +
+            escapeHtml(icon.value) +
+          '</span>' +
+        '</div>'
+      );
+    }
     const hasHref = !!icon.href;
     return (
-      '<a class="pack-closing-icon" data-icon-id="' + escapeHtml(icon.id) + '" data-has-href="' + (hasHref ? '1' : '0') + '"' +
+      '<a class="pack-closing-icon" data-icon-id="' + escapeHtml(icon.id) + '" data-kind="icon" data-has-href="' + (hasHref ? '1' : '0') + '"' +
         ' href="' + escapeHtml(icon.href || '#') + '" target="_blank" rel="noopener noreferrer"' +
         ' style="--cx:' + icon.x + '%;--cy:' + icon.y + '%;--csize:' + icon.size + 'px;"' +
         (hasHref ? '' : ' aria-disabled="true"') + '>' +
@@ -560,11 +782,14 @@
   function renderClosing() {
     const ui = els();
     const closing = state.closing;
+    const hidden = isClosingHidden();
     if (ui.closingSection) {
       ui.closingSection.style.setProperty('--pack-closing-height', clampClosingHeight(closing.height) + 'px');
+      ui.closingSection.classList.toggle('is-hidden', hidden);
     }
+    if (ui.closingResize) ui.closingResize.hidden = !isPageEditMode() || hidden;
     if (ui.devTeamBtn) {
-      ui.devTeamBtn.hidden = !closing.enabled;
+      ui.devTeamBtn.hidden = hidden || !closing.enabled;
       ui.devTeamBtn.classList.toggle('has-image', !!closing.image);
       ui.devTeamBtn.style.setProperty('--pack-dev-team-color', closing.color);
       ui.devTeamBtn.style.setProperty('--pack-dev-team-text', closing.textColor);
@@ -724,7 +949,6 @@
 
   function headerEditorFieldsHtml() {
     const h = state.header;
-    const alignLabels = { start: 'ימין', center: 'מרכז', end: 'שמאל' };
     function segHtml(name, current, options) {
       return '<div class="pack-seg" role="radiogroup">' + options.map(function (opt) {
         return '<label class="pack-seg-btn">' +
@@ -734,6 +958,16 @@
       }).join('') + '</div>';
     }
     return (
+      '<section class="pack-edit-section">' +
+        '<div class="pack-edit-section-head">כותרת</div>' +
+        '<label class="pack-check-row">' +
+          '<input type="checkbox" id="packHeaderHidden"' + (h.hidden ? ' checked' : '') + '>' +
+          '<span>הסתרת הכותרת לגמרי</span>' +
+        '</label>' +
+        '<p class="pack-field-sub" id="packHeaderHiddenHint"' + (h.hidden ? '' : ' hidden') + '>כל אזור הכותרת לא יוצג במארז. אפשר להחזיר אותו בכל עת ממצב עריכה.</p>' +
+      '</section>' +
+
+      '<div id="packHeaderContentsControls"' + (h.hidden ? ' hidden' : '') + '>' +
       '<section class="pack-edit-section">' +
         '<div class="pack-edit-section-head">רקע הכותרת</div>' +
         segHtml('packHeaderMode', h.mode, [
@@ -754,40 +988,39 @@
       '</section>' +
 
       '<section class="pack-edit-section">' +
-        '<div class="pack-edit-section-head">כותרת</div>' +
-        '<p class="pack-field-sub">לחצו ישירות על הטקסט בכותרת כדי לערוך אותו. כאן קובעים גודל, צבע ומיקום.</p>' +
-        rangeRowHtml('packTitleSize', 'גודל', h.title.size, 14, 72, 'px') +
-        colorFieldHtml('packTitleColor', 'צבע', h.title.color) +
-        segHtml('packTitleAlign', h.title.align, [
-          { value: 'start', label: alignLabels.start },
-          { value: 'center', label: alignLabels.center },
-          { value: 'end', label: alignLabels.end },
-        ]) +
-      '</section>' +
-
-      '<section class="pack-edit-section">' +
-        '<div class="pack-edit-section-head">כותרת משנה</div>' +
-        rangeRowHtml('packSubtitleSize', 'גודל', h.subtitle.size, 10, 40, 'px') +
-        colorFieldHtml('packSubtitleColor', 'צבע', h.subtitle.color) +
+        '<div class="pack-edit-section-head">טקסטים</div>' +
+        '<label class="pack-check-row">' +
+          '<input type="checkbox" id="packTitleEnabled"' + (h.title.hidden ? '' : ' checked') + '>' +
+          '<span>טקסט ראשי</span>' +
+        '</label>' +
+        '<label class="pack-check-row">' +
+          '<input type="checkbox" id="packSubtitleEnabled"' + (h.subtitle.hidden ? '' : ' checked') + '>' +
+          '<span>טקסט משני</span>' +
+        '</label>' +
+        '<p class="pack-field-sub">לחצו על הטקסט בכותרת כדי לערוך, וגררו למיקום חופשי. גודל וצבע בסרגל הכלים.</p>' +
       '</section>' +
 
       '<section class="pack-edit-section">' +
         '<div class="pack-edit-section-head" id="packEditLogosHead">לוגואים (' + h.logos.length + ')</div>' +
-        '<p class="pack-field-sub">ניתן לגרור לוגו ישירות על הכותרת כדי לשנות מיקום. כאן קובעים גודל או מוסיפים/מסירים.</p>' +
+        '<p class="pack-field-sub">ניתן לגרור לוגו ישירות על הכותרת כדי לשנות מיקום. כאן קובעים גודל (סליידר או מספר) או מוסיפים/מסירים.</p>' +
         '<div id="packEditLogoList">' + logosListHtml() + '</div>' +
         '<label class="pack-add-logo-btn" for="packAddLogoFile">+ הוספת לוגו</label>' +
         '<input type="file" id="packAddLogoFile" accept="image/*" hidden>' +
-      '</section>'
+      '</section>' +
+      '</div>'
     );
   }
 
   function logosListHtml() {
     return state.header.logos.map(function (logo) {
+      const id = escapeHtml(logo.id);
       return (
-        '<div class="pack-logo-row" data-logo-id="' + escapeHtml(logo.id) + '">' +
+        '<div class="pack-logo-row" data-logo-id="' + id + '">' +
           '<img class="pack-logo-thumb" src="' + escapeHtml(logo.src) + '" alt="">' +
-          '<input type="range" min="20" max="220" step="1" value="' + logo.size + '" data-logo-size="' + escapeHtml(logo.id) + '" title="גודל">' +
-          '<button type="button" class="pack-logo-remove" data-logo-remove="' + escapeHtml(logo.id) + '" title="הסרה" aria-label="הסרה">×</button>' +
+          '<input type="range" min="20" max="220" step="1" value="' + logo.size + '" data-logo-size="' + id + '" title="גודל" aria-label="גודל לוגו">' +
+          '<input type="number" min="20" max="220" step="1" value="' + logo.size + '" inputmode="numeric" dir="ltr" data-logo-size="' + id + '" aria-label="גודל לוגו בפיקסלים">' +
+          '<span class="pack-unit">px</span>' +
+          '<button type="button" class="pack-logo-remove" data-logo-remove="' + id + '" title="הסרה" aria-label="הסרה">×</button>' +
         '</div>'
       );
     }).join('') || '<p class="pack-field-sub">אין עדיין לוגואים.</p>';
@@ -843,21 +1076,30 @@
     bindRangeRow(root, 'packHeaderOpacity', function (v) { state.header.opacity = clampOpacity(v); renderHeader(); });
     bindRangeRow(root, 'packHeaderHeight', function (v) { state.header.height = clampHeight(v); renderHeader(); });
 
-    // כותרת
-    bindRangeRow(root, 'packTitleSize', function (v) { state.header.title.size = clamp(v, 14, 72, 30); renderHeaderText(); });
-    bindColorField(root, 'packTitleColor', function (hex) { state.header.title.color = hex; renderHeaderText(); });
-    root.querySelectorAll('input[name="packTitleAlign"]').forEach(function (input) {
-      input.addEventListener('change', function () {
-        if (!input.checked) return;
-        state.header.title.align = input.value;
-        state.header.subtitle.align = input.value;
-        renderHeaderText();
+    const headerHiddenCheck = root.querySelector('#packHeaderHidden');
+    const headerHiddenHint = root.querySelector('#packHeaderHiddenHint');
+    const headerContents = root.querySelector('#packHeaderContentsControls');
+    if (headerHiddenCheck) {
+      headerHiddenCheck.addEventListener('change', function () {
+        state.header.hidden = headerHiddenCheck.checked;
+        if (headerHiddenHint) headerHiddenHint.hidden = !headerHiddenCheck.checked;
+        if (headerContents) headerContents.hidden = headerHiddenCheck.checked;
+        renderHeader();
+        syncEditUi();
       });
-    });
-
-    // כותרת משנה
-    bindRangeRow(root, 'packSubtitleSize', function (v) { state.header.subtitle.size = clamp(v, 10, 40, 15); renderHeaderText(); });
-    bindColorField(root, 'packSubtitleColor', function (hex) { state.header.subtitle.color = hex; renderHeaderText(); });
+    }
+    const titleEnabled = root.querySelector('#packTitleEnabled');
+    if (titleEnabled) {
+      titleEnabled.addEventListener('change', function () {
+        setHeaderTextHidden('title', !titleEnabled.checked);
+      });
+    }
+    const subtitleEnabled = root.querySelector('#packSubtitleEnabled');
+    if (subtitleEnabled) {
+      subtitleEnabled.addEventListener('change', function () {
+        setHeaderTextHidden('subtitle', !subtitleEnabled.checked);
+      });
+    }
 
     // לוגואים
     const logoList = root.querySelector('#packEditLogoList');
@@ -867,7 +1109,36 @@
         if (!id) return;
         const logo = state.header.logos.find(function (l) { return l.id === id; });
         if (!logo) return;
+        const row = e.target.closest ? e.target.closest('.pack-logo-row') : null;
+        const range = row ? row.querySelector('input[type="range"][data-logo-size="' + id + '"]') : null;
+        const num = row ? row.querySelector('input[type="number"][data-logo-size="' + id + '"]') : null;
+        const isNumberField = e.target === num;
+
+        if (isNumberField) {
+          const typed = Number(e.target.value);
+          if (!Number.isFinite(typed)) return;
+          if (typed < 20 || typed > 220) return;
+          logo.size = typed;
+          if (range) range.value = String(typed);
+          renderHeaderLogos();
+          return;
+        }
+
         logo.size = clamp(e.target.value, 20, 220, 56);
+        if (range) range.value = String(logo.size);
+        if (num) num.value = String(logo.size);
+        renderHeaderLogos();
+      });
+      logoList.addEventListener('focusout', function (e) {
+        const id = e.target.getAttribute && e.target.getAttribute('data-logo-size');
+        if (!id || e.target.type !== 'number') return;
+        const logo = state.header.logos.find(function (l) { return l.id === id; });
+        if (!logo) return;
+        logo.size = clamp(e.target.value, 20, 220, 56);
+        e.target.value = String(logo.size);
+        const row = e.target.closest ? e.target.closest('.pack-logo-row') : null;
+        const range = row ? row.querySelector('input[type="range"][data-logo-size="' + id + '"]') : null;
+        if (range) range.value = String(logo.size);
         renderHeaderLogos();
       });
       logoList.addEventListener('click', function (e) {
@@ -922,7 +1193,7 @@
   function openHeaderEditor() {
     openEditor({
       title: 'עריכת כותרת',
-      hint: 'כאן מגדירים רקע, טקסטים ולוגואים של הכותרת. את הטקסט עצמו ניתן לערוך גם ישירות על הכותרת.',
+      hint: 'כאן מגדירים את אזור הכותרת. גודל וצבע של הטקסטים נקבעים בסרגל הכלים.',
       fieldsHtml: headerEditorFieldsHtml(),
       bind: bindHeaderEditorFields,
     });
@@ -934,7 +1205,7 @@
 
   function cardsSectionEditorHint() {
     return isCardsFreeform()
-      ? 'גררו כל קובייה עם העכבר לכל מקום באזור. גובה האזור ניתן לשינוי כאן או בידית בתחתית.'
+      ? 'גררו כל קובייה עם העכבר לכל מקום באזור. קו ורוד מופיע כשקוביות מתיישרות. גובה האזור ניתן לשינוי כאן או בידית בתחתית.'
       : 'קובעים כמה קוביות בשורה ואת המרווח ביניהן. תוכן כל קובייה נערך בלחיצה על העט שעליה.';
   }
 
@@ -954,7 +1225,7 @@
         '</div>' +
         '<div id="packCardsFreeControls"' + (freeform ? '' : ' hidden') + '>' +
           rangeRowHtml('packCardsFreeHeight', 'גובה אזור', clampFreeHeight(c.freeHeight), FREE_HEIGHT_MIN, FREE_HEIGHT_MAX, 'px') +
-          '<p class="pack-field-sub">גררו את הקוביות עם העכבר בתוך האזור המקווקו.</p>' +
+          '<p class="pack-field-sub">גררו את הקוביות עם העכבר בתוך האזור המקווקו. קווי יישור ורודים מופיעים כשהן באותו גובה או על אותו ציר.</p>' +
         '</div>' +
       '</section>'
     );
@@ -1001,17 +1272,16 @@
      עורך קובייה בודדת
      ================================================================ */
 
-  function iconGridHtml() {
-    return '<div class="pack-icon-grid">' + ICON_GLYPHS.map(function (glyph) {
-      return '<button type="button" class="pack-icon-btn" data-add-card-glyph="' + escapeHtml(glyph) + '" title="הוספת אייקון" aria-label="הוספת אייקון">' +
-        escapeHtml(glyph) +
-      '</button>';
-    }).join('') + '</div>';
+  function nextCardIconPos(card) {
+    const used = (card.icons || []).map(function (icon) { return icon.x; });
+    let x = 50;
+    while (used.some(function (u) { return Math.abs(u - x) < 10; }) && x < 88) x += 12;
+    return { x: x, y: 16 };
   }
 
   function cardIconsListHtml(card) {
     if (!card.icons.length) {
-      return '<p class="pack-field-sub">אין עדיין אייקונים. בחרו מהרשת או העלו תמונה.</p>';
+      return '<p class="pack-field-sub">אין עדיין אייקונים. העלו תמונה, ואז גררו בתוך הקובייה.</p>';
     }
     return card.icons.map(function (icon) {
       const id = escapeHtml(icon.id);
@@ -1019,10 +1289,17 @@
         ? '<img class="pack-logo-thumb" src="' + escapeHtml(icon.value) + '" alt="">'
         : '<span class="pack-logo-thumb pack-closing-icon-thumb" aria-hidden="true">' + escapeHtml(icon.value) + '</span>';
       return (
-        '<div class="pack-logo-row" data-card-icon-id="' + id + '">' +
-          thumb +
-          '<span class="pack-field-sub" style="margin:0;flex:1;">' + (icon.type === 'image' ? 'תמונה' : 'אייקון') + '</span>' +
-          '<button type="button" class="pack-logo-remove" data-card-icon-remove="' + id + '" title="הסרה" aria-label="הסרה">×</button>' +
+        '<div class="pack-logo-row pack-closing-icon-row" data-card-icon-id="' + id + '">' +
+          '<div class="pack-closing-icon-row-head">' +
+            thumb +
+            '<button type="button" class="pack-logo-remove" data-card-icon-remove="' + id + '" title="הסרה" aria-label="הסרה">×</button>' +
+          '</div>' +
+          '<div class="pack-range-row pack-closing-icon-size">' +
+            '<span>גודל</span>' +
+            '<input type="range" min="' + CARD_ICON_SIZE_MIN + '" max="' + CARD_ICON_SIZE_MAX + '" step="1" value="' + icon.size + '" data-card-icon-size="' + id + '" aria-label="גודל אייקון">' +
+            '<input type="number" min="' + CARD_ICON_SIZE_MIN + '" max="' + CARD_ICON_SIZE_MAX + '" step="1" value="' + icon.size + '" inputmode="numeric" dir="ltr" data-card-icon-size="' + id + '" aria-label="גודל אייקון בפיקסלים">' +
+            '<span class="pack-unit">px</span>' +
+          '</div>' +
         '</div>'
       );
     }).join('');
@@ -1061,15 +1338,25 @@
   function cardEditorFieldsHtml(card) {
     return (
       '<section class="pack-edit-section">' +
+        '<div class="pack-edit-section-head">סטטוס</div>' +
+        '<label class="pack-check-row">' +
+          '<input type="checkbox" id="packCardComingSoon"' + (card.comingSoon ? ' checked' : '') + '>' +
+          '<span>בקרוב</span>' +
+        '</label>' +
+        '<p class="pack-field-sub">כשמסומן, הקובייה מוצגת כלא פעילה עם חותמת "בקרוב", וכפתורי הפעולה חסומים.</p>' +
+      '</section>' +
+
+      '<section class="pack-edit-section">' +
         '<div class="pack-edit-section-head">תוכן</div>' +
-        '<div class="pack-field">' +
-          '<label for="packCardTitle">כותרת</label>' +
-          '<input type="text" id="packCardTitle" maxlength="40" value="' + escapeHtml(card.title) + '">' +
-        '</div>' +
-        '<div class="pack-field">' +
-          '<label for="packCardDesc">תיאור</label>' +
-          '<textarea id="packCardDesc" maxlength="140">' + escapeHtml(card.desc) + '</textarea>' +
-        '</div>' +
+        '<label class="pack-check-row">' +
+          '<input type="checkbox" id="packCardTitleEnabled"' + (card.titleHidden ? '' : ' checked') + '>' +
+          '<span>כותרת</span>' +
+        '</label>' +
+        '<label class="pack-check-row">' +
+          '<input type="checkbox" id="packCardDescEnabled"' + (card.descHidden ? '' : ' checked') + '>' +
+          '<span>תיאור</span>' +
+        '</label>' +
+        '<p class="pack-field-sub">לחצו על הטקסט בקובייה כדי לערוך. גודל וצבע בסרגל הכלים.</p>' +
       '</section>' +
 
       '<section class="pack-edit-section">' +
@@ -1088,6 +1375,7 @@
           colorFieldHtml('packCardColor', 'צבע קובייה', card.color) +
         '</div>' +
         '<div id="packCardBgImageWrap"' + (card.bgMode === 'image' ? '' : ' hidden') + '>' +
+          '<p class="pack-field-sub">אפשר להעלות PNG עם רקע שקוף — כך מתקבלת צורת קובייה חופשית (משיכת מכחול וכו׳). הצבע נעלם עד שהתמונה נטענת.</p>' +
           '<label class="pack-upload" for="packCardBgImage" style="margin-top:10px;display:flex;">' +
             '<input type="file" id="packCardBgImage" accept="image/*" hidden>' +
             '<span>' + (card.image ? 'החלפת תמונה' : 'העלאת תמונה') + '</span>' +
@@ -1099,17 +1387,15 @@
 
       '<section class="pack-edit-section">' +
         '<div class="pack-edit-section-head" id="packEditCardIconsHead">אייקונים (' + card.icons.length + ')</div>' +
-        '<p class="pack-field-sub">אפשר בלי אייקונים, או להוסיף כמה שרוצים. לחיצה על אייקון ברשת מוסיפה אותו לקובייה.</p>' +
+        '<p class="pack-field-sub">העלו אייקון מהמחשב. במצב עריכה גררו אותו על הקובייה או מחוץ למסגרת. קו ורוד מופיע כשהיישור תואם לאייקון או כפתור אחר.</p>' +
         '<div id="packEditCardIconList">' + cardIconsListHtml(card) + '</div>' +
-        iconGridHtml() +
-        '<label class="pack-upload" for="packCardIconImage" style="display:flex;">' +
-          '<input type="file" id="packCardIconImage" accept="image/*" hidden>' +
-          '<span>+ העלאת תמונת אייקון</span>' +
-        '</label>' +
+        '<label class="pack-add-logo-btn" for="packCardIconImage">+ הוסף אייקון</label>' +
+        '<input type="file" id="packCardIconImage" accept="image/*" hidden>' +
       '</section>' +
 
       '<section class="pack-edit-section">' +
         '<div class="pack-edit-section-head">כפתורי פעולה</div>' +
+        '<p class="pack-field-sub">במצב עריכה גררו את הכפתורים סביב הקובייה. כשהם באותו גובה או על אותו ציר מופיע קו יישור ורוד.</p>' +
         actionRowHtml('view', 'צפייה', card.actions.view) +
         actionRowHtml('download', 'הורדה', card.actions.download) +
         actionRowHtml('print', 'הדפסה', card.actions.print) +
@@ -1121,18 +1407,39 @@
     function getCard() {
       return state.cards.items.find(function (c) { return c.id === cardId; });
     }
-    const titleInput = root.querySelector('#packCardTitle');
-    if (titleInput) {
-      titleInput.addEventListener('input', function () {
+    const comingSoon = root.querySelector('#packCardComingSoon');
+    if (comingSoon) {
+      comingSoon.addEventListener('change', function () {
         const card = getCard();
-        if (card) { card.title = titleInput.value.slice(0, 40); renderCards(); }
+        if (!card) return;
+        card.comingSoon = comingSoon.checked;
+        renderCards();
       });
     }
-    const descInput = root.querySelector('#packCardDesc');
-    if (descInput) {
-      descInput.addEventListener('input', function () {
+    const titleEnabled = root.querySelector('#packCardTitleEnabled');
+    if (titleEnabled) {
+      titleEnabled.addEventListener('change', function () {
         const card = getCard();
-        if (card) { card.desc = descInput.value.slice(0, 140); renderCards(); }
+        if (!card) return;
+        card.titleHidden = !titleEnabled.checked;
+        if (card.titleHidden && activePackText && activePackText.cardId === cardId && activePackText.role === 'card-title') {
+          activePackText = null;
+          syncPackToolbar();
+        }
+        renderCards();
+      });
+    }
+    const descEnabled = root.querySelector('#packCardDescEnabled');
+    if (descEnabled) {
+      descEnabled.addEventListener('change', function () {
+        const card = getCard();
+        if (!card) return;
+        card.descHidden = !descEnabled.checked;
+        if (card.descHidden && activePackText && activePackText.cardId === cardId && activePackText.role === 'card-desc') {
+          activePackText = null;
+          syncPackToolbar();
+        }
+        renderCards();
       });
     }
     root.querySelectorAll('input[name="packCardBgMode"]').forEach(function (input) {
@@ -1146,6 +1453,10 @@
         if (colorWrap) colorWrap.hidden = card.bgMode !== 'color';
         if (imageWrap) imageWrap.hidden = card.bgMode !== 'image';
         renderCards();
+        if (card.bgMode === 'image') {
+          const fileInput = root.querySelector('#packCardBgImage');
+          if (fileInput) fileInput.click();
+        }
       });
     });
     bindColorField(root, 'packCardColor', function (hex) {
@@ -1197,15 +1508,24 @@
     function addCardIcon(icon) {
       const card = getCard();
       if (!card) return;
-      card.icons.push(normalizeDecorIcon(icon));
+      const pos = nextCardIconPos(card);
+      card.icons.push(normalizeDecorIcon(Object.assign({}, icon, { x: pos.x, y: pos.y })));
       refreshCardIconsList(root, card);
       renderCards();
     }
-    root.querySelectorAll('[data-add-card-glyph]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        addCardIcon({ type: 'glyph', value: btn.getAttribute('data-add-card-glyph') });
-      });
-    });
+
+    function applyCardIconSize(card, icon, sizeEl) {
+      icon.size = clampCardIconSize(sizeEl.type === 'number' ? sizeEl.value : sizeEl.value);
+      const row = sizeEl.closest ? sizeEl.closest('[data-card-icon-id]') : null;
+      if (row) {
+        row.querySelectorAll('[data-card-icon-size="' + icon.id + '"]').forEach(function (el) {
+          if (el !== sizeEl) el.value = String(icon.size);
+        });
+      }
+      const cardEl = document.querySelector('.pack-card[data-id="' + card.id + '"]');
+      const iconEl = cardEl && cardEl.querySelector('[data-card-icon-id="' + icon.id + '"]');
+      if (iconEl) iconEl.style.setProperty('--isize', icon.size + 'px');
+    }
     const iconImage = root.querySelector('#packCardIconImage');
     if (iconImage) {
       iconImage.addEventListener('change', function (e) {
@@ -1219,6 +1539,48 @@
     }
     const iconList = root.querySelector('#packEditCardIconList');
     if (iconList) {
+      iconList.addEventListener('input', function (e) {
+        const sizeId = e.target.getAttribute && e.target.getAttribute('data-card-icon-size');
+        if (!sizeId) return;
+        const card = getCard();
+        if (!card) return;
+        const icon = card.icons.find(function (item) { return item.id === sizeId; });
+        if (!icon) return;
+        const row = e.target.closest ? e.target.closest('[data-card-icon-id]') : null;
+        const range = row ? row.querySelector('input[type="range"][data-card-icon-size="' + sizeId + '"]') : null;
+        const num = row ? row.querySelector('input[type="number"][data-card-icon-size="' + sizeId + '"]') : null;
+        const isNumberField = e.target === num;
+
+        if (isNumberField) {
+          const typed = Number(e.target.value);
+          if (!Number.isFinite(typed)) return;
+          if (typed < CARD_ICON_SIZE_MIN || typed > CARD_ICON_SIZE_MAX) return;
+          icon.size = typed;
+          if (range) range.value = String(typed);
+          const cardEl = document.querySelector('.pack-card[data-id="' + card.id + '"]');
+          const iconEl = cardEl && cardEl.querySelector('[data-card-icon-id="' + icon.id + '"]');
+          if (iconEl) iconEl.style.setProperty('--isize', icon.size + 'px');
+          return;
+        }
+
+        applyCardIconSize(card, icon, e.target);
+      });
+      iconList.addEventListener('focusout', function (e) {
+        const sizeId = e.target.getAttribute && e.target.getAttribute('data-card-icon-size');
+        if (!sizeId || e.target.type !== 'number') return;
+        const card = getCard();
+        if (!card) return;
+        const icon = card.icons.find(function (item) { return item.id === sizeId; });
+        if (!icon) return;
+        icon.size = clampCardIconSize(e.target.value);
+        e.target.value = String(icon.size);
+        const row = e.target.closest ? e.target.closest('[data-card-icon-id]') : null;
+        const range = row ? row.querySelector('input[type="range"][data-card-icon-size="' + sizeId + '"]') : null;
+        if (range) range.value = String(icon.size);
+        const cardEl = document.querySelector('.pack-card[data-id="' + card.id + '"]');
+        const iconEl = cardEl && cardEl.querySelector('[data-card-icon-id="' + icon.id + '"]');
+        if (iconEl) iconEl.style.setProperty('--isize', icon.size + 'px');
+      });
       iconList.addEventListener('click', function (e) {
         const btn = e.target.closest ? e.target.closest('[data-card-icon-remove]') : null;
         if (!btn) return;
@@ -1290,6 +1652,7 @@
     openEditor({
       title: 'עריכת קובייה',
       cardId: cardId,
+      hint: 'את הטקסט עורכים ישירות על הקובייה. כאן קובעים אם להציג כותרת ותיאור, ואת הרקע והפעולות.',
       fieldsHtml: cardEditorFieldsHtml(card),
       bind: function (root) { bindCardEditorFields(root, cardId); },
     });
@@ -1320,15 +1683,28 @@
   }
 
   /* ================================================================
-     עורך הסגירה (צוות פיתוח + אייקונים)
+     עורך הסגירה (צוות פיתוח + אלמנטים)
      ================================================================ */
 
   function closingIconsListHtml() {
     if (!state.closing.icons.length) {
-      return '<p class="pack-field-sub">אין עדיין אייקונים. לחצו על «הוסף אייקון» כדי להעלות תמונה.</p>';
+      return '<p class="pack-field-sub">אין עדיין אלמנטים. הוסיפו אייקון או טקסט.</p>';
     }
     return state.closing.icons.map(function (icon) {
       const id = escapeHtml(icon.id);
+      if (icon.kind === 'text') {
+        const preview = icon.value.trim() ? icon.value.slice(0, 28) : 'טקסט';
+        return (
+          '<div class="pack-logo-row pack-closing-icon-row" data-icon-id="' + id + '">' +
+            '<div class="pack-closing-icon-row-head">' +
+              '<span class="pack-logo-thumb pack-closing-icon-thumb" aria-hidden="true">Aa</span>' +
+              '<button type="button" class="pack-logo-remove" data-icon-remove="' + id + '" title="הסרה" aria-label="הסרה">×</button>' +
+            '</div>' +
+            '<p class="pack-field-sub">«' + escapeHtml(preview) + '» — ערכו את הטקסט באזור התחתון. צבע וגודל מסרגל הכלים.</p>' +
+            '<input type="url" dir="ltr" class="pack-closing-icon-href" placeholder="קישור (אופציונלי)" data-icon-href="' + id + '" value="' + escapeHtml(icon.href) + '">' +
+          '</div>'
+        );
+      }
       const thumb = icon.type === 'image' && icon.value
         ? '<img class="pack-logo-thumb" src="' + escapeHtml(icon.value) + '" alt="">'
         : '<span class="pack-logo-thumb pack-closing-icon-thumb" aria-hidden="true">' + escapeHtml(icon.value) + '</span>';
@@ -1354,7 +1730,7 @@
     const list = document.getElementById('packEditClosingIconList');
     if (list) list.innerHTML = closingIconsListHtml();
     const head = document.getElementById('packEditClosingIconsHead');
-    if (head) head.textContent = 'אייקונים (' + state.closing.icons.length + ')';
+    if (head) head.textContent = 'אלמנטים (' + state.closing.icons.length + ')';
   }
 
   function nextClosingIconX() {
@@ -1376,9 +1752,32 @@
     refreshClosingIconsList();
   }
 
+  function addClosingText() {
+    state.closing.icons.push(normalizeClosingIcon({
+      kind: 'text',
+      value: 'טקסט',
+      x: nextClosingIconX(),
+      y: 50,
+      size: 18,
+      color: '#222222',
+    }));
+    renderClosingIcons();
+    refreshClosingIconsList();
+  }
+
   function closingEditorFieldsHtml() {
     const c = state.closing;
     return (
+      '<section class="pack-edit-section">' +
+        '<div class="pack-edit-section-head">אזור תחתון</div>' +
+        '<label class="pack-check-row">' +
+          '<input type="checkbox" id="packClosingHidden"' + (c.hidden ? ' checked' : '') + '>' +
+          '<span>הסתרת האזור התחתון לגמרי</span>' +
+        '</label>' +
+        '<p class="pack-field-sub" id="packClosingHiddenHint"' + (c.hidden ? '' : ' hidden') + '>כל האזור התחתון לא יוצג במארז. אפשר להחזיר אותו בכל עת ממצב עריכה.</p>' +
+      '</section>' +
+
+      '<div id="packClosingContentsControls"' + (c.hidden ? ' hidden' : '') + '>' +
       '<section class="pack-edit-section">' +
         '<div class="pack-edit-section-head">גובה האזור</div>' +
         '<p class="pack-field-sub">אפשר גם לגרור את הפס בתחתית המסגרת לשינוי גובה מהיר.</p>' +
@@ -1404,27 +1803,49 @@
         '</div>' +
         rangeRowHtml('packClosingSize', 'גודל', clampDevTeamSize(c.size), 70, 180, '%') +
         rangeRowHtml('packClosingRadius', 'חידוד הפינות', clampDevTeamRadius(c.radius), 0, 40, 'px') +
-        colorFieldHtml('packClosingColor', 'צבע רקע', c.color) +
-        colorFieldHtml('packClosingTextColor', 'צבע טקסט', c.textColor) +
-        '<label class="pack-upload" for="packClosingImageInput" style="margin-top:10px;display:flex;">' +
+        '<div id="packClosingFillColor"' + (c.image ? ' hidden' : '') + '>' +
+          colorFieldHtml('packClosingColor', 'צבע רקע', c.color) +
+        '</div>' +
+        '<label class="pack-upload" id="packClosingImageUpload" for="packClosingImageInput"' + (c.image ? ' hidden' : '') + '>' +
           '<input type="file" id="packClosingImageInput" accept="image/*" hidden>' +
           '<span>העלאת תמונה לכפתור</span>' +
         '</label>' +
         '<img class="pack-preview' + (c.image ? ' is-visible' : '') + '" id="packClosingImagePreview" src="' + escapeHtml(c.image) + '" alt="">' +
-        '<button type="button" class="pack-clear-btn" id="packClosingImageClear"' + (c.image ? '' : ' hidden') + '>הסרת תמונה</button>' +
+        '<button type="button" class="pack-clear-btn" id="packClosingImageClear"' + (c.image ? '' : ' hidden') + '>הסרת תמונה (חזרה לצבע)</button>' +
       '</section>' +
 
       '<section class="pack-edit-section">' +
-        '<div class="pack-edit-section-head" id="packEditClosingIconsHead">אייקונים (' + c.icons.length + ')</div>' +
-        '<p class="pack-field-sub">העלו תמונת אייקון. אפשר לגרור כל אייקון לאורך האזור התחתון, ולשנות את הגודל כאן.</p>' +
+        '<div class="pack-edit-section-head" id="packEditClosingIconsHead">אלמנטים (' + c.icons.length + ')</div>' +
+        '<p class="pack-field-sub">הוסיפו אייקון או טקסט. אפשר לגרור כל אלמנט לאורך האזור התחתון. צבע וגודל של טקסט נשלטים מסרגל הכלים.</p>' +
         '<div id="packEditClosingIconList">' + closingIconsListHtml() + '</div>' +
-        '<label class="pack-add-logo-btn" for="packAddClosingIconFile">+ הוסף אייקון</label>' +
+        '<div class="pack-closing-add-row">' +
+          '<label class="pack-add-logo-btn" for="packAddClosingIconFile">+ הוסף אייקון</label>' +
+          '<button type="button" class="pack-add-logo-btn" id="packAddClosingText">+ הוסף טקסט</button>' +
+        '</div>' +
         '<input type="file" id="packAddClosingIconFile" accept="image/*" hidden>' +
-      '</section>'
+      '</section>' +
+      '</div>'
     );
   }
 
   function bindClosingEditorFields(root) {
+    const closingHiddenCheck = root.querySelector('#packClosingHidden');
+    const closingHiddenHint = root.querySelector('#packClosingHiddenHint');
+    const closingContents = root.querySelector('#packClosingContentsControls');
+    if (closingHiddenCheck) {
+      closingHiddenCheck.addEventListener('change', function () {
+        state.closing.hidden = closingHiddenCheck.checked;
+        if (closingHiddenHint) closingHiddenHint.hidden = !closingHiddenCheck.checked;
+        if (closingContents) closingContents.hidden = closingHiddenCheck.checked;
+        if (closingHiddenCheck.checked && activePackText &&
+            (activePackText.role === 'closing-label' || activePackText.role === 'closing-text')) {
+          activePackText = null;
+          syncPackToolbar();
+        }
+        renderClosing();
+        syncEditUi();
+      });
+    }
     const enabled = root.querySelector('#packClosingEnabled');
     if (enabled) {
       enabled.addEventListener('change', function () {
@@ -1446,8 +1867,14 @@
         renderClosing();
       });
     }
-    bindColorField(root, 'packClosingColor', function (hex) { state.closing.color = hex; renderClosing(); });
-    bindColorField(root, 'packClosingTextColor', function (hex) { state.closing.textColor = hex; renderClosing(); });
+    bindColorField(root, 'packClosingColor', function (hex) {
+      state.closing.color = hex;
+      if (state.closing.image) {
+        state.closing.image = '';
+        refreshClosingFillUi();
+      }
+      renderClosing();
+    });
     bindRangeRow(root, 'packClosingHeight', function (v) {
       state.closing.height = clampClosingHeight(v);
       renderClosing();
@@ -1461,15 +1888,19 @@
       renderClosing();
     });
 
-    function refreshClosingImageUi() {
+    function refreshClosingFillUi() {
+      const hasImage = !!(state.closing.image);
+      const colorWrap = root.querySelector('#packClosingFillColor');
+      const upload = root.querySelector('#packClosingImageUpload');
       const preview = root.querySelector('#packClosingImagePreview');
       const clearBtn = root.querySelector('#packClosingImageClear');
-      const image = state.closing.image || '';
+      if (colorWrap) colorWrap.hidden = hasImage;
+      if (upload) upload.hidden = hasImage;
       if (preview) {
-        preview.src = image;
-        preview.classList.toggle('is-visible', !!image);
+        preview.src = state.closing.image || '';
+        preview.classList.toggle('is-visible', hasImage);
       }
-      if (clearBtn) clearBtn.hidden = !image;
+      if (clearBtn) clearBtn.hidden = !hasImage;
     }
 
     const imageInput = root.querySelector('#packClosingImageInput');
@@ -1480,7 +1911,7 @@
         readImageAsDataUrl(file, function (dataUrl) {
           state.closing.image = dataUrl;
           renderClosing();
-          refreshClosingImageUi();
+          refreshClosingFillUi();
         });
         e.target.value = '';
       });
@@ -1490,7 +1921,7 @@
       imageClear.addEventListener('click', function () {
         state.closing.image = '';
         renderClosing();
-        refreshClosingImageUi();
+        refreshClosingFillUi();
       });
     }
 
@@ -1500,7 +1931,7 @@
         const sizeId = e.target.getAttribute('data-icon-size');
         if (sizeId) {
           const icon = state.closing.icons.find(function (item) { return item.id === sizeId; });
-          if (!icon) return;
+          if (!icon || icon.kind === 'text') return;
           const row = e.target.closest ? e.target.closest('.pack-closing-icon-row') : null;
           const range = row ? row.querySelector('input[type="range"][data-icon-size="' + sizeId + '"]') : null;
           const num = row ? row.querySelector('input[type="number"][data-icon-size="' + sizeId + '"]') : null;
@@ -1534,7 +1965,7 @@
         const sizeId = e.target.getAttribute && e.target.getAttribute('data-icon-size');
         if (!sizeId || e.target.type !== 'number') return;
         const icon = state.closing.icons.find(function (item) { return item.id === sizeId; });
-        if (!icon) return;
+        if (!icon || icon.kind === 'text') return;
         icon.size = clampClosingIconSize(e.target.value);
         e.target.value = String(icon.size);
         const row = e.target.closest ? e.target.closest('.pack-closing-icon-row') : null;
@@ -1563,12 +1994,18 @@
         e.target.value = '';
       });
     }
+    const addText = root.querySelector('#packAddClosingText');
+    if (addText) {
+      addText.addEventListener('click', function () {
+        addClosingText();
+      });
+    }
   }
 
   function openClosingEditor() {
     openEditor({
       title: 'עריכת אזור תחתון',
-      hint: 'גררו את כפתור צוות הפיתוח ואת האייקונים ישירות בתוך מסגרת האזור התחתון.',
+      hint: 'גררו את כפתור צוות הפיתוח ואת האלמנטים ישירות בתוך מסגרת האזור התחתון.',
       fieldsHtml: closingEditorFieldsHtml(),
       bind: bindClosingEditorFields,
     });
@@ -1679,6 +2116,17 @@
           getColor: function () { return state.closing.textColor; },
           setColor: function (hex) { state.closing.textColor = hex; },
         };
+      case 'closing-text': {
+        const item = state.closing.icons.find(function (i) { return i.id === target.itemId; });
+        if (!item || item.kind !== 'text') return null;
+        return {
+          min: 10, max: 72,
+          getSize: function () { return item.size; },
+          setSize: function (v) { item.size = clamp(v, 10, 72, 18); return item.size; },
+          getColor: function () { return item.color; },
+          setColor: function (hex) { item.color = hex; },
+        };
+      }
       default:
         return null;
     }
@@ -1693,16 +2141,29 @@
       if (size != null) target.el.style.setProperty('--pack-subtitle-size', size + 'px');
       if (color != null) target.el.style.color = color;
     } else {
-      if (size != null) target.el.style.fontSize = size + 'px';
-      if (color != null) target.el.style.color = color;
+      if (size != null) {
+        target.el.style.fontSize = size + 'px';
+        if (target.role === 'closing-text') {
+          const wrap = target.el.closest ? target.el.closest('.pack-closing-text') : null;
+          if (wrap) wrap.style.setProperty('--csize', size + 'px');
+        }
+      }
+      if (color != null) {
+        target.el.style.color = color;
+        if (target.role === 'closing-text') {
+          const wrap = target.el.closest ? target.el.closest('.pack-closing-text') : null;
+          if (wrap) wrap.style.setProperty('--ccolor', color);
+        }
+      }
     }
   }
 
   function syncPackToolbar() {
+    if (!isPackActive()) return;
     const colorField = document.getElementById('inlineTextColorPicker');
     const sizeControl = document.getElementById('inlineTextSizeControl');
     const sizeRange = document.getElementById('inlineTextSize');
-    const sizeValueEl = document.getElementById('inlineTextSizeValue');
+    const sizeNum = document.getElementById('inlineTextSizeNum');
     const refs = hasActivePackText() ? getPackTextRefs(activePackText) : null;
 
     if (colorField) {
@@ -1711,15 +2172,20 @@
       if (swatch) swatch.setAttribute('aria-disabled', refs ? 'false' : 'true');
       if (refs && window.HebetColor) window.HebetColor.setHslaFieldValue('inlineTextColor', refs.getColor());
     }
-    if (sizeControl && sizeRange && sizeValueEl) {
+    if (sizeControl && sizeRange) {
       sizeControl.classList.toggle('is-disabled', !refs);
       sizeRange.disabled = !refs;
+      if (sizeNum) sizeNum.disabled = !refs;
       if (refs) {
         sizeRange.min = String(refs.min);
         sizeRange.max = String(refs.max);
+        if (sizeNum) {
+          sizeNum.min = String(refs.min);
+          sizeNum.max = String(refs.max);
+        }
         const size = refs.getSize();
         sizeRange.value = String(size);
-        sizeValueEl.textContent = String(size);
+        if (sizeNum) sizeNum.value = String(size);
       }
     }
   }
@@ -1743,8 +2209,10 @@
     applyPackTextLiveStyle(activePackText, size, null);
     persist();
     if (isEditorOpen()) snapshotJSON = JSON.stringify(state);
-    const sizeValueEl = document.getElementById('inlineTextSizeValue');
-    if (sizeValueEl) sizeValueEl.textContent = String(size);
+    const sizeRange = document.getElementById('inlineTextSize');
+    const sizeNum = document.getElementById('inlineTextSizeNum');
+    if (sizeRange) sizeRange.value = String(size);
+    if (sizeNum) sizeNum.value = String(size);
   }
 
   function scheduleClearActivePackText(el) {
@@ -1839,25 +2307,68 @@
     if (isEditorOpen()) snapshotJSON = JSON.stringify(state);
   }
 
+  function commitClosingElementText(label) {
+    const wrap = label && label.closest ? label.closest('.pack-closing-text') : null;
+    const id = wrap && wrap.getAttribute('data-icon-id');
+    const item = id ? state.closing.icons.find(function (i) { return i.id === id; }) : null;
+    if (!item || item.kind !== 'text') return;
+    item.value = String(label.textContent || '').trim().slice(0, 80) || 'טקסט';
+    if (document.activeElement !== label) label.textContent = item.value;
+    persist();
+    if (isEditorOpen()) {
+      snapshotJSON = JSON.stringify(state);
+      refreshClosingIconsList();
+    }
+  }
+
   function bindInlineClosingText() {
     const ui = els();
-    if (!ui.closingSection || !ui.devTeamLabel || ui.closingSection.dataset.textBound === '1') return;
+    if (!ui.closingSection || ui.closingSection.dataset.textBound === '1') return;
     ui.closingSection.dataset.textBound = '1';
 
     ui.closingSection.addEventListener('focusin', function (e) {
-      if (e.target !== ui.devTeamLabel || !isPageEditMode()) return;
-      activePackText = { el: ui.devTeamLabel, role: 'closing-label', cardId: null };
+      if (!isPageEditMode() || isClosingHidden()) return;
+      if (ui.devTeamLabel && e.target === ui.devTeamLabel) {
+        activePackText = { el: ui.devTeamLabel, role: 'closing-label', cardId: null };
+        syncPackToolbar();
+        return;
+      }
+      const label = e.target.closest ? e.target.closest('.pack-closing-text-label') : null;
+      if (!label || !ui.closingSection.contains(label)) return;
+      const wrap = label.closest('.pack-closing-text');
+      const id = wrap && wrap.getAttribute('data-icon-id');
+      if (!id) return;
+      activePackText = { el: label, role: 'closing-text', cardId: null, itemId: id };
       syncPackToolbar();
     });
     ui.closingSection.addEventListener('focusout', function (e) {
-      if (e.target !== ui.devTeamLabel) return;
-      commitClosingInlineText();
-      scheduleClearActivePackText(ui.devTeamLabel);
+      if (ui.devTeamLabel && e.target === ui.devTeamLabel) {
+        commitClosingInlineText();
+        scheduleClearActivePackText(ui.devTeamLabel);
+        return;
+      }
+      const label = e.target.classList && e.target.classList.contains('pack-closing-text-label') ? e.target : null;
+      if (!label) return;
+      commitClosingElementText(label);
+      scheduleClearActivePackText(label);
     });
     ui.closingSection.addEventListener('keydown', function (e) {
-      if (e.target !== ui.devTeamLabel) return;
-      if (e.key === 'Enter') { e.preventDefault(); ui.devTeamLabel.blur(); }
-      if (e.key === 'Escape') { e.preventDefault(); ui.devTeamLabel.textContent = state.closing.label; ui.devTeamLabel.blur(); }
+      if (ui.devTeamLabel && e.target === ui.devTeamLabel) {
+        if (e.key === 'Enter') { e.preventDefault(); ui.devTeamLabel.blur(); }
+        if (e.key === 'Escape') { e.preventDefault(); ui.devTeamLabel.textContent = state.closing.label; ui.devTeamLabel.blur(); }
+        return;
+      }
+      const label = e.target.classList && e.target.classList.contains('pack-closing-text-label') ? e.target : null;
+      if (!label) return;
+      if (e.key === 'Enter') { e.preventDefault(); label.blur(); }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        const wrap = label.closest('.pack-closing-text');
+        const id = wrap && wrap.getAttribute('data-icon-id');
+        const item = id ? state.closing.icons.find(function (i) { return i.id === id; }) : null;
+        if (item) label.textContent = item.value;
+        label.blur();
+      }
     });
   }
 
@@ -1902,11 +2413,177 @@
     });
   }
 
-  /* ---------- גרירה חופשית: כפתור צוות פיתוח ואייקונים באזור התחתון ---------- */
+  /* ---------- גרירה חופשית: טקסטים בכותרת ---------- */
+
+  function bindHeaderTextDragging() {
+    const ui = els();
+    if (!ui.header || ui.header.dataset.textDragBound === '1') return;
+    ui.header.dataset.textDragBound = '1';
+
+    ui.header.addEventListener('pointerdown', function (e) {
+      if (!isPageEditMode() || isHeaderHidden()) return;
+      if (e.button != null && e.button !== 0) return;
+      if (e.target.closest && e.target.closest('.pack-section-edit, .pack-header-resize, .pack-header-logo, .pack-header-drop')) return;
+      const el = e.target.closest ? e.target.closest('#packHeaderTitle, #packHeaderSubtitle') : null;
+      if (!el || el.hidden) return;
+      if (document.activeElement === el) return;
+
+      const item = el.id === 'packHeaderTitle' ? state.header.title : state.header.subtitle;
+      if (!item || item.hidden) return;
+
+      e.preventDefault();
+      const startX = e.clientX;
+      const startY = e.clientY;
+      let moved = false;
+      const rect = ui.header.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      el.classList.add('is-dragging');
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+
+      function onMove(ev) {
+        if (Math.abs(ev.clientX - startX) + Math.abs(ev.clientY - startY) > 4) moved = true;
+        if (!moved) return;
+        const padX = Math.min(45, Math.max(4, (el.offsetWidth / 2 / rect.width) * 100));
+        const padY = Math.min(45, Math.max(6, (el.offsetHeight / 2 / rect.height) * 100));
+        item.x = clamp(((ev.clientX - rect.left) / rect.width) * 100, padX, 100 - padX, item.x);
+        item.y = clamp(((ev.clientY - rect.top) / rect.height) * 100, padY, 100 - padY, item.y);
+        item.freePlaced = true;
+        el.style.setProperty('--tx', item.x + '%');
+        el.style.setProperty('--ty', item.y + '%');
+      }
+      function onUp(ev) {
+        el.classList.remove('is-dragging');
+        try { el.releasePointerCapture(ev.pointerId); } catch (_) {}
+        el.removeEventListener('pointermove', onMove);
+        el.removeEventListener('pointerup', onUp);
+        el.removeEventListener('pointercancel', onUp);
+        if (!moved) el.focus();
+        if (!isEditorOpen()) persist();
+      }
+      el.addEventListener('pointermove', onMove);
+      el.addEventListener('pointerup', onUp);
+      el.addEventListener('pointercancel', onUp);
+    });
+  }
+
+  /* ---------- גרירה חופשית: כפתור צוות פיתוח ואלמנטים באזור התחתון ---------- */
 
   function clampDragPercent(value, pad, fallback) {
     const maxPad = Math.min(Math.ceil(pad), 49);
     return clamp(value, maxPad, 100 - maxPad, fallback);
+  }
+
+  /* מאפשר לאייקון ולכפתור פעולה לשבת גם מחוץ לקובייה (פינה / מתחת לצורה). */
+  function clampCardIconDragPercent(value, iconSizePx, axisPx, fallback) {
+    const overflowPx = Math.min(160, Math.max(96, iconSizePx + 36));
+    const padPx = iconSizePx / 2 - overflowPx;
+    const pad = axisPx ? (padPx / axisPx) * 100 : 0;
+    const min = Math.max(CARD_OVERLAY_POS_MIN, pad);
+    const max = Math.min(CARD_OVERLAY_POS_MAX, 100 - pad);
+    return clamp(value, min, max, fallback);
+  }
+
+  function cardOverlayPeers(card, skipPos) {
+    const peers = [];
+    (card.icons || []).forEach(function (icon) {
+      if (icon !== skipPos) peers.push(icon);
+    });
+    ['view', 'download', 'print'].forEach(function (kind) {
+      const action = card.actions && card.actions[kind];
+      if (action && action.enabled && action !== skipPos) peers.push(action);
+    });
+    return peers;
+  }
+
+  function nearestSnap(value, axes, threshold) {
+    let best = null;
+    let bestDist = threshold;
+    for (let i = 0; i < axes.length; i++) {
+      const dist = Math.abs(value - axes[i]);
+      if (dist <= bestDist) {
+        bestDist = dist;
+        best = axes[i];
+      }
+    }
+    return best;
+  }
+
+  function nearestSnapEntry(value, entries, threshold) {
+    let best = null;
+    let bestDist = threshold;
+    for (let i = 0; i < entries.length; i++) {
+      const dist = Math.abs(value - entries[i].value);
+      if (dist <= bestDist) {
+        bestDist = dist;
+        best = entries[i];
+      }
+    }
+    return best;
+  }
+
+  function freeformSnapEntries(skipCard, dragEl, canvasRect) {
+    const dragHw = canvasRect.width ? (dragEl.offsetWidth / 2 / canvasRect.width) * 100 : 0;
+    const dragHh = canvasRect.height ? (dragEl.offsetHeight / 2 / canvasRect.height) * 100 : 0;
+    const xs = [{ value: 50, line: 50 }];
+    const ys = [{ value: 50, line: 50 }];
+    state.cards.items.forEach(function (item) {
+      if (item.id === skipCard.id) return;
+      const el = document.querySelector('.pack-card[data-id="' + item.id + '"]');
+      const hw = el && canvasRect.width ? (el.offsetWidth / 2 / canvasRect.width) * 100 : 0;
+      const hh = el && canvasRect.height ? (el.offsetHeight / 2 / canvasRect.height) * 100 : 0;
+      xs.push({ value: item.x, line: item.x });
+      ys.push({ value: item.y, line: item.y });
+      xs.push({ value: item.x - hw + dragHw, line: item.x - hw });
+      xs.push({ value: item.x + hw - dragHw, line: item.x + hw });
+      ys.push({ value: item.y - hh + dragHh, line: item.y - hh });
+      ys.push({ value: item.y + hh - dragHh, line: item.y + hh });
+    });
+    return { xs: xs, ys: ys };
+  }
+
+  function guideSpan(values) {
+    if (!values.length || values.length === 1) return { start: 0, size: 100 };
+    const min = Math.min.apply(null, values);
+    const max = Math.max.apply(null, values);
+    const pad = 3;
+    return { start: min - pad, size: Math.max(max - min + pad * 2, 0.8) };
+  }
+
+  function ensureCardGuides(host) {
+    let box = host.querySelector(':scope > .pack-card-guides');
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'pack-card-guides';
+      box.setAttribute('aria-hidden', 'true');
+      host.appendChild(box);
+    }
+    return box;
+  }
+
+  function renderCardGuides(host, snapX, snapY, xSpan, ySpan) {
+    const box = ensureCardGuides(host);
+    box.innerHTML = '';
+    if (snapY != null) {
+      const line = document.createElement('div');
+      line.className = 'pack-card-guide pack-card-guide--h';
+      line.style.top = snapY + '%';
+      line.style.left = xSpan.start + '%';
+      line.style.width = xSpan.size + '%';
+      box.appendChild(line);
+    }
+    if (snapX != null) {
+      const line = document.createElement('div');
+      line.className = 'pack-card-guide pack-card-guide--v';
+      line.style.left = snapX + '%';
+      line.style.top = ySpan.start + '%';
+      line.style.height = ySpan.size + '%';
+      box.appendChild(line);
+    }
+  }
+
+  function clearCardGuides(host) {
+    const box = host.querySelector(':scope > .pack-card-guides');
+    if (box) box.remove();
   }
 
   function bindClosingDragging() {
@@ -1916,7 +2593,7 @@
     section.dataset.dragBound = '1';
 
     section.addEventListener('click', function (e) {
-      const item = e.target.closest ? e.target.closest('.pack-dev-team-btn, .pack-closing-icon') : null;
+      const item = e.target.closest ? e.target.closest('.pack-dev-team-btn, .pack-closing-icon, .pack-closing-text') : null;
       if (!item) return;
       if (isPageEditMode()) {
         e.preventDefault();
@@ -1929,16 +2606,23 @@
       }
       if (item.classList.contains('pack-closing-icon') && item.getAttribute('data-has-href') !== '1') {
         e.preventDefault();
+        return;
+      }
+      if (item.classList.contains('pack-closing-text') && item.getAttribute('data-has-href') === '1') {
+        const href = item.getAttribute('data-href');
+        if (href) window.open(href, '_blank', 'noopener,noreferrer');
       }
     });
 
     section.addEventListener('pointerdown', function (e) {
-      if (!isPageEditMode()) return;
+      if (!isPageEditMode() || isClosingHidden()) return;
       if (e.target.closest && e.target.closest('.pack-section-edit, .pack-closing-resize')) return;
       if (e.target.id === 'packDevTeamLabel') return; // אפשרו לחיצה לעריכת הטקסט במקום גרירה
+      const focusedText = e.target.closest && e.target.closest('.pack-closing-text-label');
+      if (focusedText && document.activeElement === focusedText) return;
       if (e.button != null && e.button !== 0) return;
       const btn = e.target.closest ? e.target.closest('.pack-dev-team-btn') : null;
-      const iconEl = e.target.closest ? e.target.closest('.pack-closing-icon') : null;
+      const iconEl = e.target.closest ? e.target.closest('.pack-closing-icon, .pack-closing-text') : null;
       if (!btn && !iconEl) return;
 
       const el = btn || iconEl;
@@ -1953,12 +2637,16 @@
 
       e.preventDefault();
       e.stopPropagation();
+      const startX = e.clientX;
+      const startY = e.clientY;
+      let moved = false;
       const rect = section.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
       el.classList.add('is-dragging');
       try { el.setPointerCapture(e.pointerId); } catch (_) {}
 
       function onMove(ev) {
+        if (Math.abs(ev.clientX - startX) + Math.abs(ev.clientY - startY) > 4) moved = true;
         const padX = (el.offsetWidth / 2 / rect.width) * 100;
         const padY = (el.offsetHeight / 2 / rect.height) * 100;
         pos.x = clampDragPercent(((ev.clientX - rect.left) / rect.width) * 100, padX, pos.x);
@@ -1972,12 +2660,121 @@
         el.removeEventListener('pointermove', onMove);
         el.removeEventListener('pointerup', onUp);
         el.removeEventListener('pointercancel', onUp);
+        if (!moved && el.classList.contains('pack-closing-text')) {
+          const label = el.querySelector('.pack-closing-text-label');
+          if (label) label.focus();
+        }
         if (!isEditorOpen()) persist();
       }
       el.addEventListener('pointermove', onMove);
       el.addEventListener('pointerup', onUp);
       el.addEventListener('pointercancel', onUp);
     });
+  }
+
+  /* ---------- גרירה חופשית: אייקונים וכפתורי פעולה בתוך קובייה ---------- */
+
+  function bindCardIconDragging() {
+    const ui = els();
+    if (!ui.cardsGrid || ui.cardsGrid.dataset.iconDragBound === '1') return;
+    ui.cardsGrid.dataset.iconDragBound = '1';
+
+    ui.cardsGrid.addEventListener('pointerdown', function (e) {
+      if (!isPageEditMode()) return;
+      if (e.button != null && e.button !== 0) return;
+      const cardEl = e.target.closest ? e.target.closest('.pack-card') : null;
+      if (!cardEl) return;
+      const card = state.cards.items.find(function (item) { return item.id === cardEl.getAttribute('data-id'); });
+      if (!card) return;
+
+      const iconEl = e.target.closest ? e.target.closest('.pack-card-icon') : null;
+      const actionEl = !iconEl && e.target.closest ? e.target.closest('.pack-card-action') : null;
+      const dragEl = iconEl || actionEl;
+      if (!dragEl) return;
+
+      let pos;
+      let xVar;
+      let yVar;
+      if (iconEl) {
+        const iconId = iconEl.getAttribute('data-card-icon-id');
+        pos = (card.icons || []).find(function (item) { return item.id === iconId; });
+        xVar = '--ix';
+        yVar = '--iy';
+      } else {
+        const kind = actionEl.getAttribute('data-action-kind');
+        pos = kind && card.actions ? card.actions[kind] : null;
+        xVar = '--ax';
+        yVar = '--ay';
+      }
+      if (!pos) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      const rect = cardEl.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      dragEl.classList.add('is-dragging');
+      try { dragEl.setPointerCapture(e.pointerId); } catch (_) {}
+      const startX = e.clientX;
+      const startY = e.clientY;
+      let moved = false;
+
+      function onMove(ev) {
+        if (Math.abs(ev.clientX - startX) + Math.abs(ev.clientY - startY) > 4) moved = true;
+        let x = clampCardIconDragPercent(
+          ((ev.clientX - rect.left) / rect.width) * 100,
+          dragEl.offsetWidth,
+          rect.width,
+          pos.x
+        );
+        let y = clampCardIconDragPercent(
+          ((ev.clientY - rect.top) / rect.height) * 100,
+          dragEl.offsetHeight,
+          rect.height,
+          pos.y
+        );
+        const peers = cardOverlayPeers(card, pos);
+        const xs = [0, 50, 100].concat(peers.map(function (item) { return item.x; }));
+        const ys = [0, 50, 100].concat(peers.map(function (item) { return item.y; }));
+        const snapX = nearestSnap(x, xs, (CARD_SNAP_PX / rect.width) * 100);
+        const snapY = nearestSnap(y, ys, (CARD_SNAP_PX / rect.height) * 100);
+        if (snapX != null) x = snapX;
+        if (snapY != null) y = snapY;
+        pos.x = x;
+        pos.y = y;
+        dragEl.style.setProperty(xVar, pos.x + '%');
+        dragEl.style.setProperty(yVar, pos.y + '%');
+
+        const xPeers = [x].concat(peers.filter(function (item) { return snapY != null && Math.abs(item.y - snapY) < 0.05; }).map(function (item) { return item.x; }));
+        const yPeers = [y].concat(peers.filter(function (item) { return snapX != null && Math.abs(item.x - snapX) < 0.05; }).map(function (item) { return item.y; }));
+        renderCardGuides(
+          cardEl,
+          snapX,
+          snapY,
+          guideSpan(snapY != null ? xPeers : []),
+          guideSpan(snapX != null ? yPeers : [])
+        );
+      }
+      function onUp(ev) {
+        dragEl.classList.remove('is-dragging');
+        clearCardGuides(cardEl);
+        try { dragEl.releasePointerCapture(ev.pointerId); } catch (_) {}
+        dragEl.removeEventListener('pointermove', onMove);
+        dragEl.removeEventListener('pointerup', onUp);
+        dragEl.removeEventListener('pointercancel', onUp);
+        if (moved) {
+          function suppressClick(clickEv) {
+            clickEv.preventDefault();
+            clickEv.stopPropagation();
+            dragEl.removeEventListener('click', suppressClick, true);
+          }
+          dragEl.addEventListener('click', suppressClick, true);
+        }
+        if (!isEditorOpen()) persist();
+      }
+      dragEl.addEventListener('pointermove', onMove);
+      dragEl.addEventListener('pointerup', onUp);
+      dragEl.addEventListener('pointercancel', onUp);
+    }, true);
   }
 
   /* ---------- שינוי גובה כותרת בגרירה ---------- */
@@ -1988,7 +2785,7 @@
     ui.headerResize.dataset.bound = '1';
 
     ui.headerResize.addEventListener('pointerdown', function (e) {
-      if (!isPageEditMode()) return;
+      if (!isPageEditMode() || isHeaderHidden()) return;
       e.preventDefault();
       e.stopPropagation();
       const startY = e.clientY;
@@ -2025,7 +2822,7 @@
     ui.cardsGrid.addEventListener('pointerdown', function (e) {
       if (!isPageEditMode() || !isCardsFreeform()) return;
       if (e.button != null && e.button !== 0) return;
-      if (e.target.closest && e.target.closest('[data-card-edit], [data-card-delete], a.pack-card-action, button, .pack-cards-resize, [data-card-text]')) {
+      if (e.target.closest && e.target.closest('[data-card-edit], [data-card-delete], .pack-card-action, button, .pack-cards-resize, [data-card-text], .pack-card-icon')) {
         return; // אפשרו לחיצה לעריכת טקסט הקובייה (כותרת/תיאור) במקום גרירה
       }
       const cardEl = e.target.closest ? e.target.closest('.pack-card') : null;
@@ -2043,15 +2840,45 @@
       cardEl.setPointerCapture(e.pointerId);
 
       function onMove(ev) {
-        const x = ((ev.clientX - rect.left) / rect.width) * 100;
-        const y = ((ev.clientY - rect.top) / rect.height) * 100;
-        card.x = clamp(x, padX, 100 - padX, card.x);
-        card.y = clamp(y, padY, 100 - padY, card.y);
+        let x = clamp(((ev.clientX - rect.left) / rect.width) * 100, padX, 100 - padX, card.x);
+        let y = clamp(((ev.clientY - rect.top) / rect.height) * 100, padY, 100 - padY, card.y);
+        const entries = freeformSnapEntries(card, cardEl, rect);
+        const thX = (12 / rect.width) * 100;
+        const thY = (12 / rect.height) * 100;
+        const hitX = nearestSnapEntry(x, entries.xs, thX);
+        const hitY = nearestSnapEntry(y, entries.ys, thY);
+        let lineX = null;
+        let lineY = null;
+        if (hitX && hitX.value >= padX && hitX.value <= 100 - padX) {
+          x = hitX.value;
+          lineX = hitX.line;
+        }
+        if (hitY && hitY.value >= padY && hitY.value <= 100 - padY) {
+          y = hitY.value;
+          lineY = hitY.line;
+        }
+        card.x = x;
+        card.y = y;
         cardEl.style.setProperty('--cx', card.x + '%');
         cardEl.style.setProperty('--cy', card.y + '%');
+
+        const xPeers = [x].concat(state.cards.items.filter(function (item) {
+          return item.id !== card.id && lineY != null && Math.abs(item.y - y) < 0.05;
+        }).map(function (item) { return item.x; }));
+        const yPeers = [y].concat(state.cards.items.filter(function (item) {
+          return item.id !== card.id && lineX != null && Math.abs(item.x - x) < 0.05;
+        }).map(function (item) { return item.y; }));
+        renderCardGuides(
+          canvas,
+          lineX,
+          lineY,
+          guideSpan(lineY != null ? xPeers : []),
+          guideSpan(lineX != null ? yPeers : [])
+        );
       }
       function onUp(ev) {
         cardEl.classList.remove('is-dragging');
+        clearCardGuides(canvas);
         try { cardEl.releasePointerCapture(ev.pointerId); } catch (_) {}
         cardEl.removeEventListener('pointermove', onMove);
         cardEl.removeEventListener('pointerup', onUp);
@@ -2105,7 +2932,7 @@
     ui.closingResize.dataset.bound = '1';
 
     ui.closingResize.addEventListener('pointerdown', function (e) {
-      if (!isPageEditMode()) return;
+      if (!isPageEditMode() || isClosingHidden()) return;
       e.preventDefault();
       e.stopPropagation();
       const startY = e.clientY;
@@ -2194,28 +3021,57 @@
 
   let lastPackEditingState = null;
 
+  function commitActivePackInlineText() {
+    if (!activePackText || !activePackText.el) return;
+    const el = activePackText.el;
+    const role = activePackText.role;
+    if (role === 'header-title') commitInlineText(el, 'title');
+    else if (role === 'header-subtitle') commitInlineText(el, 'subtitle');
+    else if (role === 'card-title' || role === 'card-desc') commitCardInlineText(el);
+    else if (role === 'closing-label') commitClosingInlineText();
+    else if (role === 'closing-text') commitClosingElementText(el);
+  }
+
+  function commitPendingEdits() {
+    commitActivePackInlineText();
+    if (isEditorOpen()) return saveEditor();
+    return persistNow();
+  }
+
   function syncEditUi() {
     const ui = els();
     const editing = isPageEditMode();
     if (ui.headerEditBtn) ui.headerEditBtn.hidden = !editing;
-    if (ui.headerResize) ui.headerResize.hidden = !editing;
+    if (ui.headerResize) ui.headerResize.hidden = !editing || isHeaderHidden();
     if (ui.cardsEditBtn) ui.cardsEditBtn.hidden = !editing;
     if (ui.cardsResize) ui.cardsResize.hidden = !editing || !isCardsFreeform();
     if (ui.closingEditBtn) ui.closingEditBtn.hidden = !editing;
-    if (ui.closingResize) ui.closingResize.hidden = !editing;
-    if (ui.headerTitle) ui.headerTitle.setAttribute('contenteditable', editing ? 'true' : 'false');
-    if (ui.headerSubtitle) ui.headerSubtitle.setAttribute('contenteditable', editing ? 'true' : 'false');
-    if (ui.devTeamLabel) ui.devTeamLabel.setAttribute('contenteditable', editing ? 'true' : 'false');
+    if (ui.closingResize) ui.closingResize.hidden = !editing || isClosingHidden();
+    if (ui.headerTitle) {
+      ui.headerTitle.hidden = isHeaderHidden() || isHeaderTextHidden('title');
+      ui.headerTitle.setAttribute('contenteditable', editing && !ui.headerTitle.hidden ? 'true' : 'false');
+    }
+    if (ui.headerSubtitle) {
+      ui.headerSubtitle.hidden = isHeaderHidden() || isHeaderTextHidden('subtitle');
+      ui.headerSubtitle.setAttribute('contenteditable', editing && !ui.headerSubtitle.hidden ? 'true' : 'false');
+    }
+    if (ui.devTeamLabel) ui.devTeamLabel.setAttribute('contenteditable', editing && !isClosingHidden() ? 'true' : 'false');
+    document.querySelectorAll('.pack-closing-text-label').forEach(function (el) {
+      el.setAttribute('contenteditable', editing && !isClosingHidden() ? 'true' : 'false');
+    });
     // הקוביות בנויות מ-HTML שנוצר מחדש ותלוי במצב העריכה (contenteditable + הצגת
     // תיאור ריק) — רק כשהמצב באמת משתנה מרעננים אותן, כדי לא לפגוע בפוקוס באמצע עריכה.
     if (lastPackEditingState !== editing) {
+      if (lastPackEditingState === true && !editing) {
+        commitPendingEdits();
+      }
       lastPackEditingState = editing;
       renderCards();
+      renderClosingIcons();
     }
     if (!editing) {
       if (activePackText) { activePackText = null; syncPackToolbar(); }
     }
-    if (!editing && isEditorOpen()) closeEditor(true);
   }
 
   /* ---------- חיווט אירועים כללי ---------- */
@@ -2226,14 +3082,17 @@
     const delBtn = e.target.closest ? e.target.closest('[data-card-delete]') : null;
     if (delBtn) { e.preventDefault(); removeCard(delBtn.getAttribute('data-card-delete')); return; }
     if (!isPageEditMode()) return;
-    const printBtn = e.target.closest ? e.target.closest('[data-print-href]') : null;
-    if (printBtn) { e.preventDefault(); return; }
-    const link = e.target.closest ? e.target.closest('a.pack-card-action') : null;
-    if (link && link.getAttribute('data-has-href') !== '1') e.preventDefault();
+    const action = e.target.closest ? e.target.closest('.pack-card-action') : null;
+    if (action) { e.preventDefault(); return; }
   }
 
   function handleCardsGridClickReadMode(e) {
     if (isPageEditMode()) return;
+    const soonCard = e.target.closest ? e.target.closest('.pack-card.is-coming-soon') : null;
+    if (soonCard) {
+      e.preventDefault();
+      return;
+    }
     const printBtn = e.target.closest ? e.target.closest('[data-print-href]') : null;
     if (printBtn) {
       e.preventDefault();
@@ -2284,7 +3143,7 @@
       ui.cardsGrid.addEventListener('click', handleCardsGridClick);
       ui.cardsGrid.addEventListener('click', handleCardsGridClickReadMode);
     }
-    if (ui.editClose) ui.editClose.addEventListener('click', function () { closeEditor(true); });
+    if (ui.editClose) ui.editClose.addEventListener('click', function () { saveEditor(); });
     if (ui.editCancel) ui.editCancel.addEventListener('click', function () { closeEditor(true); });
     if (ui.editForm) {
       ui.editForm.addEventListener('submit', function (e) {
@@ -2304,9 +3163,11 @@
 
     bindResize();
     bindCardsFreeformDrag();
+    bindCardIconDragging();
     bindCardsHeightResize();
     bindClosingHeightResize();
     bindLogoDragging();
+    bindHeaderTextDragging();
     bindClosingDragging();
     bindHeaderImageDrop();
     bindInlineHeaderText();
@@ -2333,6 +3194,274 @@
     });
   }
 
+  /* ---------- הגדרות: טעינה / איפוס / ייצוא ---------- */
+
+  const PROJECT_STYLES = [
+    'css/shared/shell.css',
+    'css/manhalan/style.css',
+    'css/pack/pack.css',
+  ];
+  const PROJECT_SCRIPTS = [
+    'js/shared/shell.js',
+    'js/manhalan/app.js',
+    'js/pack/pack.js',
+  ];
+
+  function closePackSettingsMenu() {
+    const menu = document.getElementById('settingsMenu');
+    const btn = document.getElementById('btnSettings');
+    if (menu) menu.hidden = true;
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+  }
+
+  function blobToBase64(blob) {
+    return new Promise(function (resolve, reject) {
+      const reader = new FileReader();
+      reader.onload = function () {
+        const result = String(reader.result || '');
+        const comma = result.indexOf(',');
+        resolve(comma >= 0 ? result.slice(comma + 1) : result);
+      };
+      reader.onerror = function () { reject(reader.error || new Error('שגיאה בקריאת קובץ')); };
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  function serializeBootstrapJson(data) {
+    return JSON.stringify(data)
+      .replace(/</g, '\\u003c')
+      .replace(/\u2028/g, '\\u2028')
+      .replace(/\u2029/g, '\\u2029');
+  }
+
+  function escapeForInlineScript(text) {
+    return String(text || '').replace(/<\/script/gi, '<\\/script');
+  }
+
+  function collectSiteTheme() {
+    return normalizeTheme(state && state.theme, DEFAULT_THEME);
+  }
+
+  function collectPackSnapshot() {
+    persistNow();
+    return {
+      version: PACK_BOOTSTRAP_VERSION,
+      exportedAt: new Date().toISOString(),
+      mode: 'user',
+      generator: 'pack',
+      pack: cloneState(state),
+      theme: collectSiteTheme(),
+    };
+  }
+
+  function importPackSnapshot(snapshot) {
+    if (!snapshot || !snapshot.pack || typeof snapshot.pack !== 'object') {
+      throw new Error('קובץ לא תקין או חסרים בו נתוני מארז');
+    }
+    const next = normalizeState(snapshot.pack);
+    if ((!snapshot.pack.theme || typeof snapshot.pack.theme !== 'object') && snapshot.theme) {
+      next.theme = normalizeTheme(snapshot.theme);
+    }
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch (_) {
+      throw new Error('אין מספיק מקום לשמירה. נסו תמונה קטנה יותר.');
+    }
+    state = next;
+  }
+
+  function bootstrapFromEmbeddedIfPresent() {
+    const el = document.getElementById(PACK_BOOTSTRAP_ID);
+    if (!el || !String(el.textContent || '').trim()) return;
+    try {
+      const snapshot = JSON.parse(el.textContent);
+      importPackSnapshot(snapshot);
+    } catch (err) {
+      console.warn('Pack bootstrap failed', err);
+    }
+  }
+
+  function buildExportedPackHtml(snapshot, indexHtml, cssText, jsText, assetDataUrls) {
+    const urls = assetDataUrls || {};
+    let out = String(indexHtml || '');
+    if (window.HebetShell && typeof window.HebetShell.applyClientExportShell === 'function') {
+      out = window.HebetShell.applyClientExportShell(out, 'pack');
+    } else {
+      out = out.replace(
+        /<body\b[^>]*>/i,
+        '<body data-app-mode="user" class="user-mode is-pack" data-generator="pack">'
+      );
+    }
+    out = out.replace(/<link rel="stylesheet" href="css\/(?:shared\/shell|manhalan\/style|pack\/pack|style)\.css(?:\?[^"]*)?">\s*/g, '');
+    out = out.replace('</head>', '<style>\n' + cssText + '\n</style>\n</head>');
+
+    if (urls.gateBg) {
+      out = out.replace(/src="assets\/gate-bg\.jpg(?:\?[^"]*)?"/, 'src="' + urls.gateBg + '"');
+    }
+    if (urls.logo) {
+      out = out.replace(/src="assets\/hebet-logo\.png(?:\?[^"]*)?"/, 'src="' + urls.logo + '"');
+    }
+
+    const bootstrapTag =
+      '<script id="' + PACK_BOOTSTRAP_ID + '" type="application/json">' +
+      serializeBootstrapJson(snapshot) +
+      '</script>\n';
+
+    out = out.replace(/<script src="js\/(?:shared\/shell|manhalan\/app|pack\/pack|app)\.js(?:\?[^"]*)?"><\/script>\s*/g, '');
+    out = out.replace('</body>', bootstrapTag + '<script>\n' + escapeForInlineScript(jsText) + '\n</script>\n</body>');
+
+    return out;
+  }
+
+  async function fetchProjectAsset(path) {
+    if (window.HebetShell && typeof window.HebetShell.readProjectText === 'function') {
+      return window.HebetShell.readProjectText(path);
+    }
+    const res = await fetch(path, { cache: 'no-store' });
+    if (!res.ok) throw new Error('לא ניתן לקרוא ' + path);
+    return res.text();
+  }
+
+  async function exportPackUserModeHtml() {
+    if (isUserMode()) return;
+    closePackSettingsMenu();
+
+    const picker = window.HebetShell && typeof window.HebetShell.pickClientHtmlSave === 'function'
+      ? window.HebetShell.pickClientHtmlSave
+      : null;
+    const writer = window.HebetShell && typeof window.HebetShell.writeClientHtml === 'function'
+      ? window.HebetShell.writeClientHtml
+      : null;
+    const saveTarget = picker ? await picker(PACK_EXPORT_FILENAME) : 'download';
+    if (!saveTarget) return;
+
+    commitPendingEdits();
+
+    let snapshot;
+    try {
+      snapshot = collectPackSnapshot();
+    } catch (err) {
+      console.error(err);
+      alert('שגיאה באיסוף הנתונים לייצוא.');
+      return;
+    }
+
+    let html = '';
+    try {
+      const indexHtml = await fetchProjectAsset('index.html');
+      const cssText = (await Promise.all(PROJECT_STYLES.map(fetchProjectAsset))).join('\n\n');
+      const jsText = (await Promise.all(PROJECT_SCRIPTS.map(fetchProjectAsset))).join('\n\n');
+      const assetDataUrls = {};
+      try {
+        const imgRes = await fetch('assets/gate-bg.jpg', { cache: 'no-store' });
+        if (imgRes.ok) {
+          const imgBlob = await imgRes.blob();
+          const b64 = await blobToBase64(imgBlob);
+          assetDataUrls.gateBg = 'data:' + (imgBlob.type || 'image/jpeg') + ';base64,' + b64;
+        }
+      } catch (imgErr) {
+        console.warn('Gate image was not inlined into pack export', imgErr);
+      }
+      try {
+        const logoRes = await fetch('assets/hebet-logo.png', { cache: 'no-store' });
+        if (logoRes.ok) {
+          const logoBlob = await logoRes.blob();
+          const b64 = await blobToBase64(logoBlob);
+          assetDataUrls.logo = 'data:' + (logoBlob.type || 'image/png') + ';base64,' + b64;
+        }
+      } catch (logoErr) {
+        console.warn('Gate logo was not inlined into pack export', logoErr);
+      }
+      html = buildExportedPackHtml(snapshot, indexHtml, cssText, jsText, assetDataUrls);
+    } catch (err) {
+      console.warn('Full pack export failed, using live snapshot', err);
+      if (!window.HebetShell || typeof window.HebetShell.buildLiveClientHtml !== 'function') {
+        alert('לא ניתן לייצא כרגע. נסו שוב.');
+        return;
+      }
+      try {
+        html = await window.HebetShell.buildLiveClientHtml('pack', snapshot);
+      } catch (snapErr) {
+        console.error(snapErr);
+        alert('לא ניתן לייצא כרגע. נסו שוב.');
+        return;
+      }
+    }
+
+    if (writer) {
+      await writer(saveTarget, html, PACK_EXPORT_FILENAME);
+      return;
+    }
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = PACK_EXPORT_FILENAME;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function parsePackSnapshotFromHtmlText(htmlText) {
+    const doc = new DOMParser().parseFromString(String(htmlText || ''), 'text/html');
+    const bootstrapEl = doc.getElementById(PACK_BOOTSTRAP_ID);
+    if (!bootstrapEl || !String(bootstrapEl.textContent || '').trim()) {
+      throw new Error('לא נמצאו נתוני מארז בקובץ שנבחר');
+    }
+    return JSON.parse(bootstrapEl.textContent);
+  }
+
+  async function loadPackFromHtmlFile(file) {
+    if (!file) return;
+    closePackSettingsMenu();
+    try {
+      const htmlText = await file.text();
+      const snapshot = parsePackSnapshotFromHtmlText(htmlText);
+      importPackSnapshot(snapshot);
+      if (window.HebetShell && typeof window.HebetShell.setResumeGenerator === 'function') {
+        window.HebetShell.setResumeGenerator('pack');
+      }
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert((err && err.message) ? err.message : 'לא הצלחנו לטעון את הקובץ');
+    }
+  }
+
+  function resetPackToDefaults() {
+    if (isUserMode()) return;
+    const ok = window.confirm(
+      'לאפס את המארז ולהתחיל מהתחלה?\n\n' +
+      'הכותרת, הקוביות והאזור התחתון יימחקו. לא ניתן לבטל.'
+    );
+    if (!ok) return;
+
+    closePackSettingsMenu();
+    if (isEditorOpen()) closeEditor(true);
+    clearTimeout(saveTimer);
+    state = cloneState(DEFAULT_STATE);
+    persistNow();
+    if (window.HebetShell && typeof window.HebetShell.setSavedEditMode === 'function') {
+      window.HebetShell.setSavedEditMode('pack', false);
+    }
+    syncSharedEditMode(false);
+    applyPackThemeToDom();
+    renderAll();
+    syncEditUi();
+  }
+
+  window.HebetPack = {
+    reset: resetPackToDefaults,
+    exportHtml: exportPackUserModeHtml,
+    loadFromFile: loadPackFromHtmlFile,
+    importSnapshot: importPackSnapshot,
+    commitPendingEdits: commitPendingEdits,
+    applyThemePatch: applyThemePatch,
+    getTheme: collectSiteTheme,
+  };
+
   /* ---------- אתחול ---------- */
 
   function initPackWorkspace() {
@@ -2345,13 +3474,32 @@
     bindInlineHeaderText();
   }
 
+  bootstrapFromEmbeddedIfPresent();
+
   document.addEventListener('hebet:generator-enter', function (event) {
     const generator = event && event.detail && event.detail.generator;
     if (generator !== 'pack') return;
     initPackWorkspace();
+    restorePackChrome();
+  });
+
+  document.addEventListener('hebet:generator-exit', function (event) {
+    const leaving = event && event.detail && event.detail.generator;
+    closePackSettingsMenu();
+    if (leaving === 'pack') {
+      commitPendingEdits();
+    } else if (isEditorOpen()) {
+      closeEditor(true);
+    }
+    closeHslaPopover();
   });
 
   if (document.body.getAttribute('data-generator') === 'pack') {
     initPackWorkspace();
+    restorePackChrome();
+  }
+
+  if (window.HebetShell && typeof window.HebetShell.consumeResumeGenerator === 'function') {
+    window.HebetShell.consumeResumeGenerator();
   }
 })();
