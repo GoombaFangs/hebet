@@ -7,11 +7,46 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=section-card-design">
+  <link rel="stylesheet" href="css/shared/shell.css?v=gate-pro">
+  <link rel="stylesheet" href="css/manhalan/style.css?v=gate-pro">
+  <link rel="stylesheet" href="css/pack/pack.css?v=pack-header-panel">
 </head>
-<body data-app-mode="edit">
+<body data-app-mode="edit" class="gate-open" data-generator="">
 
-  <!-- שורת פונקציונליות -->
+  <!-- ===== כללי: שער כניסה ===== -->
+  <div class="site-gate" id="siteGate" role="dialog" aria-modal="true" aria-labelledby="siteGateTitle">
+    <div class="site-gate-fx" aria-hidden="true">
+      <div class="site-gate-photo">
+        <img class="site-gate-photo-img" src="assets/gate-bg.jpg?v=gate-bg-2" alt="">
+      </div>
+      <div class="site-gate-wash"></div>
+      <svg class="site-gate-grain" preserveAspectRatio="none">
+        <filter id="siteGateGrain" x="0" y="0" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" stitchTiles="stitch"/>
+          <feComponentTransfer>
+            <feFuncA type="table" tableValues="0 0 0.62"/>
+          </feComponentTransfer>
+        </filter>
+        <rect width="100%" height="100%" filter="url(#siteGateGrain)"></rect>
+      </svg>
+      <div class="site-gate-scratches"></div>
+      <div class="site-gate-vignette"></div>
+    </div>
+    <img class="site-gate-logo" src="assets/hebet-logo.png?v=clean" alt="הבט" width="83" height="81">
+    <div class="site-gate-inner">
+      <header class="site-gate-copy">
+        <p class="site-gate-kicker">נקודת כניסה</p>
+        <h1 class="site-gate-title" id="siteGateTitle">ברוך הבא למחולל</h1>
+      </header>
+      <span class="site-gate-rule" aria-hidden="true"></span>
+      <div class="site-gate-actions">
+        <button type="button" class="site-gate-enter" id="siteGateEnter">מנהלן</button>
+        <button type="button" class="site-gate-enter" id="siteGatePack">מארז</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== כללי: סרגל כלים (מופיע בכל מחולל, לא בשער) ===== -->
   <div class="site-toolbar-shell" id="siteToolbar">
   <header class="site-toolbar">
     <div class="site-toolbar-actions">
@@ -77,6 +112,9 @@
     </div>
   </header>
   </div>
+
+  <!-- ===== מחולל מנהלן ===== -->
+  <div class="app-shell app-shell--manhalan" id="manhalanApp" hidden>
 
   <!-- כותרת hero: טקסטים + איור + כפתורים -->
   <section class="home-section home-header" id="homeHeader" data-home-section="header">
@@ -272,7 +310,15 @@
     </div>
   </div>
 
-  <!-- אשף יצירת כרטיס -->
+  <button type="button" class="back-to-top" id="backToTop" hidden title="חזרה למעלה" aria-label="חזרה למעלה">
+    <svg class="back-to-top-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+      <path d="M12 5l-6 6h4v7h4v-7h4l-6-6z" fill="currentColor"/>
+    </svg>
+  </button>
+
+  </div>
+
+  <!-- ===== כללי: אשף כרטיס (נפתח מסרגל הכלים בכל מחולל) ===== -->
   <div class="modal-overlay" id="modalOverlay" hidden>
     <div class="wizard" role="dialog" aria-labelledby="wizardTitle">
 
@@ -435,12 +481,95 @@
     </div>
   </div>
 
-  <button type="button" class="back-to-top" id="backToTop" hidden title="חזרה למעלה" aria-label="חזרה למעלה">
-    <svg class="back-to-top-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
-      <path d="M12 5l-6 6h4v7h4v-7h4l-6-6z" fill="currentColor"/>
-    </svg>
-  </button>
+  <!-- ===== מחולל מארז ===== -->
+  <div class="app-shell app-shell--pack" id="packApp" hidden>
+    <div class="pack-workspace" id="packWorkspace">
+      <header class="pack-header" id="packHeader">
+        <div class="pack-header-fill" id="packHeaderFill" aria-hidden="true">
+          <div class="pack-header-color" id="packHeaderColor"></div>
+          <div class="pack-header-image" id="packHeaderImage"></div>
+        </div>
 
+        <button type="button" class="home-section-edit pack-header-edit" id="packHeaderEdit" hidden title="עריכת כותרת">✎</button>
+
+        <div class="pack-header-drop" id="packHeaderDrop" hidden>
+          <span>גררו תמונה לכאן</span>
+        </div>
+
+        <button type="button" class="pack-header-resize" id="packHeaderResize" hidden title="גררו לשינוי גובה" aria-label="שינוי גובה כותרת">
+          <span class="pack-header-resize-grip"></span>
+        </button>
+      </header>
+      <div class="pack-body" id="packBody"></div>
+    </div>
+
+    <div class="pack-edit-overlay" id="packHeaderOverlay" hidden>
+      <div class="home-edit-modal pack-edit-modal" role="dialog" aria-labelledby="packHeaderEditTitle" aria-modal="true">
+        <div class="wizard-header">
+          <h2 id="packHeaderEditTitle">עריכת כותרת</h2>
+          <button type="button" class="wizard-close" id="packHeaderEditClose" aria-label="סגירה">×</button>
+        </div>
+        <form id="packHeaderForm" class="home-edit-form">
+          <div class="home-edit-body">
+            <p class="field-subhint pack-edit-hint">כאן מגדירים את רקע הכותרת. אפשר צבע או תמונה, ואז לכוון שקיפות וגובה.</p>
+
+            <section class="home-header-editor-item">
+              <div class="pack-edit-card-head">רקע</div>
+              <div class="edit-seg" role="radiogroup" aria-label="סוג רקע כותרת">
+                <label class="edit-seg-btn" for="packHeaderModeColor">
+                  <input type="radio" name="packHeaderMode" id="packHeaderModeColor" value="color" checked>
+                  <span>צבע</span>
+                </label>
+                <label class="edit-seg-btn" for="packHeaderModeImage">
+                  <input type="radio" name="packHeaderMode" id="packHeaderModeImage" value="image">
+                  <span>תמונה</span>
+                </label>
+              </div>
+              <div class="hsla-field pack-edit-color" id="packHeaderColorPicker" data-hsla-for="packHeaderColorValue">
+                <span>צבע כותרת</span>
+                <button type="button" class="hsla-swatch" id="packHeaderColorSwatch" title="בחירת צבע כותרת" aria-label="בחירת צבע כותרת"></button>
+                <span class="color-hex" id="packHeaderColorHex">#3d403c</span>
+                <input type="hidden" id="packHeaderColorValue" value="#3d403c">
+              </div>
+            </section>
+
+            <section class="home-header-editor-item">
+              <div class="pack-edit-card-head">תמונה</div>
+              <label class="pack-edit-upload" for="packHeaderImageInput" id="packHeaderUploadBtn">
+                <input type="file" id="packHeaderImageInput" accept="image/*" hidden>
+                <span>העלאת תמונה / החלפה</span>
+              </label>
+              <img class="pack-edit-preview" id="packHeaderImagePreview" alt="" hidden>
+              <button type="button" class="pack-header-clear" id="packHeaderImageClear" hidden>הסרת תמונה</button>
+            </section>
+
+            <section class="home-header-editor-item">
+              <div class="pack-edit-card-head">התאמה</div>
+              <label class="pack-edit-control" for="packHeaderOpacity">
+                <span>שקיפות</span>
+                <input type="range" id="packHeaderOpacity" min="0" max="100" step="1" value="100" aria-label="שקיפות כותרת">
+                <input type="number" id="packHeaderOpacityNum" min="0" max="100" step="1" value="100" inputmode="numeric" aria-label="שקיפות באחוזים">
+                <span class="pack-edit-unit">%</span>
+              </label>
+              <label class="pack-edit-control" for="packHeaderHeight">
+                <span>גובה</span>
+                <input type="range" id="packHeaderHeight" min="72" max="280" step="1" value="108" aria-label="גובה כותרת">
+                <input type="number" id="packHeaderHeightNum" min="72" max="280" step="1" value="108" inputmode="numeric" aria-label="גובה בפיקסלים">
+                <span class="pack-edit-unit">px</span>
+              </label>
+            </section>
+          </div>
+          <div class="wizard-nav home-edit-nav">
+            <button type="button" class="wizard-nav-btn wizard-nav-btn--back" id="packHeaderCancel">ביטול</button>
+            <span class="wizard-nav-spacer" aria-hidden="true"></span>
+            <button type="submit" class="wizard-nav-btn wizard-nav-btn--finish">✓ שמירה</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== כללי: בוחר צבע (בשימוש הסרגל ובמחוללים) ===== -->
   <div class="hsla-popover" id="hslaPopover" hidden>
     <div class="color-picker-visual">
       <div class="color-sv-wrap" id="colorSvWrap" role="slider" aria-label="רוויה ובהירות" aria-valuemin="0" aria-valuemax="100">
@@ -520,6 +649,8 @@
     </label>
   </div>
 
-  <script src="js/app.js?v=section-card-design"></script>
+  <script src="js/shared/shell.js?v=generators-split"></script>
+  <script src="js/manhalan/app.js?v=generators-split"></script>
+  <script src="js/pack/pack.js?v=pack-header-panel"></script>
 </body>
 </html>

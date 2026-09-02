@@ -1,3 +1,4 @@
+/* ===== מחולל מנהלן (+ סגנונות שער/סרגל שמשותפים דרך ה-HTML) ===== */
 /* ===== בסיס ===== */
 @font-face {
   font-family: "NarkisBlockCondensedMF";
@@ -65,6 +66,277 @@ body[data-app-mode="user"] .cards-layout-bar,
 body[data-app-mode="user"] .cards-editor-mount,
 body[data-app-mode="user"] .float-menu-edit {
   display: none !important;
+}
+
+/* ===== שער כניסה ===== */
+body.gate-open {
+  overflow: hidden;
+}
+
+.site-gate {
+  --gate-pad: 32px;
+  --gate-frame: 20px;
+  --gate-ink: #16110c;
+  --gate-muted: #7a3d32;
+  --gate-paper: rgba(246, 239, 226, 0.86);
+  --gate-line: rgba(28, 18, 10, 0.2);
+  --gate-red: #b42323;
+  --gate-radius: 8px;
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #c4b08c;
+  color: var(--gate-ink);
+}
+
+.site-gate::after {
+  content: "";
+  position: absolute;
+  inset: var(--gate-frame);
+  z-index: 1;
+  pointer-events: none;
+  border: 1px solid rgba(36, 24, 12, 0.32);
+}
+
+.site-gate[hidden] {
+  display: none !important;
+}
+
+.site-gate-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.site-gate-photo,
+.site-gate-wash,
+.site-gate-grain,
+.site-gate-scratches,
+.site-gate-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.site-gate-photo {
+  overflow: hidden;
+  background: #b9a57f;
+}
+
+.site-gate-photo-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 42%;
+  opacity: 0.9;
+  mix-blend-mode: multiply;
+  filter: sepia(0.38) saturate(0.5) contrast(1.16) brightness(0.86) hue-rotate(-10deg);
+}
+
+.site-gate-wash {
+  background:
+    linear-gradient(180deg, rgba(40, 28, 16, 0.08) 0%, transparent 28%, rgba(20, 14, 8, 0.28) 100%),
+    linear-gradient(90deg, rgba(40, 28, 16, 0.16), transparent 18%, transparent 82%, rgba(40, 28, 16, 0.16));
+  mix-blend-mode: multiply;
+}
+
+.site-gate-grain {
+  width: 100%;
+  height: 100%;
+  opacity: 0.28;
+  mix-blend-mode: overlay;
+}
+
+.site-gate-scratches {
+  background:
+    repeating-linear-gradient(
+      90.5deg,
+      transparent 0 140px,
+      rgba(255, 250, 235, 0.05) 141px,
+      transparent 142px
+    );
+  mix-blend-mode: overlay;
+  opacity: 0.35;
+}
+
+.site-gate-vignette {
+  background: radial-gradient(ellipse at center, transparent 48%, rgba(22, 14, 8, 0.38) 100%);
+}
+
+.site-gate-logo {
+  position: absolute;
+  top: calc(var(--gate-frame) + 16px);
+  right: calc(var(--gate-frame) + 16px);
+  z-index: 6;
+  width: 80px;
+  height: auto;
+  pointer-events: none;
+  isolation: isolate;
+  mix-blend-mode: normal;
+  filter: none;
+  opacity: 1;
+}
+
+.site-gate-inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(560px, calc(100% - 64px));
+  margin: 0;
+  padding: 40px;
+  text-align: center;
+  background: var(--gate-paper);
+  border: 1px solid var(--gate-line);
+  border-radius: var(--gate-radius);
+  box-shadow:
+    0 1px 0 rgba(255, 248, 236, 0.55) inset,
+    0 18px 48px rgba(16, 10, 4, 0.28);
+  backdrop-filter: blur(12px) saturate(0.85);
+  animation: site-gate-rise 0.55s ease-out both;
+}
+
+.site-gate-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.site-gate-kicker {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  line-height: 1;
+  color: var(--gate-muted);
+}
+
+.site-gate-title {
+  margin: 0;
+  font-size: clamp(1.85rem, 4.2vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  color: var(--gate-ink);
+}
+
+.site-gate-rule {
+  display: block;
+  width: 40px;
+  height: 3px;
+  margin: 24px 0;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--gate-red) 0 8px,
+    #f3ead6 8px 12px
+  );
+}
+
+.site-gate-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.site-gate-enter {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+  padding: 12px 16px;
+  border: 1px solid #5c1410;
+  border-radius: 6px;
+  background: var(--gate-red);
+  color: #fbf6ef;
+  font: inherit;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.site-gate-enter:hover {
+  background: #c42b27;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(90, 16, 12, 0.28);
+}
+
+.site-gate-enter:active {
+  transform: translateY(0);
+  background: #9b1c18;
+  box-shadow: none;
+}
+
+.site-gate-enter:focus-visible {
+  outline: 2px solid var(--gate-ink);
+  outline-offset: 3px;
+}
+
+@keyframes site-gate-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+body.gate-leaving .site-gate {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+@media (max-width: 640px) {
+  .site-gate {
+    --gate-pad: 20px;
+    --gate-frame: 12px;
+  }
+
+  .site-gate-inner {
+    width: min(100%, calc(100% - 40px));
+    padding: 28px 20px 24px;
+  }
+
+  .site-gate-logo {
+    width: 64px;
+  }
+
+  .site-gate-actions {
+    max-width: none;
+    gap: 10px;
+  }
+
+  .site-gate-enter {
+    min-height: 48px;
+    font-size: 1.05rem;
+    letter-spacing: 0.06em;
+  }
+}
+
+@media (max-width: 420px) {
+  .site-gate-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ===== שורת פונקציונליות — פאנל עריכה נפרד ===== */
@@ -4991,6 +5263,10 @@ body.page-edit-mode .home-section {
   }
 
   body.page-edit-mode .home-header-item {
+    animation: none;
+  }
+
+  .site-gate-inner {
     animation: none;
   }
 

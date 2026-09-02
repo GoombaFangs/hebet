@@ -1,0 +1,20 @@
+/* ===== כללי — מעטפת משותפת: שער, סרגל כלים, מעבר בין מחוללים ===== */
+
+body.gate-open .site-toolbar-shell,
+body.gate-open .app-shell {
+  display: none !important;
+}
+
+.app-shell[hidden] {
+  display: none !important;
+}
+
+body[data-generator="pack"] #manhalanApp,
+body[data-generator="manhalan"] #packApp {
+  display: none !important;
+}
+
+body[data-generator="manhalan"] #manhalanApp,
+body[data-generator="pack"] #packApp {
+  display: block;
+}

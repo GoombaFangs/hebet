@@ -1,3 +1,4 @@
+/* ===== מחולל מנהלן ===== */
 const STORAGE_KEY = 'hebet-cards';
 const HOME_STORAGE_KEY = 'hebet-home';
 const FONTS_DB_NAME = 'hebet-fonts';
@@ -1857,6 +1858,11 @@ function setHslaFieldValue(fieldOrInputId, value) {
   input.value = colorToDisplayHex(value);
   updateHslaSwatch(field);
 }
+
+window.HebetColor = {
+  setupHslaField: setupHslaField,
+  setHslaFieldValue: setHslaFieldValue,
+};
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
@@ -9334,24 +9340,47 @@ async function bootstrapFromEmbeddedDataIfPresent() {
   return true;
 }
 
-function buildExportedPortalHtml(snapshot, indexHtml, cssText, jsText) {
+const PROJECT_STYLES = [
+  'css/shared/shell.css',
+  'css/manhalan/style.css',
+  'css/pack/pack.css',
+];
+const PROJECT_SCRIPTS = [
+  'js/shared/shell.js',
+  'js/manhalan/app.js',
+  'js/pack/pack.js',
+];
+
+function buildExportedPortalHtml(snapshot, indexHtml, cssText, jsText, assetDataUrls) {
+  const urls = assetDataUrls || {};
   let out = String(indexHtml || '');
-  out = out.replace('<body data-app-mode="edit">', '<body data-app-mode="user" class="user-mode">');
-  out = out.replace('<body>', '<body data-app-mode="user" class="user-mode">');
   out = out.replace(
-    /<link rel="stylesheet" href="css\/style\.css(?:\?[^"]*)?">/,
-    '<style>\n' + cssText + '\n</style>'
+    '<body data-app-mode="edit" class="gate-open" data-generator="">',
+    '<body data-app-mode="user" class="user-mode gate-open" data-generator="">'
   );
+  out = out.replace(
+    '<body data-app-mode="edit" class="gate-open">',
+    '<body data-app-mode="user" class="user-mode gate-open">'
+  );
+  out = out.replace('<body data-app-mode="edit">', '<body data-app-mode="user" class="user-mode gate-open">');
+  out = out.replace('<body>', '<body data-app-mode="user" class="user-mode gate-open">');
+  out = out.replace(/<link rel="stylesheet" href="css\/(?:shared\/shell|manhalan\/style|pack\/pack|style)\.css(?:\?[^"]*)?">\s*/g, '');
+  out = out.replace('</head>', '<style>\n' + cssText + '\n</style>\n</head>');
+
+  if (urls.gateBg) {
+    out = out.replace(/src="assets\/gate-bg\.jpg(?:\?[^"]*)?"/, 'src="' + urls.gateBg + '"');
+  }
+  if (urls.logo) {
+    out = out.replace(/src="assets\/hebet-logo\.png(?:\?[^"]*)?"/, 'src="' + urls.logo + '"');
+  }
 
   const bootstrapTag =
     '<script id="' + HEBET_BOOTSTRAP_ID + '" type="application/json">' +
     serializeBootstrapJson(snapshot) +
     '</script>\n';
 
-  out = out.replace(
-    /<script src="js\/app\.js(?:\?[^"]*)?"><\/script>/,
-    bootstrapTag + '<script>\n' + escapeForInlineScript(jsText) + '\n</script>'
-  );
+  out = out.replace(/<script src="js\/(?:shared\/shell|manhalan\/app|pack\/pack|app)\.js(?:\?[^"]*)?"><\/script>\s*/g, '');
+  out = out.replace('</body>', bootstrapTag + '<script>\n' + escapeForInlineScript(jsText) + '\n</script>\n</body>');
 
   return out;
 }
@@ -9369,10 +9398,31 @@ async function exportUserModeHtml() {
   let indexHtml;
   let cssText;
   let jsText;
+  let assetDataUrls = {};
   try {
     indexHtml = await fetchProjectAsset('index.html');
-    cssText = await fetchProjectAsset('css/style.css');
-    jsText = await fetchProjectAsset('js/app.js');
+    cssText = (await Promise.all(PROJECT_STYLES.map(fetchProjectAsset))).join('\n\n');
+    jsText = (await Promise.all(PROJECT_SCRIPTS.map(fetchProjectAsset))).join('\n\n');
+    try {
+      const imgRes = await fetch('assets/gate-bg.jpg', { cache: 'no-store' });
+      if (imgRes.ok) {
+        const imgBlob = await imgRes.blob();
+        const b64 = await blobToBase64(imgBlob);
+        assetDataUrls.gateBg = 'data:' + (imgBlob.type || 'image/jpeg') + ';base64,' + b64;
+      }
+    } catch (imgErr) {
+      console.warn('Gate image was not inlined into export', imgErr);
+    }
+    try {
+      const logoRes = await fetch('assets/hebet-logo.png', { cache: 'no-store' });
+      if (logoRes.ok) {
+        const logoBlob = await logoRes.blob();
+        const b64 = await blobToBase64(logoBlob);
+        assetDataUrls.logo = 'data:' + (logoBlob.type || 'image/png') + ';base64,' + b64;
+      }
+    } catch (logoErr) {
+      console.warn('Gate logo was not inlined into export', logoErr);
+    }
   } catch (err) {
     console.error(err);
     alert(
@@ -9391,7 +9441,7 @@ async function exportUserModeHtml() {
     return;
   }
 
-  const html = buildExportedPortalHtml(snapshot, indexHtml, cssText, jsText);
+  const html = buildExportedPortalHtml(snapshot, indexHtml, cssText, jsText, assetDataUrls);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
 
   if (window.showSaveFilePicker) {
@@ -9782,7 +9832,30 @@ async function initApp() {
   syncSiteToolbarHeight();
   await renderHome();
   renderCards(loadCards());
-  playPageEntrance();
+  if (window.HebetShell) {
+    window.HebetShell.onEnter(function () {
+      syncSiteToolbarHeight();
+      playPageEntrance();
+    });
+  }
+  if (!isSiteGateOpen()) playPageEntrance();
+}
+
+function isSiteGateOpen() {
+  if (window.HebetShell && typeof window.HebetShell.isGateOpen === 'function') {
+    return window.HebetShell.isGateOpen();
+  }
+  const gate = document.getElementById('siteGate');
+  return !!(gate && !gate.hidden && document.body.classList.contains('gate-open'));
+}
+
+function isElementShownInActiveGenerator(el) {
+  let node = el;
+  while (node) {
+    if (node.hidden) return false;
+    node = node.parentElement;
+  }
+  return true;
 }
 
 function preparePageEntrance() {
@@ -9800,7 +9873,7 @@ function preparePageEntrance() {
   let index = 0;
   selectors.forEach(function (selector) {
     document.querySelectorAll(selector).forEach(function (el) {
-      if (el.hidden) return;
+      if (!isElementShownInActiveGenerator(el)) return;
       el.classList.add('anim-enter');
       el.style.setProperty('--i', String(index));
       index += 1;
