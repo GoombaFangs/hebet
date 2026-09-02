@@ -179,18 +179,44 @@
     return { type: 'glyph', value: ICON_GLYPHS.indexOf(src.value) !== -1 ? src.value : ICON_GLYPHS[0] };
   }
 
+  function normalizeDecorIcon(raw) {
+    const src = raw && typeof raw === 'object' ? raw : {};
+    if (src.type === 'image' && src.value) {
+      return { id: src.id || nextId('cico'), type: 'image', value: String(src.value) };
+    }
+    const glyph = typeof src.value === 'string' && src.value.trim()
+      ? src.value.slice(0, 8)
+      : ICON_GLYPHS[0];
+    return { id: src.id || nextId('cico'), type: 'glyph', value: glyph };
+  }
+
+  function normalizeCardIcons(src) {
+    if (Array.isArray(src.icons)) return src.icons.map(normalizeDecorIcon);
+    if (src.icon) {
+      const one = normalizeCardIcon(src.icon);
+      return [{ id: nextId('cico'), type: one.type, value: one.value }];
+    }
+    return [];
+  }
+
+  function normalizeCardBgMode(value) {
+    return value === 'image' ? 'image' : 'color';
+  }
+
   function normalizeCard(raw) {
     const src = raw && typeof raw === 'object' ? raw : {};
     return {
       id: src.id || nextId('card'),
-      icon: normalizeCardIcon(src.icon),
+      icons: normalizeCardIcons(src),
       title: typeof src.title === 'string' ? src.title.slice(0, 40) : 'קובייה חדשה',
       titleSize: clamp(src.titleSize, 12, 34, 16),
       titleColor: src.titleColor || '#ffffff',
       desc: typeof src.desc === 'string' ? src.desc.slice(0, 140) : '',
       descSize: clamp(src.descSize, 10, 22, 13),
       descColor: src.descColor || '#ffffff',
+      bgMode: normalizeCardBgMode(src.bgMode),
       color: src.color || DEFAULT_CARD_COLOR,
+      image: typeof src.image === 'string' ? src.image : '',
       actions: {
         view: normalizeAction(src.actions && src.actions.view, 'view'),
         download: normalizeAction(src.actions && src.actions.download, 'download'),
@@ -427,10 +453,15 @@
   }
 
   function cardBadgeHtml(card) {
-    if (card.icon.type === 'image' && card.icon.value) {
-      return '<span class="pack-card-badge"><img src="' + escapeHtml(card.icon.value) + '" alt=""></span>';
-    }
-    return '<span class="pack-card-badge">' + escapeHtml(card.icon.value) + '</span>';
+    const icons = Array.isArray(card.icons) ? card.icons : [];
+    if (!icons.length) return '';
+    const items = icons.map(function (icon) {
+      if (icon.type === 'image' && icon.value) {
+        return '<span class="pack-card-badge"><img src="' + escapeHtml(icon.value) + '" alt=""></span>';
+      }
+      return '<span class="pack-card-badge">' + escapeHtml(icon.value) + '</span>';
+    }).join('');
+    return '<div class="pack-card-badges">' + items + '</div>';
   }
 
   function defaultFreeWidth() {
@@ -465,9 +496,13 @@
     const titleStyle = 'font-size:' + card.titleSize + 'px;color:' + escapeHtml(card.titleColor) + ';';
     const descStyle = 'font-size:' + card.descSize + 'px;color:' + escapeHtml(card.descColor) + ';';
     const showDesc = !!card.desc || editing;
+    const useImage = card.bgMode === 'image' && !!card.image;
+    const editingClass = editingCardId && editingCardId === card.id ? ' is-editing' : '';
+    const imageClass = useImage ? ' is-image' : '';
     return (
-      '<div class="pack-card' + (editingCardId && editingCardId === card.id ? ' is-editing' : '') + '" data-id="' + escapeHtml(card.id) + '"' +
+      '<div class="pack-card' + editingClass + imageClass + '" data-id="' + escapeHtml(card.id) + '"' +
         ' style="--pack-card-color:' + escapeHtml(card.color) +
+        ';--pack-card-image:' + (useImage ? cssUrl(card.image) : 'none') +
         ';--cx:' + card.x + '%;--cy:' + card.y + '%;--cw:' + card.w + '%;">' +
         '<button type="button" class="pack-card-edit" data-card-edit="' + escapeHtml(card.id) + '" title="עריכת קובייה" aria-label="עריכת קובייה">✎</button>' +
         '<button type="button" class="pack-card-delete" data-card-delete="' + escapeHtml(card.id) + '" title="הסרת קובייה" aria-label="הסרת קובייה">×</button>' +
@@ -966,14 +1001,38 @@
      עורך קובייה בודדת
      ================================================================ */
 
-  function iconGridHtml(card) {
+  function iconGridHtml() {
     return '<div class="pack-icon-grid">' + ICON_GLYPHS.map(function (glyph) {
-      const checked = card.icon.type === 'glyph' && card.icon.value === glyph;
-      return '<label class="pack-icon-btn">' +
-        '<input type="radio" name="packCardIcon" value="' + escapeHtml(glyph) + '"' + (checked ? ' checked' : '') + '>' +
-        '<span>' + escapeHtml(glyph) + '</span>' +
-      '</label>';
+      return '<button type="button" class="pack-icon-btn" data-add-card-glyph="' + escapeHtml(glyph) + '" title="הוספת אייקון" aria-label="הוספת אייקון">' +
+        escapeHtml(glyph) +
+      '</button>';
     }).join('') + '</div>';
+  }
+
+  function cardIconsListHtml(card) {
+    if (!card.icons.length) {
+      return '<p class="pack-field-sub">אין עדיין אייקונים. בחרו מהרשת או העלו תמונה.</p>';
+    }
+    return card.icons.map(function (icon) {
+      const id = escapeHtml(icon.id);
+      const thumb = icon.type === 'image' && icon.value
+        ? '<img class="pack-logo-thumb" src="' + escapeHtml(icon.value) + '" alt="">'
+        : '<span class="pack-logo-thumb pack-closing-icon-thumb" aria-hidden="true">' + escapeHtml(icon.value) + '</span>';
+      return (
+        '<div class="pack-logo-row" data-card-icon-id="' + id + '">' +
+          thumb +
+          '<span class="pack-field-sub" style="margin:0;flex:1;">' + (icon.type === 'image' ? 'תמונה' : 'אייקון') + '</span>' +
+          '<button type="button" class="pack-logo-remove" data-card-icon-remove="' + id + '" title="הסרה" aria-label="הסרה">×</button>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  function refreshCardIconsList(root, card) {
+    const list = root.querySelector('#packEditCardIconList');
+    if (list) list.innerHTML = cardIconsListHtml(card);
+    const head = root.querySelector('#packEditCardIconsHead');
+    if (head) head.textContent = 'אייקונים (' + card.icons.length + ')';
   }
 
   function actionRowHtml(kind, label, action) {
@@ -1014,13 +1073,39 @@
       '</section>' +
 
       '<section class="pack-edit-section">' +
-        '<div class="pack-edit-section-head">אייקון וצבע</div>' +
-        iconGridHtml(card) +
+        '<div class="pack-edit-section-head">רקע הקובייה</div>' +
+        '<div class="pack-seg" role="radiogroup">' +
+          '<label class="pack-seg-btn">' +
+            '<input type="radio" name="packCardBgMode" value="color"' + (card.bgMode !== 'image' ? ' checked' : '') + '>' +
+            '<span>צבע</span>' +
+          '</label>' +
+          '<label class="pack-seg-btn">' +
+            '<input type="radio" name="packCardBgMode" value="image"' + (card.bgMode === 'image' ? ' checked' : '') + '>' +
+            '<span>תמונה</span>' +
+          '</label>' +
+        '</div>' +
+        '<div id="packCardBgColorWrap"' + (card.bgMode === 'image' ? ' hidden' : '') + '>' +
+          colorFieldHtml('packCardColor', 'צבע קובייה', card.color) +
+        '</div>' +
+        '<div id="packCardBgImageWrap"' + (card.bgMode === 'image' ? '' : ' hidden') + '>' +
+          '<label class="pack-upload" for="packCardBgImage" style="margin-top:10px;display:flex;">' +
+            '<input type="file" id="packCardBgImage" accept="image/*" hidden>' +
+            '<span>' + (card.image ? 'החלפת תמונה' : 'העלאת תמונה') + '</span>' +
+          '</label>' +
+          '<img class="pack-preview' + (card.image ? ' is-visible' : '') + '" id="packCardBgPreview" src="' + escapeHtml(card.image || '') + '" alt="">' +
+          '<button type="button" class="pack-clear-btn" id="packCardBgClear"' + (card.image ? '' : ' hidden') + '>הסרת תמונה</button>' +
+        '</div>' +
+      '</section>' +
+
+      '<section class="pack-edit-section">' +
+        '<div class="pack-edit-section-head" id="packEditCardIconsHead">אייקונים (' + card.icons.length + ')</div>' +
+        '<p class="pack-field-sub">אפשר בלי אייקונים, או להוסיף כמה שרוצים. לחיצה על אייקון ברשת מוסיפה אותו לקובייה.</p>' +
+        '<div id="packEditCardIconList">' + cardIconsListHtml(card) + '</div>' +
+        iconGridHtml() +
         '<label class="pack-upload" for="packCardIconImage" style="display:flex;">' +
           '<input type="file" id="packCardIconImage" accept="image/*" hidden>' +
-          '<span>או העלאת תמונת אייקון</span>' +
+          '<span>+ העלאת תמונת אייקון</span>' +
         '</label>' +
-        colorFieldHtml('packCardColor', 'צבע קובייה', card.color) +
       '</section>' +
 
       '<section class="pack-edit-section">' +
@@ -1050,11 +1135,75 @@
         if (card) { card.desc = descInput.value.slice(0, 140); renderCards(); }
       });
     }
-    root.querySelectorAll('input[name="packCardIcon"]').forEach(function (input) {
+    root.querySelectorAll('input[name="packCardBgMode"]').forEach(function (input) {
       input.addEventListener('change', function () {
         if (!input.checked) return;
         const card = getCard();
-        if (card) { card.icon = { type: 'glyph', value: input.value }; renderCards(); }
+        if (!card) return;
+        card.bgMode = normalizeCardBgMode(input.value);
+        const colorWrap = root.querySelector('#packCardBgColorWrap');
+        const imageWrap = root.querySelector('#packCardBgImageWrap');
+        if (colorWrap) colorWrap.hidden = card.bgMode !== 'color';
+        if (imageWrap) imageWrap.hidden = card.bgMode !== 'image';
+        renderCards();
+      });
+    });
+    bindColorField(root, 'packCardColor', function (hex) {
+      const card = getCard();
+      if (card) { card.color = hex; renderCards(); }
+    });
+    const bgImage = root.querySelector('#packCardBgImage');
+    if (bgImage) {
+      bgImage.addEventListener('change', function (e) {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        readImageAsDataUrl(file, function (dataUrl) {
+          const card = getCard();
+          if (!card) return;
+          card.image = dataUrl;
+          card.bgMode = 'image';
+          const preview = root.querySelector('#packCardBgPreview');
+          if (preview) {
+            preview.src = dataUrl;
+            preview.classList.add('is-visible');
+          }
+          const clearBtn = root.querySelector('#packCardBgClear');
+          if (clearBtn) clearBtn.hidden = false;
+          const label = root.querySelector('label[for="packCardBgImage"] span');
+          if (label) label.textContent = 'החלפת תמונה';
+          renderCards();
+        });
+        e.target.value = '';
+      });
+    }
+    const bgClear = root.querySelector('#packCardBgClear');
+    if (bgClear) {
+      bgClear.addEventListener('click', function () {
+        const card = getCard();
+        if (!card) return;
+        card.image = '';
+        const preview = root.querySelector('#packCardBgPreview');
+        if (preview) {
+          preview.src = '';
+          preview.classList.remove('is-visible');
+        }
+        bgClear.hidden = true;
+        const label = root.querySelector('label[for="packCardBgImage"] span');
+        if (label) label.textContent = 'העלאת תמונה';
+        renderCards();
+      });
+    }
+
+    function addCardIcon(icon) {
+      const card = getCard();
+      if (!card) return;
+      card.icons.push(normalizeDecorIcon(icon));
+      refreshCardIconsList(root, card);
+      renderCards();
+    }
+    root.querySelectorAll('[data-add-card-glyph]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        addCardIcon({ type: 'glyph', value: btn.getAttribute('data-add-card-glyph') });
       });
     });
     const iconImage = root.querySelector('#packCardIconImage');
@@ -1063,16 +1212,24 @@
         const file = e.target.files && e.target.files[0];
         if (!file) return;
         readImageAsDataUrl(file, function (dataUrl) {
-          const card = getCard();
-          if (card) { card.icon = { type: 'image', value: dataUrl }; renderCards(); }
+          addCardIcon({ type: 'image', value: dataUrl });
         });
         e.target.value = '';
       });
     }
-    bindColorField(root, 'packCardColor', function (hex) {
-      const card = getCard();
-      if (card) { card.color = hex; renderCards(); }
-    });
+    const iconList = root.querySelector('#packEditCardIconList');
+    if (iconList) {
+      iconList.addEventListener('click', function (e) {
+        const btn = e.target.closest ? e.target.closest('[data-card-icon-remove]') : null;
+        if (!btn) return;
+        const card = getCard();
+        if (!card) return;
+        const id = btn.getAttribute('data-card-icon-remove');
+        card.icons = card.icons.filter(function (item) { return item.id !== id; });
+        refreshCardIconsList(root, card);
+        renderCards();
+      });
+    }
     ['view', 'download', 'print'].forEach(function (kind) {
       const check = root.querySelector('[data-action-enabled="' + kind + '"]');
       const href = root.querySelector('[data-action-href="' + kind + '"]');

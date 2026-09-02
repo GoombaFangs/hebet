@@ -394,11 +394,51 @@ body[data-app-mode="user"] .pack-cards-grid:empty::before {
   filter: brightness(1.08);
 }
 
-.pack-card-badge {
+.pack-card.is-image {
+  background-image: var(--pack-card-image, none);
+  background-size: cover;
+  background-position: center;
+}
+
+.pack-card.is-image::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: rgba(18, 20, 16, 0.42);
+  pointer-events: none;
+}
+
+.pack-card > .pack-card-title,
+.pack-card > .pack-card-desc,
+.pack-card > .pack-card-actions {
+  position: relative;
+  z-index: 1;
+}
+
+.pack-card.is-image .pack-card-title,
+.pack-card.is-image .pack-card-desc {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+}
+
+.pack-card-badges {
   position: absolute;
   top: -16px;
-  right: 50%;
-  transform: translateX(50%);
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: calc(100% - 76px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.pack-card-badge {
+  position: relative;
+  flex: 0 0 34px;
   width: 34px;
   height: 34px;
   border-radius: 50%;
@@ -1390,7 +1430,7 @@ body.page-edit-mode #packDevTeamLabel:focus {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 8px;
-  margin-bottom: 8px;
+  margin: 10px 0 8px;
 }
 
 .pack-icon-btn {
@@ -1402,8 +1442,14 @@ body.page-edit-mode #packDevTeamLabel:focus {
   border: 1px solid #d5e2d2;
   border-radius: 8px;
   background: #fff;
+  font: inherit;
   font-size: 1.05rem;
   cursor: pointer;
+}
+
+button.pack-icon-btn:hover {
+  border-color: var(--site-secondary, #e31c23);
+  background: color-mix(in srgb, var(--site-secondary, #e31c23) 10%, #fff);
 }
 
 .pack-icon-btn input {
