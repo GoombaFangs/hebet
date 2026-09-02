@@ -3404,13 +3404,257 @@
     URL.revokeObjectURL(url);
   }
 
+  function styleAttrProp(el, prop) {
+    if (!el) return '';
+    const style = el.getAttribute('style') || '';
+    const re = new RegExp('(?:^|;)\\s*' + String(prop).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*:\\s*([^;]+)', 'i');
+    const m = style.match(re);
+    return m ? m[1].trim() : '';
+  }
+
+  function parseCssUrl(value) {
+    const v = String(value || '').trim();
+    if (!v || v === 'none') return '';
+    const m = v.match(/^url\(\s*(['"]?)([\s\S]*?)\1\s*\)$/i);
+    if (!m) return v.indexOf('data:') === 0 || v.indexOf('blob:') === 0 ? v : '';
+    return String(m[2] || '').trim();
+  }
+
+  function parseColorValue(value, fallback) {
+    const v = String(value || '').trim();
+    if (!v || v === 'transparent' || v === 'rgba(0, 0, 0, 0)') return fallback;
+    if (v.charAt(0) === '#' || v.indexOf('hsl') === 0 || v.indexOf('var(') === 0) return v;
+    const m = v.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if (!m) return fallback || v;
+    function hex(n) { return ('0' + Number(n).toString(16)).slice(-2); }
+    return '#' + hex(m[1]) + hex(m[2]) + hex(m[3]);
+  }
+
+  function parsePctValue(value, fallback) {
+    const n = parseFloat(value);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  function parsePxValue(value, fallback) {
+    const n = parseFloat(value);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  function elHidden(el) {
+    if (!el) return true;
+    if (el.hidden) return true;
+    return styleAttrProp(el, 'display') === 'none';
+  }
+
+  function snapshotFromClientDoc(doc) {
+    if (!doc || !doc.getElementById) return null;
+    const packApp = doc.getElementById('packApp');
+    const cardNodes = doc.querySelectorAll('#packCardsGrid .pack-card[data-id], .pack-card[data-id]');
+    if (!packApp && !cardNodes.length) return null;
+
+    const headerEl = doc.getElementById('packHeader');
+    const titleEl = doc.getElementById('packHeaderTitle');
+    const subtitleEl = doc.getElementById('packHeaderSubtitle');
+    const cardsSection = doc.getElementById('packCards');
+    const closingEl = doc.getElementById('packClosing');
+    const body = doc.body;
+
+    const headerMode = headerEl && headerEl.classList.contains('is-transparent')
+      ? 'transparent'
+      : (headerEl && headerEl.classList.contains('is-image') ? 'image' : 'color');
+    const headerOpacityRaw = styleAttrProp(headerEl, '--pack-header-opacity');
+    const headerOpacityNum = parseFloat(headerOpacityRaw);
+    const headerOpacity = Number.isFinite(headerOpacityNum)
+      ? (headerOpacityNum <= 1 ? Math.round(headerOpacityNum * 100) : headerOpacityNum)
+      : 100;
+
+    const logos = [];
+    const logoNodes = doc.querySelectorAll('.pack-header-logo[data-logo-id], .pack-header-logo');
+    for (let i = 0; i < logoNodes.length; i++) {
+      const logoEl = logoNodes[i];
+      const src = logoEl.getAttribute('src') || '';
+      if (!src) continue;
+      logos.push({
+        id: logoEl.getAttribute('data-logo-id') || '',
+        src: src,
+        x: parsePctValue(styleAttrProp(logoEl, '--lx'), 15),
+        y: parsePctValue(styleAttrProp(logoEl, '--ly'), 50),
+        size: parsePxValue(styleAttrProp(logoEl, '--lsize'), 56),
+      });
+    }
+
+    const titleAlign = styleAttrProp(titleEl, '--pack-title-align') || 'center';
+    const header = {
+      mode: headerMode,
+      color: parseColorValue(styleAttrProp(headerEl, '--pack-header-color'), DEFAULT_HEADER_COLOR),
+      image: parseCssUrl(styleAttrProp(headerEl, '--pack-header-image')),
+      opacity: headerOpacity,
+      height: parsePxValue(styleAttrProp(headerEl, '--pack-header-height') || styleAttrProp(headerEl, 'block-size'), 108),
+      hidden: !!(headerEl && headerEl.classList.contains('is-hidden')),
+      title: {
+        text: titleEl ? String(titleEl.textContent || '').trim() : '',
+        size: parsePxValue(styleAttrProp(titleEl, '--pack-title-size') || styleAttrProp(titleEl, 'font-size'), 30),
+        color: parseColorValue(styleAttrProp(titleEl, 'color'), '#ffffff'),
+        align: titleAlign,
+        x: parsePctValue(styleAttrProp(titleEl, '--tx'), 50),
+        y: parsePctValue(styleAttrProp(titleEl, '--ty'), 40),
+        freePlaced: true,
+        hidden: elHidden(titleEl),
+      },
+      subtitle: {
+        text: subtitleEl ? String(subtitleEl.textContent || '').trim() : '',
+        size: parsePxValue(styleAttrProp(subtitleEl, '--pack-subtitle-size') || styleAttrProp(subtitleEl, 'font-size'), 15),
+        color: parseColorValue(styleAttrProp(subtitleEl, 'color'), '#ffffff'),
+        align: styleAttrProp(subtitleEl, '--pack-subtitle-align') || titleAlign,
+        x: parsePctValue(styleAttrProp(subtitleEl, '--tx'), 50),
+        y: parsePctValue(styleAttrProp(subtitleEl, '--ty'), 68),
+        freePlaced: true,
+        hidden: elHidden(subtitleEl),
+      },
+      logos: logos,
+    };
+
+    const items = [];
+    for (let i = 0; i < cardNodes.length; i++) {
+      const cardEl = cardNodes[i];
+      const id = cardEl.getAttribute('data-id') || '';
+      const titleNode = cardEl.querySelector('.pack-card-title');
+      const descNode = cardEl.querySelector('.pack-card-desc');
+      const photo = cardEl.querySelector('.pack-card-photo');
+      const imageSrc = photo ? (photo.getAttribute('src') || '') : '';
+      const actions = { view: {}, download: {}, print: {} };
+      const actionNodes = cardEl.querySelectorAll('[data-action-kind]');
+      for (let a = 0; a < actionNodes.length; a++) {
+        const actEl = actionNodes[a];
+        const kind = actEl.getAttribute('data-action-kind');
+        if (!actions[kind]) continue;
+        const img = actEl.querySelector('img');
+        actions[kind] = {
+          enabled: true,
+          href: actEl.getAttribute('data-print-href') || actEl.getAttribute('href') || '',
+          icon: img && img.getAttribute('src')
+            ? { type: 'image', value: img.getAttribute('src') }
+            : { type: 'glyph', value: String(actEl.textContent || '').trim() },
+          x: parsePctValue(styleAttrProp(actEl, '--ax'), 50),
+          y: parsePctValue(styleAttrProp(actEl, '--ay'), 50),
+        };
+      }
+      const icons = [];
+      const iconNodes = cardEl.querySelectorAll('.pack-card-icon');
+      for (let k = 0; k < iconNodes.length; k++) {
+        const iconEl = iconNodes[k];
+        const img = iconEl.querySelector('img');
+        icons.push({
+          id: iconEl.getAttribute('data-card-icon-id') || '',
+          type: img && img.getAttribute('src') ? 'image' : 'glyph',
+          value: img && img.getAttribute('src') ? img.getAttribute('src') : String(iconEl.textContent || '').trim(),
+          x: parsePctValue(styleAttrProp(iconEl, '--ix'), 50),
+          y: parsePctValue(styleAttrProp(iconEl, '--iy'), 14),
+          size: parsePxValue(styleAttrProp(iconEl, '--isize'), 36),
+        });
+      }
+      items.push({
+        id: id,
+        title: titleNode ? String(titleNode.textContent || '').trim() : '',
+        titleSize: parsePxValue(titleNode && (styleAttrProp(titleNode, 'font-size')), 16),
+        titleColor: parseColorValue(titleNode && styleAttrProp(titleNode, 'color'), '#ffffff'),
+        desc: descNode ? String(descNode.textContent || '').trim() : '',
+        descSize: parsePxValue(descNode && (styleAttrProp(descNode, 'font-size')), 13),
+        descColor: parseColorValue(descNode && styleAttrProp(descNode, 'color'), '#ffffff'),
+        titleHidden: !titleNode || elHidden(titleNode),
+        descHidden: !descNode || elHidden(descNode),
+        comingSoon: cardEl.classList.contains('is-coming-soon'),
+        bgMode: imageSrc || cardEl.classList.contains('is-image') ? 'image' : 'color',
+        color: parseColorValue(styleAttrProp(cardEl, '--pack-card-color') || styleAttrProp(cardEl, 'background-color'), DEFAULT_CARD_COLOR),
+        image: imageSrc,
+        actions: actions,
+        icons: icons,
+        x: parsePctValue(styleAttrProp(cardEl, '--cx'), 50),
+        y: parsePctValue(styleAttrProp(cardEl, '--cy'), 50),
+        w: parsePctValue(styleAttrProp(cardEl, '--cw'), 18),
+        freePlaced: true,
+      });
+    }
+
+    const closingIcons = [];
+    const closingIconNodes = doc.querySelectorAll('#packClosingItems [data-icon-id]');
+    for (let i = 0; i < closingIconNodes.length; i++) {
+      const iconEl = closingIconNodes[i];
+      const kind = iconEl.getAttribute('data-kind') === 'text' ? 'text' : 'icon';
+      const img = iconEl.querySelector('img');
+      const label = iconEl.querySelector('.pack-closing-text-label');
+      closingIcons.push({
+        id: iconEl.getAttribute('data-icon-id') || '',
+        kind: kind,
+        type: img && img.getAttribute('src') ? 'image' : 'glyph',
+        value: kind === 'text'
+          ? String((label && label.textContent) || iconEl.textContent || '').trim()
+          : (img && img.getAttribute('src') ? img.getAttribute('src') : String(iconEl.textContent || '').trim()),
+        href: iconEl.getAttribute('data-href') || (iconEl.getAttribute('href') && iconEl.getAttribute('href') !== '#' ? iconEl.getAttribute('href') : ''),
+        x: parsePctValue(styleAttrProp(iconEl, '--cx'), 18),
+        y: parsePctValue(styleAttrProp(iconEl, '--cy'), 50),
+        size: parsePxValue(styleAttrProp(iconEl, '--csize'), kind === 'text' ? 18 : 40),
+        color: parseColorValue(styleAttrProp(iconEl, '--ccolor') || styleAttrProp(iconEl, 'color'), '#222222'),
+      });
+    }
+
+    const devBtn = doc.getElementById('packDevTeamBtn');
+    const devLabel = doc.getElementById('packDevTeamLabel');
+    const closing = {
+      enabled: !!(devBtn && !elHidden(devBtn)),
+      hidden: !!(closingEl && closingEl.classList.contains('is-hidden')),
+      label: devLabel ? String(devLabel.textContent || '').trim() : 'צוות פיתוח',
+      labelSize: parsePxValue(devLabel && styleAttrProp(devLabel, 'font-size'), 14),
+      href: devBtn && devBtn.getAttribute('href') && devBtn.getAttribute('href') !== '#' ? devBtn.getAttribute('href') : '',
+      color: parseColorValue(styleAttrProp(devBtn, '--pack-dev-team-color'), DEFAULT_CARD_COLOR),
+      textColor: parseColorValue(styleAttrProp(devBtn, '--pack-dev-team-text') || (devLabel && styleAttrProp(devLabel, 'color')), '#ffffff'),
+      size: Math.round((parseFloat(styleAttrProp(devBtn, '--pack-dev-team-scale')) || 1) * 100),
+      radius: parsePxValue(styleAttrProp(devBtn, '--pack-dev-team-radius'), 12),
+      image: parseCssUrl(styleAttrProp(devBtn, '--pack-dev-team-image')),
+      x: parsePctValue(styleAttrProp(devBtn, '--cx'), 88),
+      y: parsePctValue(styleAttrProp(devBtn, '--cy'), 50),
+      height: parsePxValue(styleAttrProp(closingEl, '--pack-closing-height') || styleAttrProp(closingEl, 'block-size'), 78),
+      icons: closingIcons,
+    };
+
+    const theme = {
+      siteBgColor: parseColorValue(styleAttrProp(body, '--site-bg-color') || styleAttrProp(body, 'background-color'), '#ffffff'),
+      siteBgImage: parseCssUrl(styleAttrProp(body, '--site-bg-image')),
+      siteFont: styleAttrProp(body, '--site-font') || styleAttrProp(body, 'font-family') || DEFAULT_SITE_FONT,
+    };
+
+    const pack = normalizeState({
+      header: header,
+      cards: {
+        perRow: parsePctValue(styleAttrProp(cardsSection, '--pack-cards-per-row') || styleAttrProp(closingEl, '--pack-cards-per-row'), 4),
+        gap: parsePxValue(styleAttrProp(cardsSection, '--pack-cards-gap'), 16),
+        freeform: !!(cardsSection && cardsSection.classList.contains('is-freeform')),
+        freeHeight: parsePxValue(styleAttrProp(cardsSection, '--pack-cards-free-height') || styleAttrProp(cardsSection, 'block-size'), 420),
+        items: items,
+      },
+      closing: closing,
+      theme: theme,
+    });
+
+    return {
+      version: PACK_BOOTSTRAP_VERSION,
+      exportedAt: new Date().toISOString(),
+      mode: 'user',
+      generator: 'pack',
+      pack: pack,
+      theme: pack.theme,
+    };
+  }
+
   function parsePackSnapshotFromHtmlText(htmlText) {
     const doc = new DOMParser().parseFromString(String(htmlText || ''), 'text/html');
     const bootstrapEl = doc.getElementById(PACK_BOOTSTRAP_ID);
-    if (!bootstrapEl || !String(bootstrapEl.textContent || '').trim()) {
-      throw new Error('לא נמצאו נתוני מארז בקובץ שנבחר');
+    if (bootstrapEl && String(bootstrapEl.textContent || '').trim()) {
+      return JSON.parse(bootstrapEl.textContent);
     }
-    return JSON.parse(bootstrapEl.textContent);
+    const fromDom = snapshotFromClientDoc(doc);
+    if (fromDom) return fromDom;
+    throw new Error('לא נמצאו נתוני מארז בקובץ שנבחר');
   }
 
   async function loadPackFromHtmlFile(file) {
@@ -3457,6 +3701,7 @@
     exportHtml: exportPackUserModeHtml,
     loadFromFile: loadPackFromHtmlFile,
     importSnapshot: importPackSnapshot,
+    snapshotFromClientDoc: snapshotFromClientDoc,
     commitPendingEdits: commitPendingEdits,
     applyThemePatch: applyThemePatch,
     getTheme: collectSiteTheme,

@@ -293,6 +293,13 @@
       return { generator: GENERATOR_MANHALAN, snapshot: manhalan };
     }
 
+    if (global.HebetPack && typeof global.HebetPack.snapshotFromClientDoc === 'function') {
+      const fromDom = global.HebetPack.snapshotFromClientDoc(doc);
+      if (fromDom && fromDom.pack) {
+        return { generator: GENERATOR_PACK, snapshot: fromDom };
+      }
+    }
+
     throw new Error(
       'לא נמצאו נתוני עריכה בקובץ גרסת הלקוח.\n' +
       'ייצאו שוב מהמחולל ואז טענו את הקובץ החדש.'
