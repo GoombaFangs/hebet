@@ -7,9 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/shared/shell.css?v=pack-settings">
-  <link rel="stylesheet" href="css/manhalan/style.css?v=toolbar-size-num">
-  <link rel="stylesheet" href="css/pack/pack.css?v=coming-soon-tag">
+  <link rel="stylesheet" href="css/shared/shell.css?v=client-export-6">
+  <link rel="stylesheet" href="css/manhalan/style.css?v=cube-scale-1">
+  <link rel="stylesheet" href="css/pack/pack.css?v=action-default-rollover">
 </head>
 <body data-app-mode="edit" class="gate-open" data-generator="">
 
@@ -20,7 +20,7 @@
         <img class="site-gate-photo-img" src="assets/gate-bg.jpg?v=gate-bg-2" alt="">
       </div>
       <div class="site-gate-wash"></div>
-      <svg class="site-gate-grain" preserveAspectRatio="none">
+      <svg class="site-gate-grain" preserveAspectRatio="none" width="100%" height="100%" aria-hidden="true">
         <filter id="siteGateGrain" x="0" y="0" width="100%" height="100%">
           <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" stitchTiles="stitch"/>
           <feComponentTransfer>
@@ -53,7 +53,20 @@
       <div class="site-toolbar-brand" id="siteToolbarBrand">מחולל מנהלנים</div>
       <div class="site-toolbar-actions">
         <button type="button" class="btn-new" id="btnNew">+ כרטיס חדש</button>
-        <button type="button" class="btn-new" id="btnPackNew">+ קובייה חדשה</button>
+        <div class="settings-wrap pack-add-wrap" id="packAddWrap">
+          <button type="button" class="btn-new" id="btnPackNew" aria-haspopup="menu" aria-expanded="false" aria-controls="packAddMenu">+ הוספה</button>
+          <div class="settings-menu" id="packAddMenu" role="menu" aria-label="הוספה" hidden>
+            <button type="button" class="settings-action" data-pack-add="card" role="menuitem">קובייה חדשה</button>
+            <button type="button" class="settings-action" data-pack-add="icon" role="menuitem">אייקון חדש</button>
+            <button type="button" class="settings-action" data-pack-add="text" role="menuitem">טקסט חדש</button>
+            <button type="button" class="settings-action" data-pack-add="devteam" role="menuitem" id="packAddDevTeam">כפתור צוות פיתוח</button>
+          </div>
+        </div>
+        <input type="file" id="packAddOverlayIconFile" accept="image/*" hidden>
+        <label class="site-theme-lock" id="packCardsFreeformWrap" title="פריסת קוביות חופשית — גררו כל קובייה לכל מקום באזור">
+          <input type="checkbox" id="packCardsFreeform">
+          <span>קוביות חופשיות</span>
+        </label>
         <button type="button" class="btn-edit" id="btnEdit">עריכה</button>
         <div class="settings-wrap" id="settingsWrap">
           <button type="button" class="btn-settings" id="btnSettings" aria-haspopup="menu" aria-expanded="false" aria-controls="settingsMenu">הגדרות</button>
@@ -68,16 +81,20 @@
       </div>
     </div>
     <div class="site-toolbar-theme">
-      <div class="site-theme-cluster" id="inlineTextTools" title="צבע וגודל לטקסט שנמצא בעריכה">
+      <div class="site-theme-cluster" id="inlineTextTools" title="צבע לטקסט וגודל לטקסט או לתמונה שנבחרו">
         <span>טקסט</span>
         <div class="hsla-field site-theme-control" id="inlineTextColorPicker" data-hsla-for="inlineTextColor">
           <button type="button" class="hsla-swatch" id="inlineTextColorSwatch" title="צבע הטקסט בעריכה" aria-label="צבע טקסט"></button>
           <input type="hidden" id="inlineTextColor" value="#000000">
         </div>
-        <div class="site-theme-control site-theme-size is-disabled" id="inlineTextSizeControl" title="גודל טקסט בעריכה ישירה">
-          <input type="range" id="inlineTextSize" min="10" max="56" step="1" value="16" disabled aria-label="גודל טקסט">
-          <input type="number" id="inlineTextSizeNum" min="10" max="56" step="1" value="16" inputmode="numeric" dir="ltr" disabled aria-label="גודל טקסט במספר">
+        <div class="site-theme-control site-theme-size is-disabled" id="inlineTextSizeControl" title="גודל טקסט או תמונה שנבחרו">
+          <input type="range" id="inlineTextSize" min="10" max="56" step="1" value="16" disabled aria-label="גודל">
+          <input type="number" id="inlineTextSizeNum" min="10" max="56" step="1" value="16" inputmode="numeric" dir="ltr" disabled aria-label="גודל במספר">
         </div>
+        <label class="site-theme-lock" id="packScaleLockWrap" hidden title="שמירת יחס גובה-רוחב של הקובייה. בביטול אפשר למתוח לגובה ולרוחב בנפרד">
+          <input type="checkbox" id="packScaleLock" checked>
+          <span>פרופורציות</span>
+        </label>
       </div>
       <div class="site-theme-cluster" title="צבע רקע ותמונת רקע של העמוד">
         <span>רקע</span>
@@ -462,6 +479,7 @@
               <input type="file" id="logoImage" name="logoImage" accept="image/*">
               <span id="logoImageText"></span>
               <img id="logoImagePreview" alt="">
+              <input type="url" id="logoHref" name="logoHref" dir="ltr" placeholder="https://...">
               <input type="checkbox" id="logoFree" name="logoFree">
             </div>
           </div>
@@ -485,7 +503,7 @@
       <header class="pack-header" id="packHeader">
         <div class="pack-header-fill" id="packHeaderFill" aria-hidden="true">
           <div class="pack-header-color" id="packHeaderColor"></div>
-          <div class="pack-header-image" id="packHeaderImage"></div>
+          <div class="pack-header-image" id="packHeaderImage" title="לחצו לבחירה · גררו להזזה · גודל בסרגל הכלים"></div>
         </div>
 
         <div class="pack-header-logos" id="packHeaderLogos"></div>
@@ -495,9 +513,7 @@
           <p class="pack-header-subtitle" id="packHeaderSubtitle" data-placeholder="משני" spellcheck="false"></p>
         </div>
 
-        <p class="pack-header-hidden-note" id="packHeaderHiddenNote">הכותרת מוסתרת — לחצו על העיפרון להחזרה</p>
-
-        <button type="button" class="pack-section-edit pack-header-edit" id="packHeaderEdit" hidden title="עריכת כותרת">✎</button>
+        <p class="pack-header-hidden-note" id="packHeaderHiddenNote">הכותרת מוסתרת — לחצו כאן להחזרה</p>
 
         <div class="pack-header-drop" id="packHeaderDrop" hidden>
           <span>גררו תמונה לכאן</span>
@@ -510,25 +526,17 @@
 
       <div class="pack-body" id="packBody">
         <section class="pack-section pack-cards" id="packCards" data-pack-section="cards">
-          <button type="button" class="pack-section-edit pack-cards-edit" id="packCardsEdit" hidden title="עריכת אזור הקוביות">✎</button>
           <div class="pack-cards-grid" id="packCardsGrid"></div>
           <button type="button" class="pack-cards-resize" id="packCardsResize" hidden title="גררו לשינוי גובה האזור" aria-label="שינוי גובה אזור הקוביות">
             <span class="pack-cards-resize-grip"></span>
           </button>
         </section>
-
-        <section class="pack-section pack-closing" id="packClosing" data-pack-section="closing">
-          <button type="button" class="pack-section-edit pack-closing-edit" id="packClosingEdit" hidden title="עריכת אזור תחתון">✎</button>
-          <p class="pack-closing-hidden-note" id="packClosingHiddenNote">האזור התחתון מוסתר — לחצו על העיפרון להחזרה</p>
-          <div class="pack-closing-items" id="packClosingItems"></div>
-          <a class="pack-dev-team-btn" id="packDevTeamBtn" href="#" target="_blank" rel="noopener noreferrer" hidden>
-            <span class="pack-dev-team-label" id="packDevTeamLabel" spellcheck="false">צוות פיתוח</span>
-          </a>
-          <button type="button" class="pack-closing-resize" id="packClosingResize" hidden title="גררו לשינוי גובה האזור" aria-label="שינוי גובה אזור תחתון">
-            <span class="pack-closing-resize-grip"></span>
-          </button>
-        </section>
       </div>
+      <div class="pack-overlay-items" id="packOverlayItems"></div>
+      <a class="pack-dev-team-btn" id="packDevTeamBtn" href="#" target="_blank" rel="noopener noreferrer" hidden>
+        <span class="pack-dev-team-label" id="packDevTeamLabel" spellcheck="false">צוות פיתוח</span>
+        <button type="button" class="pack-overlay-delete" data-overlay-delete="devteam" hidden title="הסרה" aria-label="הסרת כפתור צוות פיתוח">×</button>
+      </a>
     </div>
 
     <!-- חלונית עריכה כללית של מחולל המארז — נעשה בה שימוש חוזר לכל הסקשנים -->
@@ -633,8 +641,9 @@
     </label>
   </div>
 
-  <script src="js/shared/shell.js?v=client-load-2"></script>
-  <script src="js/manhalan/app.js?v=client-load-2"></script>
-  <script src="js/pack/pack.js?v=client-load-2"></script>
+  <script src="js/shared/inline-assets.js?v=client-export-6"></script>
+  <script src="js/shared/shell.js?v=cube-dup-1"></script>
+  <script src="js/manhalan/app.js?v=text-size-select-1"></script>
+  <script src="js/pack/pack.js?v=action-default-rollover"></script>
 </body>
 </html>

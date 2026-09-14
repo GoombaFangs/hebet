@@ -1,16 +1,18 @@
 /* =====================================================================
    מחולל מארז — קובץ עצמאי ומלא.
    אין תלות בקלאסים של css/manhalan/style.css — כל מה שנחוץ להצגת
-   הכותרת / הקוביות / הסגירה ולעריכתן מוגדר כאן, בשם "pack-*".
+   הכותרת / הקוביות / האלמנטים החופשיים ולעריכתן מוגדר כאן, בשם "pack-*".
    הדבר היחיד שמשותף עם מנהלן הוא רכיב בוחר-הצבע הכללי
    (hsla-field / hsla-swatch / color-hex / hsla-popover) שמוגדר בתור
    רכיב "כללי" (בשימוש הסרגל וכל מחולל) ולכן נשלף מה-DOM המשותף בלבד.
    ===================================================================== */
 
 .pack-workspace {
+  position: relative;
   min-height: calc(100vh - var(--site-toolbar-height, 54px));
   width: 100%;
   background: transparent;
+  overflow: visible;
 }
 
 /* ===== כותרת עליונה ===== */
@@ -19,6 +21,10 @@
   --pack-header-height: 108px;
   --pack-header-color: #3d403c;
   --pack-header-image: none;
+  --pack-header-image-scale: 1;
+  --pack-header-image-scale-y: 1;
+  --pack-header-image-x: 50%;
+  --pack-header-image-y: 50%;
   --pack-header-opacity: 1;
   position: relative;
   z-index: 2;
@@ -43,33 +49,60 @@
 
 .pack-header-color {
   background: var(--pack-header-color);
+  opacity: 1;
+}
+
+.pack-header.is-transparent .pack-header-color {
   opacity: var(--pack-header-opacity);
 }
 
-.pack-header.is-transparent .pack-header-color,
 .pack-header.is-transparent .pack-header-image {
   display: none;
 }
 
 .pack-header.is-image .pack-header-color {
-  opacity: 1;
+  display: none;
 }
 
 .pack-header-image {
   display: none;
+  inset: auto;
+  width: calc(100% * var(--pack-header-image-scale, 1));
+  height: calc(100% * var(--pack-header-image-scale-y, var(--pack-header-image-scale, 1)));
+  left: var(--pack-header-image-x, 50%);
+  top: var(--pack-header-image-y, 50%);
+  transform: translate(-50%, -50%);
   background-image: var(--pack-header-image);
+  background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
-  opacity: var(--pack-header-opacity);
+  opacity: 1;
 }
 
 .pack-header.is-image .pack-header-image {
   display: block;
 }
 
+body.page-edit-mode .pack-header.is-image .pack-header-image {
+  pointer-events: auto;
+  cursor: grab;
+}
+
+body.page-edit-mode .pack-header.is-image .pack-header-image.is-dragging {
+  cursor: grabbing;
+}
+
 body.page-edit-mode .pack-header {
   outline: 2px dashed rgba(74, 124, 63, 0.45);
   outline-offset: -4px;
+}
+
+body.page-edit-mode .pack-header.is-image.is-image-selected {
+  outline-color: var(--site-secondary, #e31c23);
+}
+
+body.page-edit-mode .pack-header-logo.is-selected {
+  outline-color: var(--site-secondary, #e31c23);
 }
 
 /* --- טקסט כותרת + כותרת משנה --- */
@@ -125,8 +158,7 @@ body.page-edit-mode .pack-header {
   display: none !important;
 }
 
-.pack-header-hidden-note,
-.pack-closing-hidden-note {
+.pack-header-hidden-note {
   display: none;
   margin: 0;
   height: 100%;
@@ -135,6 +167,7 @@ body.page-edit-mode .pack-header {
   font-size: 0.88rem;
   font-weight: 700;
   color: #4a5c46;
+  cursor: pointer;
 }
 
 .pack-header.is-hidden {
@@ -157,28 +190,6 @@ body.page-edit-mode .pack-header.is-hidden .pack-header-drop {
 }
 
 body.page-edit-mode .pack-header.is-hidden .pack-header-hidden-note {
-  display: flex;
-}
-
-.pack-closing.is-hidden {
-  display: none;
-}
-
-body.page-edit-mode .pack-closing.is-hidden {
-  display: block;
-  height: 44px;
-  min-height: 44px;
-  padding: 0 24px;
-  background: #eef1ec;
-}
-
-body.page-edit-mode .pack-closing.is-hidden .pack-closing-items,
-body.page-edit-mode .pack-closing.is-hidden .pack-dev-team-btn,
-body.page-edit-mode .pack-closing.is-hidden .pack-closing-resize {
-  display: none !important;
-}
-
-body.page-edit-mode .pack-closing.is-hidden .pack-closing-hidden-note {
   display: flex;
 }
 
@@ -227,7 +238,9 @@ body.page-edit-mode .pack-header-subtitle:hover {
 }
 
 body.page-edit-mode .pack-header-title:focus,
-body.page-edit-mode .pack-header-subtitle:focus {
+body.page-edit-mode .pack-header-subtitle:focus,
+body.page-edit-mode .pack-header-title.is-selected,
+body.page-edit-mode .pack-header-subtitle.is-selected {
   outline: 1px dashed var(--site-secondary, #e31c23);
   background: rgba(0, 0, 0, 0.18);
 }
@@ -249,10 +262,29 @@ body.page-edit-mode .pack-header-subtitle:focus {
   height: auto;
   max-height: 88%;
   transform: translate(-50%, -50%);
-  object-fit: contain;
+  display: block;
   pointer-events: none;
   user-select: none;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.25));
+  text-decoration: none;
+  color: inherit;
+  box-sizing: border-box;
+}
+
+.pack-header-logo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.pack-header-logo[data-has-href="1"] {
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 body.page-edit-mode .pack-header-logo {
@@ -266,10 +298,19 @@ body.page-edit-mode .pack-header-logo:hover {
   outline-color: rgba(255, 255, 255, 0.6);
 }
 
+body.page-edit-mode .pack-header-logo.is-selected,
+body.page-edit-mode .pack-header-logo.is-selected:hover {
+  outline-color: var(--site-secondary, #e31c23);
+}
+
 .pack-header-logo.is-dragging {
   cursor: grabbing;
   outline-color: var(--site-secondary, #e31c23);
   z-index: 5;
+}
+
+.pack-header > .pack-card-guides {
+  z-index: 20;
 }
 
 /* --- כפתור עריכה (עט ירוק) — משמש בכל סקשן --- */
@@ -300,11 +341,9 @@ body.page-edit-mode .pack-section-edit:not([hidden]) {
   display: flex !important;
 }
 
+body.page-edit-mode .pack-section-edit.pack-header-edit,
 .pack-header-edit {
-  position: absolute;
-  top: 12px;
-  left: 16px;
-  z-index: 6;
+  display: none !important;
 }
 
 .pack-header-drop {
@@ -389,10 +428,6 @@ body.page-edit-mode .pack-section {
   border-radius: 16px;
 }
 
-body.page-edit-mode .pack-closing {
-  margin: 12px 20px;
-}
-
 /* ===== אזור הקוביות ===== */
 
 .pack-cards {
@@ -419,13 +454,6 @@ body.page-edit-mode .pack-cards {
   padding-bottom: 64px;
 }
 
-.pack-cards-edit {
-  position: absolute;
-  top: -6px;
-  left: 8px;
-  z-index: 4;
-}
-
 .pack-cards-grid {
   display: grid;
   grid-template-columns: repeat(
@@ -440,7 +468,7 @@ body.page-edit-mode .pack-cards {
 }
 
 .pack-cards-grid:empty::before {
-  content: "אין עדיין קוביות. לחצו על \"+ קובייה חדשה\" בסרגל הכלים.";
+  content: "אין עדיין קוביות. לחצו על \"+ הוספה\" בסרגל הכלים ובחרו קובייה חדשה.";
   display: block;
   grid-column: 1 / -1;
   padding: 30px 16px;
@@ -462,6 +490,7 @@ body[data-app-mode="user"] .pack-cards-grid:empty::before {
   width: 100%;
   min-width: 0;
   max-width: none;
+  --pack-card-img-scale: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -536,6 +565,17 @@ body.page-edit-mode .pack-card.is-awaiting-image:not(.is-editing) {
   filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.18));
 }
 
+body.page-edit-mode .pack-card-photo.is-selected {
+  outline: 2px dashed var(--site-secondary, #e31c23);
+  outline-offset: 3px;
+}
+
+.pack-cards:not(.is-freeform) .pack-card.is-image .pack-card-photo {
+  width: calc(100% * var(--pack-card-img-scale, 1));
+  max-width: none;
+  justify-self: center;
+}
+
 .pack-card.is-image .pack-card-copy {
   grid-area: 1 / 1;
   z-index: 1;
@@ -594,6 +634,10 @@ body.page-edit-mode .pack-card-icon:hover {
   outline-color: color-mix(in srgb, var(--site-secondary, #e31c23) 70%, transparent);
 }
 
+body.page-edit-mode .pack-card-icon.is-selected {
+  outline-color: var(--site-secondary, #e31c23);
+}
+
 .pack-card-icon.is-dragging {
   cursor: grabbing;
   outline-color: var(--site-secondary, #e31c23);
@@ -639,7 +683,9 @@ body.page-edit-mode .pack-card-desc:hover {
 }
 
 body.page-edit-mode .pack-card-title:focus,
-body.page-edit-mode .pack-card-desc:focus {
+body.page-edit-mode .pack-card-desc:focus,
+body.page-edit-mode .pack-card-title.is-selected,
+body.page-edit-mode .pack-card-desc.is-selected {
   outline: 1px dashed var(--site-secondary, #e31c23);
   background: rgba(255, 255, 255, 0.1);
 }
@@ -662,15 +708,15 @@ body.page-edit-mode .pack-card-desc:focus {
   cursor: pointer;
   text-decoration: none;
   transform: translate(-50%, -50%);
-  transition: transform 0.15s ease, background-color 0.15s ease, outline-color 0.15s ease;
+  transition: transform 0.15s ease, background-color 0.15s ease, outline-color 0.15s ease, color 0.15s ease;
   user-select: none;
   -webkit-user-drag: none;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.22));
 }
 
-.pack-card-action:hover {
-  transform: translate(-50%, -50%) scale(1.1);
-  background: #fff;
+.pack-card-action:hover,
+.pack-card-action:focus-visible {
+  transform: translate(-50%, -50%) scale(1.08);
 }
 
 body.page-edit-mode .pack-card-action {
@@ -729,7 +775,67 @@ body.page-edit-mode .pack-card-action:hover {
   display: block;
 }
 
-.pack-card-edit,
+.pack-card-action.has-custom-rollover:hover,
+.pack-card-action.has-custom-rollover:focus-visible {
+  background: transparent;
+}
+
+.pack-card-action.has-rollover {
+  overflow: hidden;
+}
+
+.pack-card-action.has-rollover .pack-action-normal {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.15s ease;
+}
+
+.pack-card-action.has-rollover .pack-action-hover {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: inherit;
+  line-height: 1;
+  transition: opacity 0.15s ease;
+}
+
+.pack-card-action.has-rollover .pack-action-hover--default:not(.pack-action-hover--tint) {
+  background: var(--site-secondary, #e31c23);
+  color: #fff;
+}
+
+.pack-card-action.has-rollover .pack-action-hover--tint {
+  background: rgba(227, 28, 35, 0.4);
+  background: color-mix(in srgb, var(--site-secondary, #e31c23) 40%, transparent);
+}
+
+.pack-card-action.has-rollover:hover .pack-action-hover,
+.pack-card-action.has-rollover:focus-visible .pack-action-hover {
+  opacity: 1;
+}
+
+.pack-card-action.has-rollover:not(.has-icon-image):hover .pack-action-normal,
+.pack-card-action.has-rollover:not(.has-icon-image):focus-visible .pack-action-normal,
+.pack-card-action.has-custom-rollover:hover .pack-action-normal,
+.pack-card-action.has-custom-rollover:focus-visible .pack-action-normal {
+  opacity: 0;
+}
+
+.pack-card-dup,
 .pack-card-delete {
   position: absolute;
   top: 8px;
@@ -749,13 +855,18 @@ body.page-edit-mode .pack-card-action:hover {
   z-index: 6;
 }
 
-.pack-card-edit {
+.pack-card-dup {
   right: 8px;
-  background: rgba(74, 124, 63, 0.95);
+  background: rgba(33, 100, 180, 0.95);
 }
 
-.pack-card-edit:hover {
-  background: #3d6834;
+.pack-card-dup svg {
+  display: block;
+  pointer-events: none;
+}
+
+.pack-card-dup:hover {
+  background: #1a5a9e;
 }
 
 .pack-card-delete {
@@ -768,7 +879,7 @@ body.page-edit-mode .pack-card-action:hover {
   background: #c62828;
 }
 
-body.page-edit-mode .pack-card-edit,
+body.page-edit-mode .pack-card-dup,
 body.page-edit-mode .pack-card-delete {
   display: flex;
 }
@@ -835,7 +946,7 @@ body:not(.page-edit-mode) .pack-card.is-coming-soon .pack-card-action {
   pointer-events: none;
 }
 
-body.page-edit-mode .pack-card.is-coming-soon .pack-card-edit,
+body.page-edit-mode .pack-card.is-coming-soon .pack-card-dup,
 body.page-edit-mode .pack-card.is-coming-soon .pack-card-delete {
   z-index: 12;
 }
@@ -881,9 +992,10 @@ body.page-edit-mode .pack-card.is-coming-soon.is-image .pack-card-soon {
   top: var(--cy, 50%);
   z-index: 1;
   flex: none;
-  width: min(var(--pack-card-max, 320px), 90%);
-  max-width: min(var(--pack-card-max, 320px), 90%);
-  min-height: 150px;
+  width: min(calc(var(--pack-card-max, 320px) * var(--cw, 18) / 18), 92%);
+  max-width: 92%;
+  min-height: 80px;
+  height: var(--ch, auto);
   transform: translate(-50%, -50%);
   overflow: visible;
 }
@@ -906,7 +1018,25 @@ body.page-edit-mode .pack-cards.is-freeform .pack-card {
 
 .pack-cards.is-freeform .pack-card.is-image {
   min-height: 0;
+  height: auto;
   box-shadow: none;
+  width: min(calc(var(--pack-card-max, 320px) * var(--pack-card-img-scale, 1)), 92%);
+  max-width: 92%;
+}
+
+.pack-cards.is-freeform .pack-card.is-image.is-free-scale {
+  height: calc(var(--pack-card-max, 320px) * var(--pack-card-img-scale-y, var(--pack-card-img-scale, 1)));
+  min-height: 48px;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.pack-cards.is-freeform .pack-card.is-image.is-free-scale .pack-card-photo {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: fill;
+  align-self: stretch;
+  justify-self: stretch;
 }
 
 .pack-cards.is-freeform .pack-card.is-image.is-dragging {
@@ -916,6 +1046,114 @@ body.page-edit-mode .pack-cards.is-freeform .pack-card {
 
 .pack-cards.is-freeform .pack-card.is-image.is-dragging .pack-card-photo {
   filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.28));
+}
+
+.pack-card-resize {
+  position: absolute;
+  z-index: 8;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  padding: 0;
+  border: 2px solid var(--site-secondary, #e31c23);
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+  display: none;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.pack-card-resize[data-card-resize="nw"],
+.pack-overlay-resize[data-overlay-resize="nw"] {
+  top: -6px;
+  left: -6px;
+  cursor: nwse-resize;
+}
+
+.pack-card-resize[data-card-resize="ne"],
+.pack-overlay-resize[data-overlay-resize="ne"] {
+  top: -6px;
+  right: -6px;
+  cursor: nesw-resize;
+}
+
+.pack-card-resize[data-card-resize="sw"],
+.pack-overlay-resize[data-overlay-resize="sw"] {
+  bottom: -6px;
+  left: -6px;
+  cursor: nesw-resize;
+}
+
+.pack-card-resize[data-card-resize="se"],
+.pack-overlay-resize[data-overlay-resize="se"] {
+  bottom: -6px;
+  right: -6px;
+  cursor: nwse-resize;
+}
+
+.pack-card-resize[data-card-resize="n"],
+.pack-overlay-resize[data-overlay-resize="n"] {
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.pack-card-resize[data-card-resize="s"],
+.pack-overlay-resize[data-overlay-resize="s"] {
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.pack-card-resize[data-card-resize="e"],
+.pack-overlay-resize[data-overlay-resize="e"] {
+  top: 50%;
+  right: -6px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.pack-card-resize[data-card-resize="w"],
+.pack-overlay-resize[data-overlay-resize="w"] {
+  top: 50%;
+  left: -6px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+body.page-edit-mode .pack-cards.is-freeform .pack-card .pack-card-resize,
+body.page-edit-mode .pack-closing-icon .pack-overlay-resize,
+body.page-edit-mode .pack-dev-team-btn .pack-overlay-resize {
+  display: block;
+}
+
+body.page-edit-mode .pack-cards.is-freeform .pack-card.is-image:not(.is-free-scale) .pack-card-resize[data-card-resize="n"],
+body.page-edit-mode .pack-cards.is-freeform .pack-card.is-image:not(.is-free-scale) .pack-card-resize[data-card-resize="s"],
+body.page-edit-mode .pack-cards.is-freeform .pack-card.is-image:not(.is-free-scale) .pack-card-resize[data-card-resize="e"],
+body.page-edit-mode .pack-cards.is-freeform .pack-card.is-image:not(.is-free-scale) .pack-card-resize[data-card-resize="w"],
+body.page-edit-mode .pack-closing-icon:not(.is-free-scale) .pack-overlay-resize[data-overlay-resize="n"],
+body.page-edit-mode .pack-closing-icon:not(.is-free-scale) .pack-overlay-resize[data-overlay-resize="s"],
+body.page-edit-mode .pack-closing-icon:not(.is-free-scale) .pack-overlay-resize[data-overlay-resize="e"],
+body.page-edit-mode .pack-closing-icon:not(.is-free-scale) .pack-overlay-resize[data-overlay-resize="w"],
+body.page-edit-mode .pack-dev-team-btn:not(.is-free-scale) .pack-overlay-resize[data-overlay-resize="n"],
+body.page-edit-mode .pack-dev-team-btn:not(.is-free-scale) .pack-overlay-resize[data-overlay-resize="s"],
+body.page-edit-mode .pack-dev-team-btn:not(.is-free-scale) .pack-overlay-resize[data-overlay-resize="e"],
+body.page-edit-mode .pack-dev-team-btn:not(.is-free-scale) .pack-overlay-resize[data-overlay-resize="w"] {
+  display: none;
+}
+
+body.page-edit-mode .pack-cards.is-freeform .pack-card.is-resizing {
+  z-index: 10;
+  cursor: inherit;
+}
+
+body.page-edit-mode .pack-closing-icon.is-resizing,
+body.page-edit-mode .pack-dev-team-btn.is-resizing {
+  z-index: 22;
+  cursor: inherit;
 }
 
 .pack-cards-resize {
@@ -973,67 +1211,16 @@ body.page-edit-mode .pack-cards.is-freeform .pack-cards-resize:not([hidden]) {
   cursor: pointer;
 }
 
-/* ===== סגירה — כפתור צוות פיתוח + אלמנטים נגררים ===== */
+/* ===== שכבת אלמנטים חופשית — אייקונים, טקסט, צוות פיתוח ===== */
 
 .pack-closing {
-  --pack-closing-height: 78px;
-  position: relative;
-  min-height: var(--pack-closing-height);
-  margin-top: 12px;
-  padding: 14px 24px 24px;
+  display: none !important;
 }
 
-.pack-closing.is-resizing {
-  cursor: ns-resize;
-}
-
-.pack-closing-resize {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  z-index: 6;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 72px;
-  height: 22px;
-  padding: 0;
-  transform: translateX(-50%);
-  border: 0;
-  background: transparent;
-  cursor: ns-resize;
-  touch-action: none;
-}
-
-body.page-edit-mode .pack-closing-resize:not([hidden]) {
-  display: flex;
-}
-
-.pack-closing-resize-grip {
-  width: 44px;
-  height: 5px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--site-secondary, #e31c23) 65%, #999);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-}
-
-.pack-closing-resize:hover .pack-closing-resize-grip,
-.pack-closing-resize.is-dragging .pack-closing-resize-grip {
-  width: 56px;
-  background: var(--site-secondary, #e31c23);
-}
-
-.pack-closing-edit {
-  position: absolute;
-  top: 6px;
-  left: 8px;
-  z-index: 6;
-}
-
-.pack-closing-items {
+.pack-overlay-items {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 12;
   pointer-events: none;
 }
 
@@ -1041,14 +1228,15 @@ body.page-edit-mode .pack-closing-resize:not([hidden]) {
   position: absolute;
   top: var(--cy, 50%);
   left: var(--cx, 18%);
-  z-index: 2;
+  z-index: 13;
   width: var(--csize, 36px);
-  height: var(--csize, 36px);
+  height: var(--csize-y, var(--csize, 36px));
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transform: translate(-50%, -50%);
-  font-size: calc(var(--csize, 36px) * 0.62);
+  font-size: calc(min(var(--csize, 36px), var(--csize-y, var(--csize, 36px))) * 0.62);
   line-height: 1;
   color: inherit;
   text-decoration: none;
@@ -1066,15 +1254,24 @@ body.page-edit-mode .pack-closing-resize:not([hidden]) {
   -webkit-user-drag: none;
 }
 
+.pack-closing-icon.is-free-scale img {
+  object-fit: fill;
+}
+
 .pack-closing-icon[data-has-href="1"] {
   cursor: pointer;
+}
+
+.pack-closing-icon.is-selected {
+  outline: 2px solid var(--site-secondary, #e31c23);
+  outline-offset: 3px;
 }
 
 .pack-closing-text {
   position: absolute;
   top: var(--cy, 50%);
   left: var(--cx, 20%);
-  z-index: 2;
+  z-index: 13;
   transform: translate(-50%, -50%);
   padding: 4px 8px;
   font-size: var(--csize, 18px);
@@ -1100,13 +1297,49 @@ body.page-edit-mode .pack-closing-resize:not([hidden]) {
   outline: none;
 }
 
+.pack-overlay-delete {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  z-index: 8;
+  width: 22px;
+  height: 22px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(220, 50, 50, 0.92);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.pack-overlay-delete:hover {
+  background: #c62828;
+  transform: scale(1.08);
+}
+
+body.page-edit-mode .pack-overlay-delete:not([hidden]) {
+  display: flex;
+}
+
+.pack-dev-team-btn .pack-overlay-delete,
+.pack-closing-icon .pack-overlay-delete {
+  top: 4px;
+  left: 4px;
+}
+
 .pack-dev-team-btn[hidden] {
   display: none !important;
 }
 
 .pack-dev-team-btn {
   --cx: 88%;
-  --cy: 50%;
+  --cy: 90%;
   --pack-dev-team-scale: 1;
   --pack-dev-team-radius: 12px;
   --pack-dev-team-image: none;
@@ -1115,7 +1348,7 @@ body.page-edit-mode .pack-closing-resize:not([hidden]) {
   position: absolute;
   top: var(--cy);
   left: var(--cx);
-  z-index: 3;
+  z-index: 16;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1163,6 +1396,19 @@ body.page-edit-mode .pack-closing-resize:not([hidden]) {
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
 }
 
+.pack-dev-team-btn.is-free-scale {
+  min-width: 0;
+  width: var(--pack-dev-team-w, calc(148px * var(--pack-dev-team-scale, 1)));
+  height: var(--pack-dev-team-h, calc(42px * var(--pack-dev-team-scale-y, var(--pack-dev-team-scale, 1))));
+  padding: 0 8px;
+  box-sizing: border-box;
+  font-size: clamp(10px, calc(var(--pack-dev-team-h, 42px) * 0.36), 28px);
+}
+
+.pack-dev-team-btn.is-free-scale.has-image {
+  background-size: 100% 100%;
+}
+
 body:not(.page-edit-mode) .pack-dev-team-btn:hover:not(.is-disabled) {
   filter: brightness(1.08);
 }
@@ -1183,16 +1429,26 @@ body.page-edit-mode .pack-closing-text {
 
 body.page-edit-mode .pack-dev-team-btn {
   border-radius: var(--pack-dev-team-radius, 12px);
+  overflow: visible;
 }
 
 body.page-edit-mode .pack-closing-icon {
   border-radius: 10px;
+  overflow: visible;
 }
 
 body.page-edit-mode .pack-dev-team-btn:hover,
 body.page-edit-mode .pack-closing-icon:hover,
 body.page-edit-mode .pack-closing-text:hover {
   outline-color: color-mix(in srgb, var(--site-secondary, #e31c23) 70%, transparent);
+}
+
+body.page-edit-mode .pack-dev-team-btn.is-editing,
+body.page-edit-mode .pack-closing-icon.is-editing,
+body.page-edit-mode .pack-closing-text.is-editing {
+  z-index: 20;
+  outline: 3px solid var(--site-secondary, #e31c23);
+  outline-offset: 4px;
 }
 
 body.page-edit-mode .pack-closing-text-label {
@@ -1205,6 +1461,12 @@ body.page-edit-mode .pack-closing-text-label:focus {
   outline: 1px dashed var(--site-secondary, #e31c23);
   border-radius: 4px;
   background: rgba(227, 28, 35, 0.06);
+}
+
+body.page-edit-mode .pack-closing-text.is-selected,
+body.page-edit-mode #packDevTeamLabel.is-selected {
+  outline: 1px dashed var(--site-secondary, #e31c23);
+  outline-offset: 2px;
 }
 
 body.page-edit-mode #packDevTeamLabel {
@@ -1228,7 +1490,11 @@ body.page-edit-mode #packDevTeamLabel:focus {
 .pack-closing-text.is-dragging {
   cursor: grabbing;
   outline-color: var(--site-secondary, #e31c23);
-  z-index: 5;
+  z-index: 18;
+}
+
+.pack-workspace > .pack-card-guides {
+  z-index: 17;
 }
 
 .pack-closing-icon-row {
@@ -1282,9 +1548,8 @@ body.page-edit-mode #packDevTeamLabel:focus {
   bottom: 0;
   left: 0;
   z-index: 280;
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
+  display: block;
+  direction: ltr;
   padding: 16px;
   pointer-events: none;
   background: transparent;
@@ -1297,8 +1562,12 @@ body.page-edit-mode #packDevTeamLabel:focus {
 .pack-edit-modal {
   display: flex;
   flex-direction: column;
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  direction: rtl;
   pointer-events: auto;
-  width: min(400px, calc(100vw - 28px));
+  width: min(400px, calc(100% - 32px));
   max-width: 400px;
   max-height: calc(100vh - var(--site-toolbar-height, 54px) - 32px);
   margin: 0;
@@ -1307,7 +1576,13 @@ body.page-edit-mode #packDevTeamLabel:focus {
   border-radius: 16px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
   overflow: hidden;
-  animation: packEditIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform: translate3d(var(--pack-edit-x, 0px), 0, 0);
+  transition: transform 0.64s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: packEditIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.pack-edit-overlay.is-dock-instant .pack-edit-modal {
+  transition: none;
 }
 
 .pack-edit-header {
@@ -1323,6 +1598,9 @@ body.page-edit-mode #packDevTeamLabel:focus {
   font-size: 1.2rem;
   color: #222;
   margin: 0;
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
 }
 
 .pack-edit-close {
@@ -1611,6 +1889,16 @@ body.page-edit-mode #packDevTeamLabel:focus {
   direction: ltr;
 }
 
+#packHeaderColorFields,
+#packHeaderImageFields,
+#packHeaderOpacityFields {
+  margin-top: 10px;
+}
+
+#packHeaderImageFields .pack-upload {
+  margin-top: 0;
+}
+
 /* העלאת תמונה */
 
 .pack-upload {
@@ -1662,6 +1950,177 @@ body.page-edit-mode #packDevTeamLabel:focus {
   display: block;
 }
 
+.pack-header-preview {
+  position: relative;
+  margin-top: 10px;
+  overflow: visible;
+}
+
+.pack-header-preview[hidden] {
+  display: none !important;
+}
+
+.pack-header-preview-stage {
+  position: relative;
+  width: 100%;
+  height: 210px;
+  min-height: 180px;
+  overflow: visible;
+  border: 1px solid #d5e2d2;
+  border-radius: 10px;
+  background: #dfe6dc;
+  box-sizing: border-box;
+}
+
+.pack-header-preview-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.pack-header-preview-img,
+.pack-header-preview-handles {
+  position: absolute;
+  width: calc(100% * var(--pack-header-image-scale, 1));
+  height: calc(100% * var(--pack-header-image-scale-y, var(--pack-header-image-scale, 1)));
+  left: var(--pack-header-image-x, 50%);
+  top: var(--pack-header-image-y, 50%);
+  transform: translate(-50%, -50%);
+}
+
+.pack-header-preview-img {
+  background-image: var(--pack-header-image);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+}
+
+.pack-header-preview-img.is-dragging {
+  cursor: grabbing;
+}
+
+.pack-header-preview-handles {
+  z-index: 2;
+  pointer-events: none;
+}
+
+.pack-header-preview-handles .pack-header-preview-resize {
+  display: block;
+  pointer-events: auto;
+}
+
+.pack-header-preview-resize[data-header-preview-resize="nw"] {
+  top: -6px;
+  left: -6px;
+  cursor: nwse-resize;
+}
+
+.pack-header-preview-resize[data-header-preview-resize="ne"] {
+  top: -6px;
+  right: -6px;
+  cursor: nesw-resize;
+}
+
+.pack-header-preview-resize[data-header-preview-resize="sw"] {
+  bottom: -6px;
+  left: -6px;
+  cursor: nesw-resize;
+}
+
+.pack-header-preview-resize[data-header-preview-resize="se"] {
+  bottom: -6px;
+  right: -6px;
+  cursor: nwse-resize;
+}
+
+.pack-header-preview-resize[data-header-preview-resize="n"] {
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.pack-header-preview-resize[data-header-preview-resize="s"] {
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.pack-header-preview-resize[data-header-preview-resize="e"] {
+  top: 50%;
+  right: -6px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.pack-header-preview-resize[data-header-preview-resize="w"] {
+  top: 50%;
+  left: -6px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.pack-header-preview:not(.is-free-scale) .pack-header-preview-resize[data-header-preview-resize="n"],
+.pack-header-preview:not(.is-free-scale) .pack-header-preview-resize[data-header-preview-resize="s"],
+.pack-header-preview:not(.is-free-scale) .pack-header-preview-resize[data-header-preview-resize="e"],
+.pack-header-preview:not(.is-free-scale) .pack-header-preview-resize[data-header-preview-resize="w"] {
+  display: none;
+}
+
+#packHeaderKeepRatioWrap {
+  margin-top: 8px;
+}
+
+#packHeaderKeepRatioWrap[hidden] {
+  display: none !important;
+}
+
+.pack-header-image-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.pack-header-image-actions .pack-clear-btn,
+.pack-header-image-actions .pack-reset-btn {
+  margin-top: 0;
+  flex: 1 1 0;
+}
+
+.pack-reset-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #b7d0b2;
+  border-radius: 10px;
+  background: #f4faf2;
+  color: #2f4f2a;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pack-reset-btn:hover {
+  background: #e7f3e4;
+}
+
+.pack-reset-btn[hidden] {
+  display: none !important;
+}
+
+.pack-header-image-actions[hidden] {
+  display: none !important;
+}
+
 .pack-clear-btn {
   display: inline-flex;
   align-items: center;
@@ -1698,6 +2157,19 @@ body.page-edit-mode #packDevTeamLabel:focus {
   border: 1px solid #e2eadf;
   border-radius: 10px;
   background: #fff;
+}
+
+.pack-logo-row--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.pack-logo-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .pack-logo-row:last-child {
@@ -1796,6 +2268,10 @@ body.page-edit-mode #packDevTeamLabel:focus {
 
 /* צ'קבוקס פעולה + שדה קישור (view/download/print) */
 
+.pack-action-block {
+  margin-bottom: 10px;
+}
+
 .pack-action-row {
   display: flex;
   align-items: center;
@@ -1837,9 +2313,49 @@ body.page-edit-mode #packDevTeamLabel:focus {
 .pack-action-icon-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  margin: -2px 0 12px 0;
+  margin: 0 0 6px 0;
   padding-right: 24px;
+}
+
+.pack-action-hover-row {
+  margin: 0 0 12px 0;
+}
+
+.pack-action-hover-row .pack-action-icon-preview:not(.is-visible) {
+  border-style: dashed;
+  background: #f7faf6;
+}
+
+.pack-action-icon-preview.is-default-hover {
+  position: relative;
+}
+
+.pack-action-icon-preview.is-default-hover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: rgba(227, 28, 35, 0.4);
+  background: color-mix(in srgb, var(--site-secondary, #e31c23) 40%, transparent);
+}
+
+.pack-action-icon-preview .pack-default-hover-thumb {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--site-secondary, #e31c23);
+  color: #fff;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.pack-action-icon-preview.is-default-hover:has(.pack-default-hover-thumb)::after {
+  display: none;
 }
 
 .pack-action-icon-preview {
@@ -1886,11 +2402,9 @@ body.page-edit-mode #packDevTeamLabel:focus {
 @keyframes packEditIn {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 
@@ -1900,31 +2414,31 @@ body.user-mode .pack-header-edit,
 body.user-mode .pack-header-resize,
 body.user-mode .pack-header-drop,
 body.user-mode .pack-header-hidden-note,
-body.user-mode .pack-closing-hidden-note,
 body.user-mode .pack-edit-overlay,
 body.user-mode .pack-section-edit,
-body.user-mode .pack-card-edit,
+body.user-mode .pack-card-dup,
 body.user-mode .pack-card-delete,
+body.user-mode .pack-overlay-delete,
+body.user-mode .pack-card-resize,
+body.user-mode .pack-overlay-resize,
 body.user-mode .pack-cards-resize,
-body.user-mode .pack-closing-resize,
 body[data-app-mode="user"] .pack-header-edit,
 body[data-app-mode="user"] .pack-header-resize,
 body[data-app-mode="user"] .pack-header-drop,
 body[data-app-mode="user"] .pack-header-hidden-note,
-body[data-app-mode="user"] .pack-closing-hidden-note,
 body[data-app-mode="user"] .pack-edit-overlay,
 body[data-app-mode="user"] .pack-section-edit,
-body[data-app-mode="user"] .pack-card-edit,
+body[data-app-mode="user"] .pack-card-dup,
 body[data-app-mode="user"] .pack-card-delete,
-body[data-app-mode="user"] .pack-cards-resize,
-body[data-app-mode="user"] .pack-closing-resize {
+body[data-app-mode="user"] .pack-overlay-delete,
+body[data-app-mode="user"] .pack-card-resize,
+body[data-app-mode="user"] .pack-overlay-resize,
+body[data-app-mode="user"] .pack-cards-resize {
   display: none !important;
 }
 
 body.user-mode .pack-header.is-hidden,
-body[data-app-mode="user"] .pack-header.is-hidden,
-body.user-mode .pack-closing.is-hidden,
-body[data-app-mode="user"] .pack-closing.is-hidden {
+body[data-app-mode="user"] .pack-header.is-hidden {
   display: none !important;
 }
 
@@ -1933,22 +2447,30 @@ body[data-app-mode="user"] .pack-section {
   outline: none !important;
 }
 
-body.user-mode .pack-closing,
-body[data-app-mode="user"] .pack-closing {
-  margin-inline: 0;
+body.user-mode .pack-header-title:empty::before,
+body.user-mode .pack-header-subtitle:empty::before,
+body[data-app-mode="user"] .pack-header-title:empty::before,
+body[data-app-mode="user"] .pack-header-subtitle:empty::before {
+  content: none;
 }
 
 /* ===== רספונסיביות ===== */
 
 @media (max-width: 760px) {
   .pack-edit-overlay {
+    display: flex;
     justify-content: center;
     padding: 10px;
   }
 
   .pack-edit-modal {
+    position: relative;
+    top: auto;
+    left: auto;
     width: min(100%, calc(100vw - 20px));
     max-width: none;
+    transform: none !important;
+    transition: none;
   }
 
   .pack-header-text {
@@ -1965,5 +2487,6 @@ body[data-app-mode="user"] .pack-closing {
 @media (prefers-reduced-motion: reduce) {
   .pack-edit-modal {
     animation: none;
+    transition-duration: 0.01ms;
   }
 }

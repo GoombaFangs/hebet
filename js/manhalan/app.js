@@ -1,6 +1,8 @@
 /* ===== מחולל מנהלן ===== */
 const STORAGE_KEY = 'hebet-cards';
 const HOME_STORAGE_KEY = 'hebet-home';
+let snapshotCardsJson = null;
+let snapshotHomeJson = null;
 const FONTS_DB_NAME = 'hebet-fonts';
 const FONTS_STORE = 'fonts';
 const HEBET_BOOTSTRAP_ID = 'hebet-bootstrap';
@@ -92,6 +94,7 @@ const DEFAULT_HOME = {
     bgOpacity: 0,
     bgImage: '',
     artSrc: '',
+    artHref: '',
     artSide: 'left',
     artWidth: 46,
     kicker: 'תווית עליונה',
@@ -328,6 +331,7 @@ function createEmptyWizardData() {
     iconPositions: {},
     logoFree: false,
     logoPosition: null,
+    logoHref: '',
     flatImageZoom: 100,
     flatImagePosX: 50,
     flatImagePosY: 50,
@@ -388,7 +392,7 @@ function resetWizardData() {
 /* ===== אחסון ===== */
 
 function loadCards() {
-  const saved = localStorage.getItem(STORAGE_KEY);
+  const saved = snapshotCardsJson || localStorage.getItem(STORAGE_KEY);
   let cards;
   if (saved) {
     try {
@@ -695,6 +699,7 @@ function getInlineFormattingTargetEl() {
 }
 
 function canUseInlineFormattingToolbar() {
+  if (window.HebetPackText && window.HebetPackText.hasActiveText()) return true;
   if (isWizardPreviewTextEditing()) return true;
   if (!editMode || !activeInlineEdit) return false;
   const spec = getInlineEditSpec(activeInlineEdit.el);
@@ -706,9 +711,13 @@ function isCategoryTextEditing() {
 }
 
 function canUseInlineColorToolbar() {
-  // סרגל הכלים משותף עם מחולל המארזים: כשקיימת עריכת טקסט פעילה שם, מאפשרים לו
-  // להשתמש ברכיב הצבע (ראו js/pack/pack.js -> window.HebetPackText).
-  if (window.HebetPackText && window.HebetPackText.hasActiveText()) return true;
+  // סרגל הכלים משותף עם מחולל המארזים: טקסט מקבל צבע, תמונה לא.
+  if (window.HebetPackText && typeof window.HebetPackText.hasActiveText === 'function' &&
+      window.HebetPackText.hasActiveText()) {
+    return typeof window.HebetPackText.hasActiveColor === 'function'
+      ? window.HebetPackText.hasActiveColor()
+      : true;
+  }
   if (isWizardPreviewTextEditing()) return true;
   if (editMode && isCategoryTextEditing()) return true;
   return !!(editMode && activeInlineEdit && activeInlineEdit.el && getInlineEditSpec(activeInlineEdit.el));
@@ -739,7 +748,9 @@ function bindInlineFormattingToolbarGuard() {
         saveInlineTextSelection();
         return;
       }
-      e.preventDefault();
+      const packSticky = window.HebetPackText && typeof window.HebetPackText.hasActiveText === 'function' &&
+        window.HebetPackText.hasActiveText();
+      if (!packSticky) e.preventDefault();
       saveInlineTextSelection();
     }
   }, true);
@@ -1125,6 +1136,16 @@ function syncInlineTextSizeControl() {
   const range = document.getElementById('inlineTextSize');
   if (!control || !range) return;
 
+  if (window.HebetPackText && typeof window.HebetPackText.hasActiveText === 'function' &&
+      window.HebetPackText.hasActiveText()) {
+    window.HebetPackText.syncToolbar();
+    return;
+  }
+
+  control.classList.remove('is-visual-scale');
+  const lockWrap = document.getElementById('packScaleLockWrap');
+  if (lockWrap) lockWrap.hidden = true;
+
   const enabled = canUseInlineFormattingToolbar();
 
   if (!enabled) {
@@ -1142,6 +1163,12 @@ function syncInlineTextSizeControl() {
       : wizardData.notesSize;
     const size = clampFontSize(stored, cfg.fallback, cfg.max);
     setInlineTextSizeFields(size, { min: cfg.min, max: cfg.max });
+    syncInlineTextColorControl();
+    return;
+  }
+
+  if (!activeInlineEdit) {
+    setInlineTextSizeEnabled(false);
     syncInlineTextColorControl();
     return;
   }
@@ -2209,6 +2236,15 @@ function isCardLogoFree(card) {
   return !!(card && card.logo && card.logoFree);
 }
 
+function cardLogoHref(card) {
+  return headerActionHref(card && (card.logoHref || card.logoLink));
+}
+
+function wrapCardLogoHtml(imgHtml, href) {
+  if (!href || editMode) return imgHtml;
+  return '<a class="card-logo-link" href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer">' + imgHtml + '</a>';
+}
+
 function getLogoPosition(card) {
   const saved = card && card.logoPosition;
   if (saved && saved.x != null && saved.y != null) {
@@ -2507,9 +2543,10 @@ function buildFlatImageHtml(card) {
 function buildFreeLogoHtml(card) {
   if (!isCardLogoFree(card)) return '';
   const pos = getLogoPosition(card);
+  const img = '<img class="card-logo card-logo--free" src="' + card.logo + '" alt="">';
   return (
     '<div class="card-logo-free is-free" style="left:' + pos.x + '%;top:' + pos.y + '%;">' +
-      '<img class="card-logo card-logo--free" src="' + card.logo + '" alt="">' +
+      wrapCardLogoHtml(img, cardLogoHref(card)) +
     '</div>'
   );
 }
@@ -2520,7 +2557,7 @@ function buildCardInner(card, options) {
   const showActions = options.showActions === true;
   const logoFree = isCardLogoFree(card);
   const logoHtml = (!logoFree && card.logo)
-    ? '<img class="card-logo" src="' + card.logo + '" alt="">'
+    ? wrapCardLogoHtml('<img class="card-logo" src="' + card.logo + '" alt="">', cardLogoHref(card))
     : '';
   const titleRaw = (card.title || '').slice(0, 10);
   const unitRaw = (card.unitName || '').slice(0, 10);
@@ -3694,6 +3731,7 @@ function setupCardClicks() {
       if (
         e.target.closest('.btn-view') ||
         e.target.closest('.card-action-icon') ||
+        e.target.closest('.card-logo-link') ||
         e.target.closest('.card-edit') ||
         e.target.closest('.card-duplicate')
       ) return;
@@ -3730,8 +3768,11 @@ function buildDetailHtml(card) {
     return '<img src="' + src + '" alt="">';
   }).join('');
 
+  const logoHref = cardLogoHref(card);
   const logoBlock = card.logo
-    ? '<div class="detail-logo-wrap"><img src="' + card.logo + '" alt="לוגו"></div>'
+    ? '<div class="detail-logo-wrap">' +
+        wrapCardLogoHtml('<img src="' + card.logo + '" alt="לוגו">', logoHref) +
+      '</div>'
     : '';
 
   return (
@@ -3922,11 +3963,13 @@ function getWizardPreviewCardData() {
     iconPositions: normalizeIconPositions(wizardData.iconPositions),
     logoFree: !!wizardData.logoFree,
     logoPosition: normalizeLogoPosition(wizardData.logoPosition),
+    logoHref: String(wizardData.logoHref || '').trim(),
     flatImageZoom: getFlatImageZoom(wizardData),
     flatImagePosX: getFlatImagePosX(wizardData),
     flatImagePosY: getFlatImagePosY(wizardData),
     mainImage: wizardData.mainImage,
     logo: wizardData.logo,
+    logoHref: String(wizardData.logoHref || '').trim(),
     fontFamily: getCurrentSiteFont(),
     bgMode: wizardData.bgMode || DEFAULT_CARD_BG_MODE,
     useImageBg: wizardData.bgMode === 'image',
@@ -4339,6 +4382,8 @@ function syncFormToData() {
   const logoFreeEl = document.getElementById('logoFree');
   wizardData.logoFree = !!(logoFreeEl && logoFreeEl.checked);
   wizardData.logoPosition = normalizeLogoPosition(wizardData.logoPosition);
+  const logoHrefEl = document.getElementById('logoHref');
+  wizardData.logoHref = logoHrefEl ? String(logoHrefEl.value || '').trim().slice(0, 600) : (wizardData.logoHref || '');
   const flatImageZoomEl = document.getElementById('flatImageZoom');
   wizardData.flatImageZoom = clampFlatImageZoom(
     flatImageZoomEl ? flatImageZoomEl.value : wizardData.flatImageZoom
@@ -4620,6 +4665,14 @@ function bindLiveInputs() {
     updateLivePreview();
   });
 
+  const logoHrefInput = document.getElementById('logoHref');
+  if (logoHrefInput) {
+    logoHrefInput.addEventListener('input', function () {
+      wizardData.logoHref = String(logoHrefInput.value || '').trim().slice(0, 600);
+      updateLivePreview();
+    });
+  }
+
   document.getElementById('extraImages').addEventListener('change', async function (e) {
     const files = [...e.target.files];
     if (!files.length) return;
@@ -4737,6 +4790,8 @@ function applyWizardDataToForm() {
   if (iconsFreeEl) iconsFreeEl.checked = !!wizardData.iconsFree;
   const logoFreeEl = document.getElementById('logoFree');
   if (logoFreeEl) logoFreeEl.checked = !!wizardData.logoFree;
+  const logoHrefEl = document.getElementById('logoHref');
+  if (logoHrefEl) logoHrefEl.value = wizardData.logoHref || '';
   const zoom = getFlatImageZoom(wizardData);
   const posX = getFlatImagePosX(wizardData);
   const posY = getFlatImagePosY(wizardData);
@@ -4788,6 +4843,7 @@ function buildCardFromWizard(id) {
     mainImage: wizardData.mainImage,
     extraImages: wizardData.extraImages.slice(),
     logo: wizardData.logo,
+    logoHref: String(wizardData.logoHref || '').trim().slice(0, 600),
     primaryColor: wizardData.primaryColor,
     secondaryColor: wizardData.secondaryColor,
     outlineColor: wizardData.outlineColor || '#e87722',
@@ -4874,6 +4930,7 @@ function openWizard() {
   wizardData.iconPositions = {};
   wizardData.logoFree = false;
   wizardData.logoPosition = null;
+  wizardData.logoHref = '';
   wizardData.flatImageZoom = 100;
   wizardData.flatImagePosX = 50;
   wizardData.flatImagePosY = 50;
@@ -4913,6 +4970,7 @@ function openWizardForEdit(cardId) {
   wizardData.mainImage = card.mainImage || '';
   wizardData.extraImages = (card.extraImages || []).slice();
   wizardData.logo = card.logo || '';
+  wizardData.logoHref = card.logoHref || card.logoLink || '';
   wizardData.primaryColor = card.primaryColor || '#e87722';
   wizardData.secondaryColor = card.secondaryColor || '#4a7c3f';
   wizardData.outlineColor = card.outlineColor || '#e87722';
@@ -5222,6 +5280,7 @@ function normalizeHeader(header, fallbackTitle) {
     bgImage: source.bgImage || '',
     artSrc: source.artSrc || '',
     artSide: 'left',
+    artHref: String(source.artHref || '').trim().slice(0, 600),
     artWidth: clampHeaderArtWidth(source.artWidth != null ? source.artWidth : defaults.artWidth),
     kicker: clampStoredInlineText(pickHeaderText(source, 'kicker', defaults.kicker), 80),
     kickerColor: normalizeTextColor(source.kickerColor, defaults.kickerColor),
@@ -5271,6 +5330,7 @@ function migrateItemsToHero(header, fallbackTitle) {
     bgOpacity: source.bgOpacity,
     bgImage: source.bgImage || '',
     artSrc: logoItem ? logoItem.src : '',
+    artHref: logoItem && logoItem.link ? String(logoItem.link).trim() : '',
     artSide: 'left',
     title: titleItem && titleItem.text ? titleItem.text : fallbackTitle,
     titleColor: titleItem && titleItem.color ? titleItem.color : HEADER_TEXT_COLOR,
@@ -5288,14 +5348,16 @@ function migrateItemsToHero(header, fallbackTitle) {
 function migrateLegacyHeader(parsed) {
   const logos = Array.isArray(parsed.titleLogos) ? parsed.titleLogos : [];
   const firstLogo = logos.find(function (logo) { return logo && logo.src; })
-    || (parsed.titleLogoEnabled && parsed.titleLogo ? { src: parsed.titleLogo } : null);
+    || (parsed.titleLogoEnabled && parsed.titleLogo
+      ? { src: parsed.titleLogo, link: parsed.titleLogoLink || '' }
+      : null);
 
   return migrateItemsToHero({
     height: 400,
     bgOpacity: migrateBgOpacity(parsed, 'title'),
     bgImage: parsed.titleImage || '',
     items: [
-      firstLogo ? { type: 'logo', src: firstLogo.src } : null,
+      firstLogo ? { type: 'logo', src: firstLogo.src, link: firstLogo.link || '' } : null,
       { type: 'title', text: parsed.title || DEFAULT_HOME.title },
     ].filter(Boolean),
   }, parsed.title);
@@ -5352,7 +5414,7 @@ function normalizeHeaderBadgeText(value) {
 }
 
 function loadHome() {
-  const saved = localStorage.getItem(HOME_STORAGE_KEY);
+  const saved = snapshotHomeJson || localStorage.getItem(HOME_STORAGE_KEY);
   let home = Object.assign({}, DEFAULT_HOME);
   home.header = normalizeHeader(DEFAULT_HOME.header, DEFAULT_HOME.title);
   home.floatMenu = normalizeFloatMenu(home.floatMenu, home);
@@ -7253,6 +7315,7 @@ function applySiteChrome(theme) {
 }
 
 function applySiteTheme(home) {
+  if (isPackGeneratorActive()) return;
   home = ensureCardsSections(home || loadHome());
   const secondary = home.siteSecondaryColor || DEFAULT_HOME.siteSecondaryColor;
   const sectionId = getActiveCardsSectionId();
@@ -7316,6 +7379,11 @@ function applyEditModeState(want) {
     grid.classList.toggle('edit-mode', editMode);
   });
   document.body.classList.toggle('page-edit-mode', editMode);
+  if (isPackGeneratorActive()) {
+    syncInlineTextSizeControl();
+    persistCurrentEditMode();
+    return;
+  }
   if (wasEditMode && !editMode) {
     saveAllCardsSectionsFromDom();
   }
@@ -7478,7 +7546,9 @@ async function renderHome(homeOverride, previewOptions) {
   applySiteTheme(home);
   renderFloatMenu(home);
   syncInlineEditableHosts();
-  document.title = title.trim() || 'פורטל תוכן';
+  if (document.body.getAttribute('data-generator') !== 'pack') {
+    document.title = title.trim() || 'פורטל תוכן';
+  }
 }
 
 function renderAccentedText(text, accents, accentColor) {
@@ -7692,8 +7762,14 @@ function renderHomeHeader(home) {
     ? '<div class="home-header-actions">' + buttonHtml + linkHtml + '</div>'
     : '';
 
+  const artHref = headerActionHref(header.artHref);
+  const artImg = '<img class="home-header-art-img" src="' + header.artSrc + '" alt="">';
   const artHtml = header.artSrc
-    ? '<div class="home-header-art"><img class="home-header-art-img" src="' + header.artSrc + '" alt=""></div>'
+    ? '<div class="home-header-art">' +
+        (artHref && !editMode
+          ? '<a class="home-header-art-link" href="' + escapeHtml(artHref) + '" target="_blank" rel="noopener noreferrer">' + artImg + '</a>'
+          : artImg) +
+      '</div>'
     : '';
 
   itemsEl.innerHTML =
@@ -7952,7 +8028,9 @@ function commitInlineEdit(options) {
 
   if (String(spec.key || '').indexOf('header.') === 0) {
     renderHomeHeader(home);
-    document.title = getHeaderTitleText(home).trim() || 'פורטל תוכן';
+    if (document.body.getAttribute('data-generator') !== 'pack') {
+      document.title = getHeaderTitleText(home).trim() || 'פורטל תוכן';
+    }
   } else if (String(spec.key || '').indexOf('floatMenu.') === 0) {
     renderFloatMenu(home);
   } else if (String(spec.key || '').indexOf('card.') === 0) {
@@ -8248,6 +8326,7 @@ function readHeaderDraftFromEditor() {
 
   homeEditHeaderDraft.artSide = 'left';
   homeEditHeaderDraft.artWidth = clampHeaderArtWidth(readHeaderField('homeHeaderArtWidth') || homeEditHeaderDraft.artWidth);
+  homeEditHeaderDraft.artHref = readHeaderField('homeHeaderArtHref').trim();
   homeEditHeaderDraft.buttonHref = readHeaderField('homeHeaderButtonHref').trim();
   homeEditHeaderDraft.linkHref = readHeaderField('homeHeaderLinkHref').trim();
 
@@ -8980,6 +9059,8 @@ function homeHeaderFieldsHtml(header) {
       '</label>' +
       '<img class="home-edit-preview' + (header.artSrc ? ' is-visible' : '') + '" id="homeHeaderArtPreview" src="' + (header.artSrc || '') + '" alt="">' +
       (header.artSrc ? '<button type="button" class="edit-clear-btn" id="homeHeaderArtClear">הסרת איור</button>' : '') +
+      '<label for="homeHeaderArtHref" style="margin-top:10px;display:block;">קישור לאיור / לוגו (אופציונלי)</label>' +
+      '<input type="text" id="homeHeaderArtHref" placeholder="https://..." value="' + escapeHtml(header.artHref || '') + '">' +
       homeSizeControlHtml('homeHeaderArtWidth', artWidth, {
         min: 20, max: 70, step: 1, unit: '%', label: 'רוחב איור', ico: 'size',
       }) +
@@ -9046,6 +9127,14 @@ function bindHomeHeaderEditor() {
     artClear.addEventListener('click', function () {
       homeEditHeaderDraft.artSrc = '';
       refreshHomeHeaderEditorFields();
+    });
+  }
+
+  const artHref = document.getElementById('homeHeaderArtHref');
+  if (artHref) {
+    artHref.addEventListener('input', function () {
+      homeEditHeaderDraft.artHref = artHref.value.trim();
+      scheduleHomeEditorPreview();
     });
   }
 }
@@ -9421,8 +9510,16 @@ async function importAppSnapshot(snapshot) {
     throw new Error('קובץ לא תקין או חסרים בו נתונים');
   }
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot.cards));
-  localStorage.setItem(HOME_STORAGE_KEY, JSON.stringify(snapshot.home));
+  snapshotCardsJson = JSON.stringify(snapshot.cards);
+  snapshotHomeJson = JSON.stringify(snapshot.home);
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot.cards));
+    localStorage.setItem(HOME_STORAGE_KEY, JSON.stringify(snapshot.home));
+  } catch (err) {
+    if (!IS_USER_MODE) {
+      throw new Error('אין מספיק מקום לשמירה. נסו תמונה קטנה יותר.');
+    }
+  }
 
   await deleteIndexedDb(FONTS_DB_NAME);
   const fonts = Array.isArray(snapshot.fonts) ? snapshot.fonts : [];
@@ -9474,6 +9571,17 @@ const PROJECT_SCRIPTS = [
 ];
 
 function buildExportedPortalHtml(snapshot, indexHtml, cssText, jsText, assetDataUrls) {
+  if (window.HebetShell && typeof window.HebetShell.assembleClientHtml === 'function') {
+    return window.HebetShell.assembleClientHtml({
+      generator: 'manhalan',
+      indexHtml: indexHtml,
+      css: cssText,
+      js: jsText,
+      snapshot: snapshot,
+      bootstrapId: HEBET_BOOTSTRAP_ID,
+      assetDataUrls: assetDataUrls,
+    });
+  }
   const urls = assetDataUrls || {};
   let out = String(indexHtml || '');
   if (window.HebetShell && typeof window.HebetShell.applyClientExportShell === 'function') {
@@ -9484,7 +9592,7 @@ function buildExportedPortalHtml(snapshot, indexHtml, cssText, jsText, assetData
       '<body data-app-mode="user" class="user-mode is-manhalan" data-generator="manhalan">'
     );
   }
-  out = out.replace(/<link rel="stylesheet" href="css\/(?:shared\/shell|manhalan\/style|pack\/pack|style)\.css(?:\?[^"]*)?">\s*/g, '');
+  out = out.replace(/<link\b[^>]*href="css\/[^"]+"[^>]*>\s*/gi, '');
   out = out.replace('</head>', '<style>\n' + cssText + '\n</style>\n</head>');
 
   if (urls.gateBg) {
@@ -9499,7 +9607,7 @@ function buildExportedPortalHtml(snapshot, indexHtml, cssText, jsText, assetData
     serializeBootstrapJson(snapshot) +
     '</script>\n';
 
-  out = out.replace(/<script src="js\/(?:shared\/shell|manhalan\/app|pack\/pack|app)\.js(?:\?[^"]*)?"><\/script>\s*/g, '');
+  out = out.replace(/<script\b[^>]*src="js\/[^"]+"[^>]*><\/script>\s*/gi, '');
   out = out.replace('</body>', bootstrapTag + '<script>\n' + escapeForInlineScript(jsText) + '\n</script>\n</body>');
 
   return out;
@@ -9518,6 +9626,10 @@ async function exportUserModeHtml() {
   if (IS_USER_MODE) return;
   closeSettingsModal();
 
+  if (typeof savePendingEditsBeforeLeavingEditMode === 'function') {
+    try { await savePendingEditsBeforeLeavingEditMode(); } catch (_) {}
+  }
+
   const picker = window.HebetShell && typeof window.HebetShell.pickClientHtmlSave === 'function'
     ? window.HebetShell.pickClientHtmlSave
     : null;
@@ -9526,10 +9638,6 @@ async function exportUserModeHtml() {
     : null;
   const saveTarget = picker ? await picker(HEBET_EXPORT_FILENAME) : 'download';
   if (!saveTarget) return;
-
-  if (typeof savePendingEditsBeforeLeavingEditMode === 'function') {
-    try { await savePendingEditsBeforeLeavingEditMode(); } catch (_) {}
-  }
 
   let snapshot;
   try {
@@ -9542,9 +9650,16 @@ async function exportUserModeHtml() {
 
   let html = '';
   try {
-    const indexHtml = await fetchProjectAsset('index.html');
-    const cssText = (await Promise.all(PROJECT_STYLES.map(fetchProjectAsset))).join('\n\n');
-    const jsText = (await Promise.all(PROJECT_SCRIPTS.map(fetchProjectAsset))).join('\n\n');
+    let sources = null;
+    if (window.HebetShell && typeof window.HebetShell.collectExportSources === 'function') {
+      sources = await window.HebetShell.collectExportSources('manhalan');
+    } else {
+      sources = {
+        indexHtml: await fetchProjectAsset('index.html'),
+        css: (await Promise.all(PROJECT_STYLES.map(fetchProjectAsset))).join('\n\n'),
+        js: (await Promise.all(PROJECT_SCRIPTS.map(fetchProjectAsset))).join('\n\n'),
+      };
+    }
     const assetDataUrls = {};
     try {
       const imgRes = await fetch('assets/gate-bg.jpg', { cache: 'no-store' });
@@ -9566,11 +9681,11 @@ async function exportUserModeHtml() {
     } catch (logoErr) {
       console.warn('Gate logo was not inlined into export', logoErr);
     }
-    html = buildExportedPortalHtml(snapshot, indexHtml, cssText, jsText, assetDataUrls);
+    html = buildExportedPortalHtml(snapshot, sources.indexHtml, sources.css, sources.js, assetDataUrls);
   } catch (err) {
     console.warn('Full export failed, using live snapshot', err);
     if (!window.HebetShell || typeof window.HebetShell.buildLiveClientHtml !== 'function') {
-      alert('לא ניתן לייצא כרגע. נסו שוב.');
+      alert('לא ניתן לייצא כרגע. פתחו את index.html מתיקיית הפרויקט (Hebet/hebet) ורעננו עם Ctrl+F5.');
       return;
     }
     try {
@@ -10043,6 +10158,16 @@ bindInlineEditing();
 
 async function initApp() {
   applyAppModeShell();
+  if (isPackGeneratorActive()) {
+    try {
+      await loadAndRegisterCustomFonts();
+    } catch (err) {
+      console.warn('Custom fonts unavailable', err);
+    }
+    populateFontSelects();
+    syncSiteToolbarHeight();
+    return;
+  }
 
   try {
     await bootstrapFromEmbeddedDataIfPresent();

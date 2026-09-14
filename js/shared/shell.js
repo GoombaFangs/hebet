@@ -343,6 +343,40 @@
     return true;
   }
 
+  const EXPORT_CSS_PATHS = [
+    'css/shared/shell.css',
+    'css/manhalan/style.css',
+    'css/pack/pack.css',
+  ];
+  const EXPORT_JS_PATHS = [
+    'js/shared/shell.js',
+    'js/manhalan/app.js',
+    'js/pack/pack.js',
+  ];
+
+  const CLIENT_EXPORT_CSS =
+    'html,body{margin:0;}' +
+    'body.user-mode,body[data-app-mode="user"]{--site-toolbar-height:0px;}' +
+    'body.user-mode .site-toolbar-shell,body.user-mode #siteToolbar,' +
+    'body[data-app-mode="user"] .site-toolbar-shell,body[data-app-mode="user"] #siteToolbar,' +
+    'body.user-mode #siteGate,body[data-app-mode="user"] #siteGate,' +
+    'body.user-mode .pack-header-hidden-note,body.user-mode .pack-closing-hidden-note,' +
+    'body[data-app-mode="user"] .pack-header-hidden-note,body[data-app-mode="user"] .pack-closing-hidden-note,' +
+    'body.user-mode .pack-section-edit,body.user-mode .pack-header-edit,' +
+    'body.user-mode .pack-header-resize,body.user-mode .pack-cards-resize,' +
+    'body.user-mode .pack-closing-resize,body.user-mode .pack-header-drop,' +
+    'body.user-mode .pack-card-dup,body.user-mode .pack-card-delete,' +
+    'body.user-mode .pack-card-resize,' +
+    'body.user-mode .home-section-edit,body.user-mode .home-section-dup,' +
+    'body.user-mode .home-section-delete,body.user-mode .home-section-restore,' +
+    'body.user-mode .home-resize-handle,body.user-mode .float-menu-edit,' +
+    'body.user-mode .pack-edit-overlay,body.user-mode #modalOverlay,' +
+    'body.user-mode #homeEditOverlay,body.user-mode #detailOverlay,' +
+    'body.user-mode #hslaPopover,body.user-mode #backToTop,' +
+    'body.is-pack #manhalanApp,body.is-pack .app-shell--manhalan,' +
+    'body.is-manhalan #packApp,body.is-manhalan .app-shell--pack{' +
+    'display:none!important;}';
+
   function applyClientExportShell(html, generator) {
     const gen = generator === GENERATOR_PACK ? GENERATOR_PACK : GENERATOR_MANHALAN;
     let out = String(html || '');
@@ -358,6 +392,163 @@
       '<div class="site-toolbar-shell" id="siteToolbar">',
       '<div class="site-toolbar-shell" id="siteToolbar" hidden>'
     );
+    return out;
+  }
+
+  function escapeForInlineScript(text) {
+    return String(text || '').replace(/<\/script/gi, '<\\/script');
+  }
+
+  function getBundledAssets() {
+    const bundled = global.HEBET_INLINE_ASSETS;
+    if (!bundled || typeof bundled !== 'object' || !bundled.indexHtml) return null;
+    if (!bundled.css || !bundled.js) return null;
+    return bundled;
+  }
+
+  function joinParts(parts, keys) {
+    const out = [];
+    for (let i = 0; i < keys.length; i++) {
+      const value = parts && parts[keys[i]];
+      if (value) out.push(value);
+    }
+    return out.join('\n\n');
+  }
+
+  function bundledCssText(bundled) {
+    if (!bundled) return '';
+    if (typeof bundled.css === 'string') return bundled.css;
+    return joinParts(bundled.css, ['shell', 'manhalan', 'pack']);
+  }
+
+  function bundledJsText(bundled, generator) {
+    if (!bundled) return '';
+    if (typeof bundled.js === 'string') return bundled.js;
+    const keys = generator === GENERATOR_PACK ? ['shell', 'pack'] : ['shell', 'manhalan'];
+    return joinParts(bundled.js, keys);
+  }
+
+  function sourcesFromBundle(bundled, generator) {
+    const gen = generator === GENERATOR_PACK ? GENERATOR_PACK : GENERATOR_MANHALAN;
+    return {
+      indexHtml: bundled.indexHtml,
+      css: bundledCssText(bundled),
+      js: bundledJsText(bundled, gen),
+    };
+  }
+
+  async function tryFetchText(path) {
+    const res = await fetch(path, { cache: 'no-store' });
+    if (!res.ok) throw new Error('לא ניתן לקרוא ' + path);
+    return res.text();
+  }
+
+  async function collectExportSources(generator) {
+    const gen = generator === GENERATOR_PACK || generator === GENERATOR_MANHALAN
+      ? generator
+      : (getGenerator() === GENERATOR_PACK ? GENERATOR_PACK : GENERATOR_MANHALAN);
+    const bundled = getBundledAssets();
+    if (location.protocol === 'file:' && bundled) {
+      return sourcesFromBundle(bundled, gen);
+    }
+    try {
+      const indexHtml = await tryFetchText('index.html');
+      const cssParts = await Promise.all(EXPORT_CSS_PATHS.map(tryFetchText));
+      const jsParts = await Promise.all(EXPORT_JS_PATHS.map(tryFetchText));
+      const cssMap = { shell: cssParts[0], manhalan: cssParts[1], pack: cssParts[2] };
+      const jsMap = { shell: jsParts[0], manhalan: jsParts[1], pack: jsParts[2] };
+      return {
+        indexHtml: indexHtml,
+        css: joinParts(cssMap, ['shell', 'manhalan', 'pack']),
+        js: bundledJsText({ js: jsMap }, gen),
+      };
+    } catch (err) {
+      if (bundled) return sourcesFromBundle(bundled, gen);
+      throw err;
+    }
+  }
+
+  function escapeHtmlText(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+
+  function clientTitleFromSnapshot(generator, snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return '';
+    if (generator === GENERATOR_PACK && snapshot.pack && snapshot.pack.header) {
+      const title = snapshot.pack.header.title;
+      const text = title && typeof title.text === 'string' ? title.text.trim() : '';
+      return text;
+    }
+    if (snapshot.home) {
+      const home = snapshot.home;
+      const fromHeader = home.header && home.header.title && home.header.title.text;
+      const text = String(fromHeader || home.title || '').trim();
+      return text;
+    }
+    return '';
+  }
+
+  function assembleClientHtml(options) {
+    const opts = options || {};
+    const gen = opts.generator === GENERATOR_PACK ? GENERATOR_PACK : GENERATOR_MANHALAN;
+    const bootstrapId = opts.bootstrapId || (gen === GENERATOR_PACK ? PACK_BOOTSTRAP_ID : MANHALAN_BOOTSTRAP_ID);
+    const urls = opts.assetDataUrls || {};
+    let out = applyClientExportShell(opts.indexHtml, gen);
+
+    out = out.replace(/<link\b[^>]*href="css\/[^"]+"[^>]*>\s*/gi, '');
+    out = out.replace(/<script\b[^>]*src="js\/[^"]+"[^>]*><\/script>\s*/gi, '');
+
+    if (gen === GENERATOR_PACK) {
+      out = out.replace(
+        '<div class="app-shell app-shell--pack" id="packApp" hidden>',
+        '<div class="app-shell app-shell--pack" id="packApp">'
+      );
+      if (opts.liveWorkspaceHtml) {
+        out = out.replace(
+          /(<div class="pack-workspace" id="packWorkspace">)[\s\S]*?(?=<div class="pack-edit-overlay")/,
+          function () {
+            return '<div class="pack-workspace" id="packWorkspace">' + opts.liveWorkspaceHtml + '\n    ';
+          }
+        );
+      }
+    } else {
+      out = out.replace(
+        '<div class="app-shell app-shell--manhalan" id="manhalanApp" hidden>',
+        '<div class="app-shell app-shell--manhalan" id="manhalanApp">'
+      );
+    }
+
+    if (urls.gateBg) {
+      out = out.replace(/src="assets\/gate-bg\.jpg(?:\?[^"]*)?"/, 'src="' + urls.gateBg + '"');
+    }
+    if (urls.logo) {
+      out = out.replace(/src="assets\/hebet-logo\.png(?:\?[^"]*)?"/, 'src="' + urls.logo + '"');
+    }
+
+    const titleText = clientTitleFromSnapshot(gen, opts.snapshot);
+    if (titleText) {
+      out = out.replace(/<title>[^<]*<\/title>/i, '<title>' + escapeHtmlText(titleText) + '</title>');
+    }
+
+    const css = String(opts.css || '') + '\n' + CLIENT_EXPORT_CSS;
+    if (out.indexOf('</head>') !== -1) {
+      out = out.replace('</head>', '<style>\n' + css + '\n</style>\n</head>');
+    } else {
+      out = '<style>\n' + css + '\n</style>\n' + out;
+    }
+
+    const bootstrapTag =
+      '<script id="' + bootstrapId + '" type="application/json">' +
+      serializeBootstrapJson(opts.snapshot || {}) +
+      '</script>\n';
+    const jsTag = '<script>\n' + escapeForInlineScript(opts.js || '') + '\n</script>\n';
+    if (out.indexOf('</body>') !== -1) {
+      out = out.replace('</body>', bootstrapTag + jsTag + '</body>');
+    } else {
+      out += bootstrapTag + jsTag;
+    }
     return out;
   }
 
@@ -390,6 +581,14 @@
         lastErr = new Error('לא ניתן לקרוא ' + path);
       } catch (err) {
         lastErr = err;
+      }
+    }
+    const bundled = getBundledAssets();
+    if (bundled) {
+      if (path === 'index.html') return bundled.indexHtml;
+      if (/\.css(\?|$)/i.test(path) || String(path).indexOf('.css') !== -1) return bundledCssText(bundled);
+      if (/\.js(\?|$)/i.test(path) || String(path).indexOf('.js') !== -1) {
+        return bundledJsText(bundled, getGenerator() || GENERATOR_MANHALAN);
       }
     }
     if (/\.css(\?|$)/i.test(path) || String(path).indexOf('.css') !== -1) {
@@ -454,7 +653,7 @@
       '.home-section-edit', '.home-section-dup', '.home-section-delete', '.home-section-restore',
       '.home-resize-handle', '.float-menu-edit', '.cards-layout-bar', '.cards-editor-mount',
       '.pack-section-edit', '.pack-header-resize', '.pack-cards-resize', '.pack-closing-resize',
-      '.pack-header-drop', '.pack-card-edit', '.pack-card-delete', '.card-edit',
+      '.pack-header-drop', '.pack-card-dup', '.pack-card-delete', '.pack-card-resize', '.card-edit',
     ];
     const found = root.querySelectorAll(selectors.join(','));
     for (let i = 0; i < found.length; i++) {
@@ -485,6 +684,17 @@
   }
 
   async function buildLiveClientHtml(generator, snapshot) {
+    const bundled = getBundledAssets();
+    if (bundled) {
+      return assembleClientHtml({
+        generator: generator,
+        indexHtml: bundled.indexHtml,
+        css: bundledCssText(bundled),
+        js: bundledJsText(bundled, generator),
+        snapshot: snapshot,
+      });
+    }
+
     const gen = generator === GENERATOR_PACK ? GENERATOR_PACK : GENERATOR_MANHALAN;
     const appId = gen === GENERATOR_PACK ? 'packApp' : 'manhalanApp';
     const otherId = gen === GENERATOR_PACK ? 'manhalanApp' : 'packApp';
@@ -500,7 +710,7 @@
     let cssText = '';
     try {
       clone = document.documentElement.cloneNode(true);
-      cssText = cssTextFromLoadedSheets();
+      cssText = (bundled && bundled.css) || cssTextFromLoadedSheets();
       if (!cssText) {
         const cloneBody = clone.querySelector('body');
         if (cloneBody) copyComputedStyles(document.body, cloneBody);
@@ -532,16 +742,14 @@
     const other = clone.querySelector('#' + otherId);
     if (other && other.parentNode) other.parentNode.removeChild(other);
 
-    const head = clone.querySelector('head') || clone;
-    if (cssText) {
-      cssText = await rewriteBlobUrlsInText(cssText);
-      const style = document.createElement('style');
-      style.textContent = cssText +
-        '\nbody.user-mode .site-toolbar-shell,#siteToolbar,.home-section-edit,.pack-section-edit{display:none!important}';
-      head.appendChild(style);
-    }
-
     const body = clone.querySelector('body');
+    const head = clone.querySelector('head') || clone;
+    cssText = (cssText || '') + '\n' + CLIENT_EXPORT_CSS;
+    cssText = await rewriteBlobUrlsInText(cssText);
+    const style = document.createElement('style');
+    style.textContent = cssText;
+    head.appendChild(style);
+
     if (body) {
       body.setAttribute('data-app-mode', 'user');
       body.setAttribute('data-generator', gen);
@@ -589,6 +797,8 @@
     pickClientHtmlOpen: pickClientHtmlOpen,
     writeClientHtml: writeClientHtml,
     applyClientExportShell: applyClientExportShell,
+    collectExportSources: collectExportSources,
+    assembleClientHtml: assembleClientHtml,
     parseClientExportHtml: parseClientExportHtml,
     setResumeGenerator: setResumeGenerator,
     consumeResumeGenerator: consumeResumeGenerator,

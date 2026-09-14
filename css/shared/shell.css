@@ -19,15 +19,38 @@ body[data-generator="pack"] #packApp {
   display: block;
 }
 
+body.user-mode,
+body[data-app-mode="user"] {
+  --site-toolbar-height: 0px;
+}
+
+body.user-mode .site-toolbar-shell,
+body.user-mode #siteToolbar,
+body[data-app-mode="user"] .site-toolbar-shell,
+body[data-app-mode="user"] #siteToolbar,
+body.user-mode #siteGate,
+body[data-app-mode="user"] #siteGate {
+  display: none !important;
+}
+
 /* כפתורי הסרגל ששייכים למחולל אחד בלבד:
    מנהלן — אשף כרטיס חדש.
-   מארז — הוספת קובייה.
+   מארז — תפריט הוספה (קובייה / אייקון / טקסט / צוות פיתוח).
    תפריט הגדרות (טעינה/איפוס/ייצוא) משותף: כל מחולל מפעיל את הפעולות על הנתונים שלו.
    שאר הסרגל (עריכה, ערכת נושא) משותף. */
 body.is-pack #btnNew {
   display: none !important;
 }
 
-body:not(.is-pack) #btnPackNew {
+body:not(.is-pack) #btnPackNew,
+body:not(.is-pack) #packAddWrap,
+body:not(.is-pack) #packCardsFreeformWrap {
   display: none !important;
+}
+
+#packCardsFreeformWrap {
+  padding-inline: 8px;
+  border-radius: 6px;
+  background: var(--toolbar-surface);
+  border: 1px solid var(--toolbar-border);
 }
