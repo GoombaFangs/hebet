@@ -357,6 +357,7 @@
       titleHidden: !!src.titleHidden,
       descHidden: !!src.descHidden,
       comingSoon: !!src.comingSoon,
+      comingSoonLabel: typeof src.comingSoonLabel === 'string' ? src.comingSoonLabel : '',
       bgMode: bgMode,
       color: src.color || DEFAULT_CARD_COLOR,
       image: typeof src.image === 'string' ? src.image : '',
@@ -1135,6 +1136,46 @@
     return !!state.cards.freeform;
   }
 
+  function cardSoonLabelSrc(card) {
+    return card && typeof card.comingSoonLabel === 'string' ? card.comingSoonLabel : '';
+  }
+
+  function comingSoonBadgeHtml() {
+    return (
+      '<span class="pack-card-soon-badge">' +
+        '<span class="pack-card-soon-rule" aria-hidden="true"></span>' +
+        '<span class="pack-card-soon-text">בקרוב</span>' +
+        '<span class="pack-card-soon-rule" aria-hidden="true"></span>' +
+      '</span>'
+    );
+  }
+
+  function comingSoonLabelImgHtml(src) {
+    if (!src) return '';
+    return '<img class="pack-card-soon-label" src="' + escapeHtml(src) + '" alt="בקרוב">';
+  }
+
+  function comingSoonOverlayHtml(card) {
+    const labelSrc = cardSoonLabelSrc(card);
+    const labelImg = comingSoonLabelImgHtml(labelSrc);
+    if (!card.comingSoon) {
+      return labelImg ? '<div class="pack-card-soon-store" hidden>' + labelImg + '</div>' : '';
+    }
+    const customClass = labelSrc ? ' has-custom-label' : '';
+    const inner = labelSrc ? labelImg : comingSoonBadgeHtml();
+    return (
+      '<div class="pack-card-soon' + customClass + '" role="status" aria-label="בקרוב">' +
+        inner +
+      '</div>'
+    );
+  }
+
+  function soonLabelPreviewHtml(card) {
+    const labelSrc = cardSoonLabelSrc(card);
+    if (labelSrc) return comingSoonLabelImgHtml(labelSrc);
+    return '<span class="pack-soon-label-fallback">בקרוב</span>';
+  }
+
   function cardHtml(card) {
     const actionsHtml = ['view', 'download', 'print'].map(function (k) { return actionButtonHtml(card, k); }).join('');
     const editing = isPageEditMode();
@@ -1155,9 +1196,7 @@
     const imageScaleY = clampImageScale(card.imageScaleY != null ? card.imageScaleY : imageScale);
     const keepRatio = card.keepRatio !== false;
     const freeScaleClass = useImage && !keepRatio ? ' is-free-scale' : '';
-    const soonHtml = card.comingSoon
-      ? '<div class="pack-card-soon" role="status" aria-label="בקרוב"><span class="pack-card-soon-badge">בקרוב</span></div>'
-      : '';
+    const soonHtml = comingSoonOverlayHtml(card);
     const resizeHtml = editing
       ? '<span class="pack-card-resize" data-card-resize="nw" title="גררו לשינוי גודל"></span>' +
         '<span class="pack-card-resize" data-card-resize="n" title="גררו לשינוי גובה"></span>' +
@@ -2180,6 +2219,20 @@
           '<input type="checkbox" id="packCardComingSoon"' + (card.comingSoon ? ' checked' : '') + '>' +
           '<span>בקרוב</span>' +
         '</label>' +
+        '<div class="pack-soon-label-wrap" id="packCardSoonLabelWrap"' + (card.comingSoon ? '' : ' hidden') + '>' +
+          '<div class="pack-soon-label-row">' +
+            '<span class="pack-soon-label-preview' + (cardSoonLabelSrc(card) ? ' is-custom' : '') + '" id="packCardSoonLabelPreview">' +
+              soonLabelPreviewHtml(card) +
+            '</span>' +
+            '<label class="pack-upload pack-upload--sm" for="packCardSoonLabel">' +
+              '<input type="file" id="packCardSoonLabel" accept="image/*" hidden>' +
+              '<span id="packCardSoonLabelBtnText">' + (cardSoonLabelSrc(card) ? 'החלפת תווית' : 'העלאת תווית') + '</span>' +
+            '</label>' +
+            '<button type="button" class="pack-clear-btn pack-clear-btn--sm" id="packCardSoonLabelClear"' +
+              (cardSoonLabelSrc(card) ? '' : ' hidden') + '>לברירת מחדל</button>' +
+          '</div>' +
+          '<p class="pack-field-sub">העלו תמונת תווית משלכם במקום החותמת. מומלץ PNG עם רקע שקוף.</p>' +
+        '</div>' +
         '<p class="pack-field-sub">כשמסומן, הקובייה מוצגת כלא פעילה עם חותמת "בקרוב", וכפתורי הפעולה חסומים.</p>' +
       '</section>' +
 
@@ -2263,11 +2316,52 @@
       return state.cards.items.find(function (c) { return c.id === cardId; });
     }
     const comingSoon = root.querySelector('#packCardComingSoon');
+    const soonLabelWrap = root.querySelector('#packCardSoonLabelWrap');
+    const soonLabelInput = root.querySelector('#packCardSoonLabel');
+    const soonLabelPreview = root.querySelector('#packCardSoonLabelPreview');
+    const soonLabelBtnText = root.querySelector('#packCardSoonLabelBtnText');
+    const soonLabelClear = root.querySelector('#packCardSoonLabelClear');
+    function refreshSoonLabelUi(card) {
+      const hasCustom = !!cardSoonLabelSrc(card);
+      if (soonLabelWrap) soonLabelWrap.hidden = !(card && card.comingSoon);
+      if (soonLabelPreview) {
+        soonLabelPreview.classList.toggle('is-custom', hasCustom);
+        soonLabelPreview.innerHTML = soonLabelPreviewHtml(card);
+      }
+      if (soonLabelBtnText) soonLabelBtnText.textContent = hasCustom ? 'החלפת תווית' : 'העלאת תווית';
+      if (soonLabelClear) soonLabelClear.hidden = !hasCustom;
+    }
     if (comingSoon) {
       comingSoon.addEventListener('change', function () {
         const card = getCard();
         if (!card) return;
         card.comingSoon = comingSoon.checked;
+        refreshSoonLabelUi(card);
+        renderCards();
+      });
+    }
+    if (soonLabelInput) {
+      soonLabelInput.addEventListener('change', function (e) {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        readImageAsDataUrl(file, function (dataUrl) {
+          const card = getCard();
+          if (!card) return;
+          card.comingSoon = true;
+          card.comingSoonLabel = dataUrl;
+          if (comingSoon) comingSoon.checked = true;
+          refreshSoonLabelUi(card);
+          renderCards();
+        });
+        e.target.value = '';
+      });
+    }
+    if (soonLabelClear) {
+      soonLabelClear.addEventListener('click', function () {
+        const card = getCard();
+        if (!card) return;
+        card.comingSoonLabel = '';
+        refreshSoonLabelUi(card);
         renderCards();
       });
     }
@@ -5668,6 +5762,10 @@
         titleHidden: !titleNode || elHidden(titleNode),
         descHidden: !descNode || elHidden(descNode),
         comingSoon: cardEl.classList.contains('is-coming-soon'),
+        comingSoonLabel: (function () {
+          const labelImg = cardEl.querySelector('.pack-card-soon-label');
+          return labelImg && labelImg.getAttribute('src') ? labelImg.getAttribute('src') : '';
+        })(),
         bgMode: imageSrc || cardEl.classList.contains('is-image') ? 'image' : 'color',
         color: parseColorValue(styleAttrProp(cardEl, '--pack-card-color') || styleAttrProp(cardEl, 'background-color'), DEFAULT_CARD_COLOR),
         image: imageSrc,

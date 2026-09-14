@@ -906,8 +906,12 @@ body.page-edit-mode .pack-card-delete {
 .pack-card.is-coming-soon .pack-card-copy,
 .pack-card.is-coming-soon .pack-card-icon,
 .pack-card.is-coming-soon .pack-card-action {
-  opacity: 0.38;
-  filter: grayscale(0.35);
+  opacity: 0.55;
+  filter: grayscale(0.12);
+}
+
+.pack-card-soon-store {
+  display: none !important;
 }
 
 .pack-card-soon {
@@ -919,41 +923,74 @@ body.page-edit-mode .pack-card-delete {
   justify-content: center;
   pointer-events: none;
   border-radius: inherit;
-  background:
-    linear-gradient(165deg, rgba(18, 22, 20, 0.42) 0%, rgba(12, 14, 13, 0.62) 100%);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  background: rgba(16, 18, 16, 0.28);
 }
 
 .pack-card.is-image .pack-card-soon {
   grid-area: 1 / 1;
   z-index: 8;
-  background:
-    radial-gradient(ellipse at center, rgba(12, 14, 13, 0.22) 0%, rgba(12, 14, 13, 0.06) 52%, transparent 74%);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background: rgba(10, 12, 11, 0.16);
+}
+
+.pack-card-soon.has-custom-label {
+  background: rgba(10, 12, 11, 0.1);
 }
 
 .pack-card.is-coming-soon.is-image .pack-card-photo {
-  filter: grayscale(0.45) brightness(0.58) saturate(0.65);
+  filter: grayscale(0.12) brightness(0.82) saturate(0.88);
 }
 
 .pack-card-soon-badge {
   position: relative;
+  z-index: 1;
   display: inline-flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  padding: 3px 8px;
-  border-radius: 3px;
-  border-inline-start: 2px solid var(--site-secondary, #e31c23);
-  background: #efece4;
-  color: #2a2d28;
-  font-size: 0.68rem;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(247, 245, 240, 0.94);
+  color: #2c302b;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  line-height: 1.25;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
   user-select: none;
-  box-shadow: none;
+  border: 1px solid rgba(44, 48, 43, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.pack-card-soon-text {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.pack-card-soon-rule {
+  display: block;
+  width: 10px;
+  height: 1px;
+  background: color-mix(in srgb, var(--site-secondary, #e31c23) 70%, #b9b2a6);
+  opacity: 0.85;
+  flex: 0 0 auto;
+}
+
+.pack-card-soon-label {
+  position: relative;
+  z-index: 1;
+  display: block;
+  max-width: min(58%, 168px);
+  max-height: 34%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.18));
 }
 
 body:not(.page-edit-mode) .pack-card.is-coming-soon .pack-card-soon {
@@ -971,13 +1008,15 @@ body.page-edit-mode .pack-card.is-coming-soon .pack-card-delete {
 }
 
 body.page-edit-mode .pack-card.is-coming-soon .pack-card-soon {
-  background:
-    linear-gradient(165deg, rgba(18, 22, 20, 0.28) 0%, rgba(12, 14, 13, 0.4) 100%);
+  background: rgba(16, 18, 16, 0.18);
 }
 
 body.page-edit-mode .pack-card.is-coming-soon.is-image .pack-card-soon {
-  background:
-    radial-gradient(ellipse at center, rgba(12, 14, 13, 0.16) 0%, transparent 72%);
+  background: rgba(10, 12, 11, 0.1);
+}
+
+body.page-edit-mode .pack-card.is-coming-soon .pack-card-soon.has-custom-label {
+  background: rgba(10, 12, 11, 0.06);
 }
 
 /* ===== קוביות חופשיות — גרירה בתוך האזור ===== */
@@ -1203,6 +1242,58 @@ body.page-edit-mode .pack-cards.is-freeform .pack-cards-resize:not([hidden]) {
   height: 18px;
   accent-color: #4a7c3f;
   cursor: pointer;
+}
+
+.pack-soon-label-wrap {
+  margin: -4px 0 12px;
+}
+
+.pack-soon-label-wrap[hidden] {
+  display: none !important;
+}
+
+.pack-soon-label-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pack-soon-label-preview {
+  flex: 0 0 auto;
+  width: 58px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid #d5e2d2;
+  background: #f7f5f0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.pack-soon-label-preview.is-custom {
+  background: #f4f6f2;
+}
+
+.pack-soon-label-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  animation: none;
+  filter: none;
+}
+
+.pack-soon-label-fallback {
+  color: #2c302b;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  user-select: none;
+}
+
+.pack-soon-label-wrap .pack-field-sub {
+  margin-top: 8px;
 }
 
 /* ===== שכבת אלמנטים חופשית — אייקונים, טקסט, צוות פיתוח ===== */
