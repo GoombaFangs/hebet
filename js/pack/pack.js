@@ -109,6 +109,8 @@
   let bound = false;
   let uid = 1;
   let activePackText = null; // { el, role, cardId, itemId }
+  let cardPreviewObserver = null;
+  let cardPreviewObservedEl = null;
 
   /* ---------- כלים כלליים ---------- */
 
@@ -331,9 +333,21 @@
 
   function normalizeCard(raw) {
     const src = raw && typeof raw === 'object' ? raw : {};
+    const bgMode = normalizeCardBgMode(src.bgMode);
+    let imageScale = clampImageScale(src.imageScale);
+    let imageScaleY = clampImageScale(src.imageScaleY != null ? src.imageScaleY : src.imageScale);
+    let w = clampFreeWidth(src.w);
+    let h = src.h == null || src.h === '' ? 0 : clampCardBoxHeight(src.h);
+    const legacyImageLayout = bgMode === 'image' && src.image && src.imageX == null && src.imageY == null;
+    if (legacyImageLayout) {
+      w = clampFreeWidth((imageScale / 100) * 18);
+      if (!h) h = clampCardBoxHeight(CARD_BOX_BASE_PX * (imageScaleY / 100));
+      imageScale = 100;
+      imageScaleY = 100;
+    }
     return {
       id: src.id || nextId('card'),
-      icons: normalizeCardIcons(src),
+      icons: [],
       title: typeof src.title === 'string' ? src.title.slice(0, 40) : 'קובייה חדשה',
       titleSize: clamp(src.titleSize, 12, 34, 16),
       titleColor: src.titleColor || '#ffffff',
@@ -343,11 +357,13 @@
       titleHidden: !!src.titleHidden,
       descHidden: !!src.descHidden,
       comingSoon: !!src.comingSoon,
-      bgMode: normalizeCardBgMode(src.bgMode),
+      bgMode: bgMode,
       color: src.color || DEFAULT_CARD_COLOR,
       image: typeof src.image === 'string' ? src.image : '',
-      imageScale: clampImageScale(src.imageScale),
-      imageScaleY: clampImageScale(src.imageScaleY != null ? src.imageScaleY : src.imageScale),
+      imageScale: imageScale,
+      imageScaleY: imageScaleY,
+      imageX: clampImagePos(src.imageX),
+      imageY: clampImagePos(src.imageY),
       keepRatio: src.keepRatio !== false,
       actions: {
         view: normalizeAction(src.actions && src.actions.view, 'view'),
@@ -356,8 +372,8 @@
       },
       x: clamp(src.x, 0, 100, 50),
       y: clamp(src.y, 0, 100, 50),
-      w: clampFreeWidth(src.w),
-      h: src.h == null || src.h === '' ? 0 : clampCardBoxHeight(src.h),
+      w: w,
+      h: h,
       freePlaced: !!src.freePlaced,
     };
   }
@@ -519,13 +535,45 @@
     return !card || card.keepRatio !== false;
   }
 
+  function cardImageScaleY(card) {
+    return clampImageScale(card && card.imageScaleY != null ? card.imageScaleY : (card && card.imageScale));
+  }
+
+  function applyCardImageVars(el, card) {
+    if (!el || !card) return;
+    el.style.setProperty('--pack-card-image', card.image ? cssUrl(card.image) : 'none');
+    el.style.setProperty('--pack-card-img-scale', String(clampImageScale(card.imageScale) / 100));
+    el.style.setProperty('--pack-card-img-scale-y', String(cardImageScaleY(card) / 100));
+    el.style.setProperty('--pack-card-img-x', clampImagePos(card.imageX) + '%');
+    el.style.setProperty('--pack-card-img-y', clampImagePos(card.imageY) + '%');
+    el.classList.toggle('is-free-scale', card.bgMode === 'image' && !!card.image && !cardKeepsRatio(card));
+  }
+
   function applyCardImageScaleStyle(card, cardEl) {
-    if (!cardEl || !card) return;
-    const sx = clampImageScale(card.imageScale) / 100;
-    const sy = clampImageScale(card.imageScaleY != null ? card.imageScaleY : card.imageScale) / 100;
-    cardEl.style.setProperty('--pack-card-img-scale', String(sx));
-    cardEl.style.setProperty('--pack-card-img-scale-y', String(sy));
-    cardEl.classList.toggle('is-free-scale', card.bgMode === 'image' && !!card.image && !cardKeepsRatio(card));
+    applyCardImageVars(cardEl, card);
+    if (card && isEditorOpen() && editingCardId === card.id) syncCardImagePreview(card.id);
+  }
+
+  function fillCardImage(card) {
+    if (!card) return;
+    card.imageScale = 100;
+    card.imageScaleY = 100;
+    card.imageX = 50;
+    card.imageY = 50;
+  }
+
+  function ensureCardImageBox(card, cardEl) {
+    if (!card || card.bgMode !== 'image' || !card.image || card.h) return;
+    const liveH = cardEl && cardEl.clientHeight;
+    card.h = clampCardBoxHeight(Math.max(liveH || 0, 150));
+    if (cardEl) cardEl.style.setProperty('--ch', card.h + 'px');
+  }
+
+  function captureCardBoxHeight(card) {
+    if (!card || card.h) return;
+    const el = cardLiveEl(card.id);
+    if (!el) return;
+    card.h = clampCardBoxHeight(Math.max(el.getBoundingClientRect().height, 150));
   }
 
   function setCardKeepRatio(card, cardEl, keep) {
@@ -535,15 +583,15 @@
       card.imageScaleY = clampImageScale(card.imageScale);
     } else {
       card.keepRatio = false;
-      if (cardEl) {
-        const rect = cardEl.getBoundingClientRect();
-        if (rect.width) card.imageScale = clampImageScale((rect.width / CARD_BOX_BASE_PX) * 100);
-        if (rect.height) card.imageScaleY = clampImageScale((rect.height / CARD_BOX_BASE_PX) * 100);
-      } else if (card.imageScaleY == null) {
-        card.imageScaleY = clampImageScale(card.imageScale);
-      }
+      if (card.imageScaleY == null) card.imageScaleY = clampImageScale(card.imageScale);
     }
     applyCardImageScaleStyle(card, cardEl);
+    if (isEditorOpen() && editingCardId === card.id) {
+      const wrap = document.getElementById('packCardImagePreviewWrap');
+      const ratioInput = document.getElementById('packCardKeepRatio');
+      if (wrap) wrap.classList.toggle('is-free-scale', !cardKeepsRatio(card));
+      if (ratioInput) ratioInput.checked = cardKeepsRatio(card);
+    }
   }
 
   function clampImagePos(n) {
@@ -788,6 +836,102 @@
     applyHeaderImageVars(wrap);
     const stage = document.getElementById('packHeaderImagePreviewStage');
     if (stage) applyHeaderImageVars(stage);
+    syncHeaderPreviewFrame();
+    window.requestAnimationFrame(syncHeaderPreviewFrame);
+  }
+
+  function headerLiveSize() {
+    const header = document.getElementById('packHeader');
+    const liveW = header ? header.clientWidth : 0;
+    const liveH = header ? header.clientHeight : 0;
+    return {
+      width: liveW || window.innerWidth || 1200,
+      height: liveH || clampHeight(state.header && state.header.height),
+    };
+  }
+
+  function syncHeaderPreviewFrame() {
+    const stage = document.getElementById('packHeaderImagePreviewStage');
+    const wrap = document.getElementById('packHeaderImagePreviewWrap');
+    if (!stage || !wrap || wrap.hidden) return;
+    const live = headerLiveSize();
+    if (!live.width || !live.height) return;
+    const ratio = live.width / live.height;
+    stage.style.setProperty('--pack-header-preview-ratio', String(ratio));
+    const stageW = stage.clientWidth;
+    if (stageW) stage.style.height = Math.max(1, stageW / ratio) + 'px';
+  }
+
+  function bindHeaderPreviewFrameSync() {
+    const header = document.getElementById('packHeader');
+    if (!header || header.dataset.previewFrameBound === '1') return;
+    header.dataset.previewFrameBound = '1';
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', syncHeaderImagePreview);
+      return;
+    }
+    const observer = new ResizeObserver(function () { syncHeaderImagePreview(); });
+    observer.observe(header);
+  }
+
+  function cardLiveEl(cardId) {
+    if (!cardId) return null;
+    return document.querySelector('.pack-card[data-id="' + cardId + '"]');
+  }
+
+  function syncCardPreviewFrame(cardId) {
+    const stage = document.getElementById('packCardImagePreviewStage');
+    const wrap = document.getElementById('packCardImagePreviewWrap');
+    if (!stage || !wrap || wrap.hidden) return;
+    const cardEl = cardLiveEl(cardId);
+    const w = (cardEl && cardEl.clientWidth) || CARD_BOX_BASE_PX;
+    const h = (cardEl && cardEl.clientHeight) || 180;
+    if (!w || !h) return;
+    const ratio = w / h;
+    stage.style.setProperty('--pack-card-preview-ratio', String(ratio));
+    const stageW = stage.clientWidth;
+    if (stageW) stage.style.height = Math.max(1, stageW / ratio) + 'px';
+  }
+
+  function bindCardPreviewFrameSync(cardId) {
+    const cardEl = cardLiveEl(cardId);
+    if (!cardEl) return;
+    if (typeof ResizeObserver === 'undefined') return;
+    if (cardPreviewObservedEl === cardEl) return;
+    if (cardPreviewObserver) cardPreviewObserver.disconnect();
+    cardPreviewObserver = new ResizeObserver(function () { syncCardImagePreview(cardId); });
+    cardPreviewObserver.observe(cardEl);
+    cardPreviewObservedEl = cardEl;
+  }
+
+  function syncCardImagePreview(cardId) {
+    const card = findCardById(cardId);
+    const wrap = document.getElementById('packCardImagePreviewWrap');
+    if (!wrap || !card) return;
+    const has = card.bgMode === 'image' && !!card.image;
+    wrap.hidden = !has;
+    wrap.classList.toggle('is-free-scale', has && !cardKeepsRatio(card));
+    const actions = wrap.parentElement && wrap.parentElement.querySelector('.pack-card-image-actions');
+    const ratioWrap = document.getElementById('packCardKeepRatioWrap');
+    const clearBtn = document.getElementById('packCardImageClear');
+    const resetBtn = document.getElementById('packCardImageReset');
+    const ratioInput = document.getElementById('packCardKeepRatio');
+    const label = document.querySelector('label[for="packCardBgImage"] span');
+    if (actions) actions.hidden = !has;
+    if (ratioWrap) ratioWrap.hidden = !has;
+    if (clearBtn) clearBtn.hidden = !has;
+    if (resetBtn) resetBtn.hidden = !has;
+    if (ratioInput) ratioInput.checked = cardKeepsRatio(card);
+    if (label) label.textContent = has ? 'החלפת תמונה' : 'העלאת תמונה';
+    if (!has) return;
+    applyCardImageVars(wrap, card);
+    const stage = document.getElementById('packCardImagePreviewStage');
+    if (stage) applyCardImageVars(stage, card);
+    const live = cardLiveEl(card.id);
+    if (live) applyCardImageVars(live, card);
+    syncCardPreviewFrame(card.id);
+    bindCardPreviewFrameSync(card.id);
+    window.requestAnimationFrame(function () { syncCardPreviewFrame(card.id); });
   }
 
   /* ---------- רינדור: כותרת (רקע) ---------- */
@@ -966,24 +1110,6 @@
     return '<a class="' + cls + '"' + kindAttr + ' href="' + href + '" target="_blank" rel="noopener noreferrer"' + downloadAttr + ' data-has-href="' + (action.href && !card.comingSoon ? '1' : '0') + '" style="' + posStyle + '" title="' + title + '" aria-label="' + title + '"' + soonAttr + '>' + iconHtml + '</a>';
   }
 
-  function cardIconInnerHtml(icon) {
-    if (icon.type === 'image' && icon.value) {
-      return '<img src="' + escapeHtml(icon.value) + '" alt="">';
-    }
-    return escapeHtml(icon.value);
-  }
-
-  function cardIconsHtml(card) {
-    const icons = Array.isArray(card.icons) ? card.icons : [];
-    return icons.map(function (icon) {
-      return (
-        '<span class="pack-card-icon" data-card-icon-id="' + escapeHtml(icon.id) + '"' +
-          ' style="--ix:' + icon.x + '%;--iy:' + icon.y + '%;--isize:' + icon.size + 'px;"' +
-          '>' + cardIconInnerHtml(icon) + '</span>'
-      );
-    }).join('');
-  }
-
   function defaultFreeWidth() {
     return 18;
   }
@@ -1023,7 +1149,7 @@
     const imageClass = useImage ? ' is-image' : (awaitingImage ? ' is-awaiting-image' : '');
     const soonClass = card.comingSoon ? ' is-coming-soon' : '';
     const photoHtml = useImage
-      ? '<img class="pack-card-photo" src="' + escapeHtml(card.image) + '" alt="">'
+      ? '<div class="pack-card-fill" aria-hidden="true"><div class="pack-card-photo" title="לחצו לבחירה · גודל בסרגל הכלים"></div></div>'
       : '';
     const imageScale = clampImageScale(card.imageScale);
     const imageScaleY = clampImageScale(card.imageScaleY != null ? card.imageScaleY : imageScale);
@@ -1049,7 +1175,9 @@
         ';--cx:' + card.x + '%;--cy:' + card.y + '%;--cw:' + card.w +
         ';--ch:' + (card.h ? clampCardBoxHeight(card.h) + 'px' : 'auto') +
         ';--pack-card-img-scale:' + (imageScale / 100) +
-        ';--pack-card-img-scale-y:' + (imageScaleY / 100) + ';">' +
+        ';--pack-card-img-scale-y:' + (imageScaleY / 100) +
+        ';--pack-card-img-x:' + clampImagePos(card.imageX) + '%' +
+        ';--pack-card-img-y:' + clampImagePos(card.imageY) + '%;">' +
         photoHtml +
         resizeHtml +
         '<button type="button" class="pack-card-dup" data-card-dup="' + escapeHtml(card.id) + '" title="שכפול קובייה" aria-label="שכפול קובייה">' +
@@ -1059,7 +1187,6 @@
           '</svg>' +
         '</button>' +
         '<button type="button" class="pack-card-delete" data-card-delete="' + escapeHtml(card.id) + '" title="הסרת קובייה" aria-label="הסרת קובייה">×</button>' +
-        cardIconsHtml(card) +
         '<div class="pack-card-copy">' +
           (showTitle ? '<h3 class="pack-card-title" data-card-text="title" data-card-id="' + escapeHtml(card.id) + '" style="' + titleStyle + '"' + editableAttr + '>' + escapeHtml(card.title) + '</h3>' : '') +
           (showDesc ? '<p class="pack-card-desc" data-card-text="desc" data-card-id="' + escapeHtml(card.id) + '" style="' + descStyle + '"' + editableAttr + '>' + escapeHtml(card.desc) + '</p>' : '') +
@@ -1085,7 +1212,14 @@
     if (ui.cardsResize) ui.cardsResize.hidden = !isPageEditMode() || !freeform;
     syncCardsFreeformToggle();
     ui.cardsGrid.innerHTML = state.cards.items.map(cardHtml).join('');
+    state.cards.items.forEach(function (card) {
+      const cardEl = ui.cardsGrid.querySelector('.pack-card[data-id="' + card.id + '"]');
+      if (!cardEl) return;
+      applyCardImageVars(cardEl, card);
+      ensureCardImageBox(card, cardEl);
+    });
     restoreActivePackTargetEl();
+    if (isEditorOpen() && editingCardId) syncCardImagePreview(editingCardId);
   }
 
   /* ---------- רינדור: סגירה ---------- */
@@ -1578,7 +1712,7 @@
             '<button type="button" class="pack-clear-btn" id="packHeaderImageClear"' + (h.image ? '' : ' hidden') + '>הסרת תמונה</button>' +
             '<button type="button" class="pack-reset-btn" id="packHeaderImageReset"' + (h.image ? '' : ' hidden') + '>איפוס תמונה</button>' +
           '</div>' +
-          '<p class="pack-field-sub">התצוגה המקדימה משקפת את התמונה בכותרת. גררו את התמונה כדי להזיז אותה, ואת הקוביות האדומות כדי לשנות גודל. איפוס ממלא את כל שטח הכותרת.</p>' +
+          '<p class="pack-field-sub">התצוגה המקדימה היא העתק מוקטן של הכותרת באתר — אותו יחס ואותו חיתוך. גררו את התמונה כדי להזיז אותה, ואת הקוביות האדומות כדי לשנות גודל. איפוס ממלא את כל שטח הכותרת.</p>' +
         '</div>' +
         '<div id="packHeaderOpacityFields"' + (h.mode === 'transparent' ? '' : ' hidden') + '>' +
           rangeRowHtml('packHeaderOpacity', 'שקיפות', h.opacity, 0, 100, '%') +
@@ -1826,6 +1960,134 @@
     img.addEventListener('pointercancel', onUp);
   }
 
+  function bindCardPreviewResize(root, cardId) {
+    if (!root || root.dataset.cardPreviewResizeBound === '1') return;
+    root.dataset.cardPreviewResizeBound = '1';
+    root.addEventListener('pointerdown', function (e) {
+      const from = eventEl(e.target);
+      if (!from || !from.closest) return;
+      const card = findCardById(cardId);
+      if (!card || card.bgMode !== 'image' || !card.image) return;
+      if (e.button != null && e.button !== 0) return;
+      const handle = from.closest('[data-card-preview-resize]');
+      const img = from.closest('#packCardImagePreview');
+      if (!handle && !img) return;
+      const stage = document.getElementById('packCardImagePreviewStage');
+      if (!stage) return;
+      const rect = stage.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (handle) {
+        startCardPreviewResize(e, handle, rect, card);
+        return;
+      }
+      startCardPreviewPan(e, img, rect, card);
+    });
+  }
+
+  function startCardPreviewResize(e, handle, rect, card) {
+    const corner = handle.getAttribute('data-card-preview-resize') || 'se';
+    const xSign = corner.indexOf('e') >= 0 ? 1 : (corner.indexOf('w') >= 0 ? -1 : 0);
+    const ySign = corner.indexOf('s') >= 0 ? 1 : (corner.indexOf('n') >= 0 ? -1 : 0);
+    const startW = (clampImageScale(card.imageScale) / 100) * rect.width;
+    const startH = (cardImageScaleY(card) / 100) * rect.height;
+    const startCx = (clampImagePos(card.imageX) / 100) * rect.width;
+    const startCy = (clampImagePos(card.imageY) / 100) * rect.height;
+    const startLeft = startCx - startW / 2;
+    const startTop = startCy - startH / 2;
+    const fixedX = xSign > 0 ? startLeft : (xSign < 0 ? startLeft + startW : startCx);
+    const fixedY = ySign > 0 ? startTop : (ySign < 0 ? startTop + startH : startCy);
+    const minW = (IMAGE_SCALE_MIN / 100) * rect.width;
+    const maxW = (IMAGE_SCALE_MAX / 100) * rect.width;
+    const minH = (IMAGE_SCALE_MIN / 100) * rect.height;
+    const maxH = (IMAGE_SCALE_MAX / 100) * rect.height;
+    try { handle.setPointerCapture(e.pointerId); } catch (_) {}
+
+    function sizeFromPointer(ev) {
+      const px = ev.clientX - rect.left;
+      const py = ev.clientY - rect.top;
+      let w = xSign ? Math.abs(px - fixedX) : startW;
+      let h = ySign ? Math.abs(py - fixedY) : startH;
+      const keep = cardKeepsRatio(card) && xSign && ySign;
+      if (keep) {
+        const factor = Math.max(w / Math.max(startW, 1), h / Math.max(startH, 1));
+        w = startW * factor;
+        h = startH * factor;
+      } else if (cardKeepsRatio(card) && (xSign || ySign)) {
+        setCardKeepRatio(card, cardLiveEl(card.id), false);
+      }
+      w = Math.min(maxW, Math.max(minW, w));
+      h = Math.min(maxH, Math.max(minH, h));
+      if (keep) {
+        const factor = Math.min(w / Math.max(startW, 1), h / Math.max(startH, 1));
+        w = Math.min(maxW, Math.max(minW, startW * factor));
+        h = startH * (w / Math.max(startW, 1));
+        if (h > maxH) { h = maxH; w = startW * (h / Math.max(startH, 1)); }
+        if (h < minH) { h = minH; w = startW * (h / Math.max(startH, 1)); }
+      }
+      const left = xSign ? (xSign > 0 ? fixedX : fixedX - w) : startLeft;
+      const top = ySign ? (ySign > 0 ? fixedY : fixedY - h) : startTop;
+      card.imageScale = clampImageScale((w / rect.width) * 100);
+      card.imageScaleY = clampImageScale((h / rect.height) * 100);
+      card.imageX = clampImagePos(((left + w / 2) / rect.width) * 100);
+      card.imageY = clampImagePos(((top + h / 2) / rect.height) * 100);
+      applyCardImageScaleStyle(card, cardLiveEl(card.id));
+      if (activePackText && activePackText.role === 'card-image' && activePackText.cardId === card.id) {
+        syncPackToolbar();
+      }
+    }
+    function onMove(ev) { sizeFromPointer(ev); }
+    function onUp(ev) {
+      try { handle.releasePointerCapture(ev.pointerId); } catch (_) {}
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onUp);
+      handle.removeEventListener('pointercancel', onUp);
+    }
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+    handle.addEventListener('pointercancel', onUp);
+  }
+
+  function startCardPreviewPan(e, img, rect, card) {
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const origX = clampImagePos(card.imageX);
+    const origY = clampImagePos(card.imageY);
+    let moved = false;
+    try { img.setPointerCapture(e.pointerId); } catch (_) {}
+    img.classList.add('is-dragging');
+
+    function onMove(ev) {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      if (!moved && Math.abs(dx) + Math.abs(dy) < 4) return;
+      moved = true;
+      card.imageX = clampImagePos(origX + (dx / rect.width) * 100);
+      card.imageY = clampImagePos(origY + (dy / rect.height) * 100);
+      applyCardImagePosLive(card);
+    }
+    function onUp(ev) {
+      img.classList.remove('is-dragging');
+      try { img.releasePointerCapture(ev.pointerId); } catch (_) {}
+      img.removeEventListener('pointermove', onMove);
+      img.removeEventListener('pointerup', onUp);
+      img.removeEventListener('pointercancel', onUp);
+    }
+    img.addEventListener('pointermove', onMove);
+    img.addEventListener('pointerup', onUp);
+    img.addEventListener('pointercancel', onUp);
+  }
+
+  function applyCardImagePosLive(card) {
+    const cardEl = card && cardLiveEl(card.id);
+    if (cardEl) applyCardImageVars(cardEl, card);
+    const wrap = document.getElementById('packCardImagePreviewWrap');
+    if (wrap) applyCardImageVars(wrap, card);
+    const stage = document.getElementById('packCardImagePreviewStage');
+    if (stage) applyCardImageVars(stage, card);
+  }
+
   function openEditorRefresh() {
     const ui = els();
     if (!ui.editFields) return;
@@ -1833,6 +2095,7 @@
     modeRadios.forEach(function (r) { r.checked = r.value === state.header.mode; });
     syncHeaderBgModeFields(ui.editFields);
     syncHeaderImagePreview();
+    if (editingCardId) syncCardImagePreview(editingCardId);
   }
 
   function openHeaderEditor() {
@@ -1872,46 +2135,6 @@
   /* ================================================================
      עורך קובייה בודדת
      ================================================================ */
-
-  function nextCardIconPos(card) {
-    const used = (card.icons || []).map(function (icon) { return icon.x; });
-    let x = 50;
-    while (used.some(function (u) { return Math.abs(u - x) < 10; }) && x < 88) x += 12;
-    return { x: x, y: 16 };
-  }
-
-  function cardIconsListHtml(card) {
-    if (!card.icons.length) {
-      return '<p class="pack-field-sub">אין עדיין אייקונים. העלו תמונה, ואז גררו בתוך הקובייה.</p>';
-    }
-    return card.icons.map(function (icon) {
-      const id = escapeHtml(icon.id);
-      const thumb = icon.type === 'image' && icon.value
-        ? '<img class="pack-logo-thumb" src="' + escapeHtml(icon.value) + '" alt="">'
-        : '<span class="pack-logo-thumb pack-closing-icon-thumb" aria-hidden="true">' + escapeHtml(icon.value) + '</span>';
-      return (
-        '<div class="pack-logo-row pack-closing-icon-row" data-card-icon-id="' + id + '">' +
-          '<div class="pack-closing-icon-row-head">' +
-            thumb +
-            '<button type="button" class="pack-logo-remove" data-card-icon-remove="' + id + '" title="הסרה" aria-label="הסרה">×</button>' +
-          '</div>' +
-          '<div class="pack-range-row pack-closing-icon-size">' +
-            '<span>גודל</span>' +
-            '<input type="range" min="' + CARD_ICON_SIZE_MIN + '" max="' + CARD_ICON_SIZE_MAX + '" step="1" value="' + icon.size + '" data-card-icon-size="' + id + '" aria-label="גודל אייקון">' +
-            '<input type="number" min="' + CARD_ICON_SIZE_MIN + '" max="' + CARD_ICON_SIZE_MAX + '" step="1" value="' + icon.size + '" inputmode="numeric" dir="ltr" data-card-icon-size="' + id + '" aria-label="גודל אייקון בפיקסלים">' +
-            '<span class="pack-unit">px</span>' +
-          '</div>' +
-        '</div>'
-      );
-    }).join('');
-  }
-
-  function refreshCardIconsList(root, card) {
-    const list = root.querySelector('#packEditCardIconList');
-    if (list) list.innerHTML = cardIconsListHtml(card);
-    const head = root.querySelector('#packEditCardIconsHead');
-    if (head) head.textContent = 'אייקונים (' + card.icons.length + ')';
-  }
 
   function actionRowHtml(kind, label, action) {
     const hasImage = actionHasCustomIcon(action);
@@ -1970,7 +2193,7 @@
           '<input type="checkbox" id="packCardDescEnabled"' + (card.descHidden ? '' : ' checked') + '>' +
           '<span>תיאור</span>' +
         '</label>' +
-        '<p class="pack-field-sub">לחצו על הטקסט בקובייה כדי לערוך. גודל וצבע בסרגל הכלים. לחצו על תמונת הקובייה במסך כדי להגדיל או להקטין אותה מסרגל הכלים.</p>' +
+        '<p class="pack-field-sub">לחצו על הטקסט בקובייה כדי לערוך. גודל וצבע בסרגל הכלים. גודל התמונה משתנה בפינות התצוגה המקדימה.</p>' +
       '</section>' +
 
       '<section class="pack-edit-section">' +
@@ -1989,22 +2212,40 @@
           colorFieldHtml('packCardColor', 'צבע קובייה', card.color) +
         '</div>' +
         '<div id="packCardBgImageWrap"' + (card.bgMode === 'image' ? '' : ' hidden') + '>' +
-          '<p class="pack-field-sub">אפשר להעלות PNG עם רקע שקוף — כך מתקבלת צורת קובייה חופשית (משיכת מכחול וכו׳). לחצו על התמונה במסך כדי להגדיל או להקטין אותה מסרגל הכלים.</p>' +
           '<label class="pack-upload" for="packCardBgImage" style="margin-top:10px;display:flex;">' +
             '<input type="file" id="packCardBgImage" accept="image/*" hidden>' +
             '<span>' + (card.image ? 'החלפת תמונה' : 'העלאת תמונה') + '</span>' +
           '</label>' +
-          '<img class="pack-preview' + (card.image ? ' is-visible' : '') + '" id="packCardBgPreview" src="' + escapeHtml(card.image || '') + '" alt="">' +
-          '<button type="button" class="pack-clear-btn" id="packCardBgClear"' + (card.image ? '' : ' hidden') + '>הסרת תמונה</button>' +
+          '<div class="pack-card-preview" id="packCardImagePreviewWrap"' + (card.image ? '' : ' hidden') + '>' +
+            '<div class="pack-card-preview-stage" id="packCardImagePreviewStage">' +
+              '<div class="pack-card-preview-clip">' +
+                '<div class="pack-card-preview-img" id="packCardImagePreview" title="גררו להזזה · פינות לשינוי גודל"></div>' +
+              '</div>' +
+              '<div class="pack-card-preview-handles" aria-hidden="true">' +
+                '<span class="pack-card-resize pack-card-preview-resize" data-card-preview-resize="nw" title="גררו לשינוי גודל"></span>' +
+                '<span class="pack-card-resize pack-card-preview-resize" data-card-preview-resize="n" title="גררו לשינוי גובה"></span>' +
+                '<span class="pack-card-resize pack-card-preview-resize" data-card-preview-resize="ne" title="גררו לשינוי גודל"></span>' +
+                '<span class="pack-card-resize pack-card-preview-resize" data-card-preview-resize="w" title="גררו לשינוי רוחב"></span>' +
+                '<span class="pack-card-resize pack-card-preview-resize" data-card-preview-resize="e" title="גררו לשינוי רוחב"></span>' +
+                '<span class="pack-card-resize pack-card-preview-resize" data-card-preview-resize="sw" title="גררו לשינוי גודל"></span>' +
+                '<span class="pack-card-resize pack-card-preview-resize" data-card-preview-resize="s" title="גררו לשינוי גובה"></span>' +
+                '<span class="pack-card-resize pack-card-preview-resize" data-card-preview-resize="se" title="גררו לשינוי גודל"></span>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div id="packCardKeepRatioWrap"' + (card.image ? '' : ' hidden') + '>' +
+            '<label class="pack-check-row">' +
+              '<input type="checkbox" id="packCardKeepRatio"' + (card.keepRatio !== false ? ' checked' : '') + '>' +
+              '<span>פרופורציות</span>' +
+            '</label>' +
+            '<p class="pack-field-sub">כשהסימון פעיל, גובה ורוחב משתנים יחד. בביטול מופיעות ידיות גם בצלעות, ואפשר למתוח כל ציר בנפרד.</p>' +
+          '</div>' +
+          '<div class="pack-card-image-actions pack-header-image-actions"' + (card.image ? '' : ' hidden') + '>' +
+            '<button type="button" class="pack-clear-btn" id="packCardImageClear"' + (card.image ? '' : ' hidden') + '>הסרת תמונה</button>' +
+            '<button type="button" class="pack-reset-btn" id="packCardImageReset"' + (card.image ? '' : ' hidden') + '>איפוס תמונה</button>' +
+          '</div>' +
+          '<p class="pack-field-sub">התצוגה המקדימה היא העתק מוקטן של הקובייה באתר — אותו יחס ואותו חיתוך. גררו את התמונה כדי להזיז אותה, ואת הקוביות האדומות כדי לשנות גודל. איפוס ממלא את כל שטח הקובייה.</p>' +
         '</div>' +
-      '</section>' +
-
-      '<section class="pack-edit-section">' +
-        '<div class="pack-edit-section-head" id="packEditCardIconsHead">אייקונים (' + card.icons.length + ')</div>' +
-        '<p class="pack-field-sub">העלו אייקון מהמחשב. לחצו עליו במסך כדי לשנות גודל מסרגל הכלים, וגררו למיקום. קו ורוד מופיע כשהיישור תואם לאייקון או כפתור אחר.</p>' +
-        '<div id="packEditCardIconList">' + cardIconsListHtml(card) + '</div>' +
-        '<label class="pack-add-logo-btn" for="packCardIconImage">+ הוסף אייקון</label>' +
-        '<input type="file" id="packCardIconImage" accept="image/*" hidden>' +
       '</section>' +
 
       '<section class="pack-edit-section">' +
@@ -2059,6 +2300,7 @@
         if (!input.checked) return;
         const card = getCard();
         if (!card) return;
+        if (input.value === 'image') captureCardBoxHeight(card);
         card.bgMode = normalizeCardBgMode(input.value);
         const colorWrap = root.querySelector('#packCardBgColorWrap');
         const imageWrap = root.querySelector('#packCardBgImageWrap');
@@ -2069,8 +2311,13 @@
         }
         renderCards();
         if (card.bgMode === 'image') {
-          const fileInput = root.querySelector('#packCardBgImage');
-          if (fileInput) fileInput.click();
+          if (card.image) {
+            ensureCardImageBox(card, cardLiveEl(card.id));
+            syncCardImagePreview(card.id);
+          } else {
+            const fileInput = root.querySelector('#packCardBgImage');
+            if (fileInput) fileInput.click();
+          }
         }
       });
     });
@@ -2086,23 +2333,18 @@
         readImageAsDataUrl(file, function (dataUrl) {
           const card = getCard();
           if (!card) return;
+          captureCardBoxHeight(card);
           card.image = dataUrl;
           card.bgMode = 'image';
-          const preview = root.querySelector('#packCardBgPreview');
-          if (preview) {
-            preview.src = dataUrl;
-            preview.classList.add('is-visible');
-          }
-          const clearBtn = root.querySelector('#packCardBgClear');
-          if (clearBtn) clearBtn.hidden = false;
-          const label = root.querySelector('label[for="packCardBgImage"] span');
-          if (label) label.textContent = 'החלפת תמונה';
+          fillCardImage(card);
           renderCards();
+          ensureCardImageBox(card, cardLiveEl(card.id));
+          syncCardImagePreview(card.id);
         });
         e.target.value = '';
       });
     }
-    const bgClear = root.querySelector('#packCardBgClear');
+    const bgClear = root.querySelector('#packCardImageClear');
     if (bgClear) {
       bgClear.addEventListener('click', function () {
         const card = getCard();
@@ -2111,108 +2353,37 @@
         if (activePackText && activePackText.role === 'card-image' && activePackText.cardId === cardId) {
           setActivePackTarget(null);
         }
-        const preview = root.querySelector('#packCardBgPreview');
-        if (preview) {
-          preview.src = '';
-          preview.classList.remove('is-visible');
-        }
-        bgClear.hidden = true;
-        const label = root.querySelector('label[for="packCardBgImage"] span');
-        if (label) label.textContent = 'העלאת תמונה';
         renderCards();
+        syncCardImagePreview(cardId);
       });
     }
-
-    function addCardIcon(icon) {
-      const card = getCard();
-      if (!card) return;
-      const pos = nextCardIconPos(card);
-      card.icons.push(normalizeDecorIcon(Object.assign({}, icon, { x: pos.x, y: pos.y })));
-      refreshCardIconsList(root, card);
-      renderCards();
-    }
-
-    function applyCardIconSize(card, icon, sizeEl) {
-      icon.size = clampCardIconSize(sizeEl.type === 'number' ? sizeEl.value : sizeEl.value);
-      const row = sizeEl.closest ? sizeEl.closest('[data-card-icon-id]') : null;
-      if (row) {
-        row.querySelectorAll('[data-card-icon-size="' + icon.id + '"]').forEach(function (el) {
-          if (el !== sizeEl) el.value = String(icon.size);
-        });
-      }
-      const cardEl = document.querySelector('.pack-card[data-id="' + card.id + '"]');
-      const iconEl = cardEl && cardEl.querySelector('[data-card-icon-id="' + icon.id + '"]');
-      if (iconEl) iconEl.style.setProperty('--isize', icon.size + 'px');
-    }
-    const iconImage = root.querySelector('#packCardIconImage');
-    if (iconImage) {
-      iconImage.addEventListener('change', function (e) {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        readImageAsDataUrl(file, function (dataUrl) {
-          addCardIcon({ type: 'image', value: dataUrl });
-        });
-        e.target.value = '';
-      });
-    }
-    const iconList = root.querySelector('#packEditCardIconList');
-    if (iconList) {
-      iconList.addEventListener('input', function (e) {
-        const sizeId = e.target.getAttribute && e.target.getAttribute('data-card-icon-size');
-        if (!sizeId) return;
+    const bgReset = root.querySelector('#packCardImageReset');
+    if (bgReset) {
+      bgReset.addEventListener('click', function () {
         const card = getCard();
-        if (!card) return;
-        const icon = card.icons.find(function (item) { return item.id === sizeId; });
-        if (!icon) return;
-        const row = e.target.closest ? e.target.closest('[data-card-icon-id]') : null;
-        const range = row ? row.querySelector('input[type="range"][data-card-icon-size="' + sizeId + '"]') : null;
-        const num = row ? row.querySelector('input[type="number"][data-card-icon-size="' + sizeId + '"]') : null;
-        const isNumberField = e.target === num;
-
-        if (isNumberField) {
-          const typed = Number(e.target.value);
-          if (!Number.isFinite(typed)) return;
-          if (typed < CARD_ICON_SIZE_MIN || typed > CARD_ICON_SIZE_MAX) return;
-          icon.size = typed;
-          if (range) range.value = String(typed);
-          const cardEl = document.querySelector('.pack-card[data-id="' + card.id + '"]');
-          const iconEl = cardEl && cardEl.querySelector('[data-card-icon-id="' + icon.id + '"]');
-          if (iconEl) iconEl.style.setProperty('--isize', icon.size + 'px');
-          return;
-        }
-
-        applyCardIconSize(card, icon, e.target);
-      });
-      iconList.addEventListener('focusout', function (e) {
-        const sizeId = e.target.getAttribute && e.target.getAttribute('data-card-icon-size');
-        if (!sizeId || e.target.type !== 'number') return;
-        const card = getCard();
-        if (!card) return;
-        const icon = card.icons.find(function (item) { return item.id === sizeId; });
-        if (!icon) return;
-        icon.size = clampCardIconSize(e.target.value);
-        e.target.value = String(icon.size);
-        const row = e.target.closest ? e.target.closest('[data-card-icon-id]') : null;
-        const range = row ? row.querySelector('input[type="range"][data-card-icon-size="' + sizeId + '"]') : null;
-        if (range) range.value = String(icon.size);
-        const cardEl = document.querySelector('.pack-card[data-id="' + card.id + '"]');
-        const iconEl = cardEl && cardEl.querySelector('[data-card-icon-id="' + icon.id + '"]');
-        if (iconEl) iconEl.style.setProperty('--isize', icon.size + 'px');
-      });
-      iconList.addEventListener('click', function (e) {
-        const btn = e.target.closest ? e.target.closest('[data-card-icon-remove]') : null;
-        if (!btn) return;
-        const card = getCard();
-        if (!card) return;
-        const id = btn.getAttribute('data-card-icon-remove');
-        card.icons = card.icons.filter(function (item) { return item.id !== id; });
-        if (activePackText && activePackText.role === 'card-icon' && activePackText.itemId === id) {
-          setActivePackTarget(null);
-        }
-        refreshCardIconsList(root, card);
+        if (!card || !card.image) return;
+        fillCardImage(card);
         renderCards();
+        if (activePackText && activePackText.role === 'card-image' && activePackText.cardId === cardId) {
+          syncPackToolbar();
+        }
+        syncCardImagePreview(cardId);
       });
     }
+    const ratioInput = root.querySelector('#packCardKeepRatio');
+    if (ratioInput) {
+      ratioInput.addEventListener('change', function () {
+        const card = getCard();
+        if (!card) return;
+        setCardKeepRatio(card, cardLiveEl(card.id), !!ratioInput.checked);
+        if (activePackText && activePackText.role === 'card-image' && activePackText.cardId === cardId) {
+          syncPackToolbar();
+        }
+      });
+    }
+    bindCardPreviewResize(root, cardId);
+    syncCardImagePreview(cardId);
+
     ['view', 'download', 'print'].forEach(function (kind) {
       const check = root.querySelector('[data-action-enabled="' + kind + '"]');
       const href = root.querySelector('[data-action-href="' + kind + '"]');
@@ -2369,9 +2540,8 @@
   }
 
   function isHeaderEditorHostEl(el) {
-    return !!(el && el.closest && el.closest(
-      '#packHeaderTitle, #packHeaderSubtitle, #packHeaderHiddenNote'
-    ));
+    return !!(el && el.closest && el.closest('#packHeader') &&
+      !el.closest('.pack-header-resize, .pack-header-drop'));
   }
 
   function bindHeaderEditorAutoOpen() {
@@ -2383,15 +2553,8 @@
       if (e.button != null && e.button !== 0) return;
       const from = eventEl(e.target);
       if (!from || !from.closest) return;
-      if (isHeaderEditorHostEl(from)) {
-        ensureHeaderEditor();
-        return;
-      }
-      if (!isHeaderHidden() && isHeaderTextHidden('title') && isHeaderTextHidden('subtitle') &&
-          from.closest('#packHeader') &&
-          !from.closest('.pack-header-resize, .pack-header-drop, .pack-header-logo')) {
-        ensureHeaderEditor();
-      }
+      if (from.closest('.pack-header-resize, .pack-header-drop')) return;
+      ensureHeaderEditor();
     }, true);
   }
 
@@ -2465,11 +2628,6 @@
     const raw = cloneState(source);
     delete raw.id;
     raw.title = nextDuplicateTitle(source.title);
-    raw.icons = (raw.icons || []).map(function (icon) {
-      const next = cloneState(icon);
-      delete next.id;
-      return next;
-    });
     if (isCardsFreeform()) {
       raw.x = clamp(source.x + 4, 0, 100, source.x);
       raw.y = clamp(source.y + 5, 0, 100, source.y);
@@ -4167,60 +4325,31 @@
       if (!rect.width || !rect.height) return;
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
-      const isImage = card.bgMode === 'image' && !!card.image;
       const xSign = corner.indexOf('e') >= 0 ? 1 : (corner.indexOf('w') >= 0 ? -1 : 0);
       const ySign = corner.indexOf('s') >= 0 ? 1 : (corner.indexOf('n') >= 0 ? -1 : 0);
 
       cardEl.classList.add('is-resizing');
       try { handle.setPointerCapture(e.pointerId); } catch (_) {}
-      if (isImage) {
+      if (card.bgMode === 'image' && card.image) {
         const photo = cardEl.querySelector('.pack-card-photo');
         if (photo) setActivePackTarget({ el: photo, role: 'card-image', cardId: card.id });
       }
 
       function sizeFromPointer(ev) {
-        if (isImage) {
-          const keep = cardKeepsRatio(card) && xSign && ySign;
-          if (keep) {
-            const ratio = rect.height ? rect.width / rect.height : 1;
-            const fromX = Math.max(24, xSign * (ev.clientX - cx)) * 2;
-            const fromY = Math.max(24, ySign * (ev.clientY - cy)) * 2 * ratio;
-            const widthPx = Math.max(fromX, fromY);
-            card.imageScale = clampImageScale((widthPx / CARD_BOX_BASE_PX) * 100);
-            card.imageScaleY = card.imageScale;
-          } else {
-            if (cardKeepsRatio(card)) {
-              setCardKeepRatio(card, cardEl, false);
-              if (activePackText && activePackText.role === 'card-image' && activePackText.cardId === card.id) {
-                syncPackToolbar();
-              }
-            }
-            if (xSign) {
-              const widthPx = Math.max(24, xSign * (ev.clientX - cx)) * 2;
-              card.imageScale = clampImageScale((widthPx / CARD_BOX_BASE_PX) * 100);
-            }
-            if (ySign) {
-              const heightPx = Math.max(24, ySign * (ev.clientY - cy)) * 2;
-              card.imageScaleY = clampImageScale((heightPx / CARD_BOX_BASE_PX) * 100);
-            }
-          }
-          applyCardImageScaleStyle(card, cardEl);
-          if (activePackText && activePackText.role === 'card-image' && activePackText.cardId === card.id) {
-            syncPackToolbar();
-          }
-        } else {
-          if (xSign) {
-            const widthPx = Math.max(40, Math.max(24, xSign * (ev.clientX - cx)) * 2);
-            card.w = clampFreeWidth((widthPx / CARD_BOX_BASE_PX) * 18);
-            cardEl.style.setProperty('--cw', String(card.w));
-          }
-          if (ySign) {
-            const heightPx = Math.max(CARD_BOX_H_MIN, Math.max(24, ySign * (ev.clientY - cy)) * 2);
-            card.h = clampCardBoxHeight(heightPx);
-            cardEl.style.setProperty('--ch', card.h + 'px');
-          }
+        if (xSign) {
+          const widthPx = Math.max(40, Math.max(24, xSign * (ev.clientX - cx)) * 2);
+          card.w = clampFreeWidth((widthPx / CARD_BOX_BASE_PX) * 18);
+          cardEl.style.setProperty('--cw', String(card.w));
         }
-        if (isEditorOpen() && editingCardId === card.id) syncEditorDockSide({ live: true });
+        if (ySign) {
+          const heightPx = Math.max(CARD_BOX_H_MIN, Math.max(24, ySign * (ev.clientY - cy)) * 2);
+          card.h = clampCardBoxHeight(heightPx);
+          cardEl.style.setProperty('--ch', card.h + 'px');
+        }
+        if (isEditorOpen() && editingCardId === card.id) {
+          syncCardPreviewFrame(card.id);
+          syncEditorDockSide({ live: true });
+        }
       }
 
       function onMove(ev) { sizeFromPointer(ev); }
@@ -4931,6 +5060,7 @@
     bindDevTeamDragging();
     bindHeaderImageDrop();
     bindHeaderImagePan();
+    bindHeaderPreviewFrameSync();
     bindPackImageSelection();
     bindInlineHeaderText();
     bindInlineCardText();
@@ -5486,7 +5616,7 @@
       const titleNode = cardEl.querySelector('.pack-card-title');
       const descNode = cardEl.querySelector('.pack-card-desc');
       const photo = cardEl.querySelector('.pack-card-photo');
-      const imageSrc = photo ? (photo.getAttribute('src') || '') : '';
+      const imageSrc = parseCssUrl(styleAttrProp(cardEl, '--pack-card-image')) || (photo && photo.getAttribute('src')) || '';
       const actions = { view: {}, download: {}, print: {} };
       const actionNodes = cardEl.querySelectorAll('[data-action-kind]');
       for (let a = 0; a < actionNodes.length; a++) {
@@ -5543,6 +5673,8 @@
         image: imageSrc,
         imageScale: Math.round((parseFloat(styleAttrProp(cardEl, '--pack-card-img-scale')) || 1) * 100),
         imageScaleY: Math.round((parseFloat(styleAttrProp(cardEl, '--pack-card-img-scale-y')) || parseFloat(styleAttrProp(cardEl, '--pack-card-img-scale')) || 1) * 100),
+        imageX: parsePctValue(styleAttrProp(cardEl, '--pack-card-img-x'), 50),
+        imageY: parsePctValue(styleAttrProp(cardEl, '--pack-card-img-y'), 50),
         keepRatio: !cardEl.classList.contains('is-free-scale'),
         actions: actions,
         icons: icons,
